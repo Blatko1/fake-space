@@ -1,26 +1,25 @@
-use winit::{dpi::PhysicalSize, window::Window};
+use winit::{dpi::PhysicalSize, window::Window as WinitWindow};
 
-pub struct GFXUtil {
-    surface: wgpu::Surface,
-    device: wgpu::Device,
-    config: wgpu::SurfaceConfiguration,
-    queue: wgpu::Queue,
-
-    window: Window,
-    size: PhysicalSize<u32>,
+pub struct Window {
+    pub surface: wgpu::Surface,
+    pub device: wgpu::Device,
+    pub config: wgpu::SurfaceConfiguration,
+    pub queue: wgpu::Queue,
+    pub winit_window: WinitWindow,
 }
 
-impl GFXUtil {
-    pub async fn init(window: Window) -> Result<Self, Box<dyn std::error::Error>> {
-        let size = window.inner_size();
-
-        let backends = wgpu::util::backend_bits_from_env().unwrap_or(wgpu::Backends::PRIMARY);
+impl Window {
+    pub async fn init(
+        winit_window: WinitWindow,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        let backends = wgpu::util::backend_bits_from_env()
+            .unwrap_or(wgpu::Backends::PRIMARY);
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends,
             dx12_shader_compiler: wgpu::Dx12Compiler::Fxc,
         });
 
-        let surface = unsafe { instance.create_surface(&window) }?;
+        let surface = unsafe { instance.create_surface(&winit_window) }?;
 
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
@@ -42,25 +41,46 @@ impl GFXUtil {
             )
             .await?;
 
-        let surface_caps = surface.get_capabilities(&adapter);
-        let config = wgpu::SurfaceConfiguration {
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            format: surface_caps.formats[0],
-            width: size.width,
-            height: size.height,
-            present_mode: surface_caps.present_modes[0],
-            alpha_mode: surface_caps.alpha_modes[0],
-            view_formats: vec![],
-        };
+        let size = winit_window.inner_size();
+        let config = surface
+            .get_default_config(&adapter, size.width, size.height)
+            .expect("Surface isn't supported by the adapter.");
+        surface.configure(&device, &config);
 
         Ok(Self {
             surface,
             device,
             config,
             queue,
-
-            window,
-            size,
+            winit_window,
         })
+    }
+
+    pub fn resize(&mut self, new_size: PhysicalSize<u32>) {
+        if new_size.width > 0 && new_size.height > 0 {
+            self.config.width = new_size.width;
+            self.config.height = new_size.height;
+            self.surface.configure(&self.device, &self.config);
+        }
+    }
+
+    pub fn request_close(&self) {
+        self.winit_window.
+    }
+
+    pub fn get_device(&self) -> &wgpu::Device {
+        &self.device
+    }
+
+    pub fn get_config(&self) -> &wgpu::SurfaceConfiguration {
+        &self.config
+    }
+
+    pub fn get_queue(&self) -> &wgpu::Queue {
+        &self.queue
+    }
+
+    pub fn get_window(&self) -> &WinitWindow {
+        &self.winit_window
     }
 }
