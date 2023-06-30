@@ -64,10 +64,6 @@ impl Window {
         }
     }
 
-    pub fn request_close(&self) {
-        self.winit_window.
-    }
-
     pub fn get_device(&self) -> &wgpu::Device {
         &self.device
     }
