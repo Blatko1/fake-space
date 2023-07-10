@@ -1,16 +1,16 @@
-use winit::{dpi::PhysicalSize, window::Window as WinitWindow};
+use winit::{dpi::PhysicalSize, window::Window as InnerWindow};
 
 pub struct Window {
-    pub surface: wgpu::Surface,
-    pub device: wgpu::Device,
-    pub config: wgpu::SurfaceConfiguration,
-    pub queue: wgpu::Queue,
-    pub winit_window: WinitWindow,
+    surface: wgpu::Surface,
+    device: wgpu::Device,
+    config: wgpu::SurfaceConfiguration,
+    queue: wgpu::Queue,
+    winit_window: InnerWindow,
 }
 
 impl Window {
     pub async fn init(
-        winit_window: WinitWindow,
+        winit_window: InnerWindow,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let backends = wgpu::util::backend_bits_from_env()
             .unwrap_or(wgpu::Backends::PRIMARY);
@@ -64,19 +64,27 @@ impl Window {
         }
     }
 
-    pub fn get_device(&self) -> &wgpu::Device {
+    pub fn recreate_sc(&self) {
+        self.surface.configure(&self.device, &self.config);
+    }
+
+    pub fn get_current_texture(&self) -> Result<wgpu::SurfaceTexture, wgpu::SurfaceError> {
+        self.surface.get_current_texture()
+    }
+
+    pub fn device(&self) -> &wgpu::Device {
         &self.device
     }
 
-    pub fn get_config(&self) -> &wgpu::SurfaceConfiguration {
+    pub fn config(&self) -> &wgpu::SurfaceConfiguration {
         &self.config
     }
 
-    pub fn get_queue(&self) -> &wgpu::Queue {
+    pub fn queue(&self) -> &wgpu::Queue {
         &self.queue
     }
 
-    pub fn get_window(&self) -> &WinitWindow {
+    pub fn inner_window(&self) -> &InnerWindow {
         &self.winit_window
     }
 }

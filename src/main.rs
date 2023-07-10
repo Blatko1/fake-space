@@ -1,9 +1,9 @@
 mod state;
-mod utils;
+mod window;
 
-use futures::executor::block_on;
+use pollster::block_on;
 use state::State;
-use utils::Window;
+use window::Window;
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -26,7 +26,7 @@ fn main() {
 
     event_loop.run(move |event, _, control| {
         match event {
-            Event::WindowEvent { window_id, event } => match event {
+            Event::WindowEvent { event, .. } => match event {
                 WindowEvent::CloseRequested | WindowEvent::Destroyed => {
                     *control = ControlFlow::Exit
                 }
@@ -34,19 +34,26 @@ fn main() {
                     state.process_keyboard_input(input)
                 }
                 WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
-                    state.resize(*new_inner_size);
+                    state.window().resize(*new_inner_size);
                 }
-                WindowEvent::Resized(new_size) => state.resize(new_size),
+                WindowEvent::Resized(new_size) => state.window().resize(new_size),
                 _ => (),
             },
-            Event::DeviceEvent { device_id, event } => todo!(),
+            Event::DeviceEvent { device_id, event } => (),
             Event::MainEventsCleared => {
                 if state.should_exit() {
                     *control = ControlFlow::Exit; 
                 }
+                match state.render() {
+                    Ok(_) => (),
+                    Err(wgpu::SurfaceError::Lost) => state.window().recreate_sc(),
+                    // The system is out of memory, we should probably quit
+                    Err(wgpu::SurfaceError::OutOfMemory) => *control = ControlFlow::Exit,
+                    // All other errors (Outdated, Timeout) should be resolved by the next frame
+                    Err(e) => eprintln!("{:?}", e),
+                }
             },
-            Event::RedrawRequested(_) => todo!(),
-            Event::RedrawEventsCleared => todo!(),
+            Event::RedrawRequested(_) => (),
             Event::LoopDestroyed => println!("Exited!"),
             _ => (),
         }
