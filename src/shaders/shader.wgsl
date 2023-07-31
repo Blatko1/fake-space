@@ -27,6 +27,6 @@ var t_sampler: sampler;
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     // return vec4<f32>(0.3, 0.2, 0.1, 1.0);
-    let rgb = textureSample(texture, t_sampler, in.tex_pos).rgb;
-    return vec4<f32>(rgb, 1.0);
+    let texel = textureSample(texture, t_sampler, in.tex_pos);
+    return texel;
 }

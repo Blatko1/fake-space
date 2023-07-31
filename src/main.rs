@@ -2,12 +2,13 @@ mod state;
 mod window;
 
 use pollster::block_on;
-use state::{State, WIDTH, HEIGHT};
+use state::{State, HEIGHT, WIDTH};
 use window::Window;
 use winit::{
+    dpi::PhysicalSize,
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
-    window::WindowBuilder as WinitWindowBuilder, dpi::PhysicalSize,
+    window::WindowBuilder as WinitWindowBuilder,
 };
 
 fn main() {

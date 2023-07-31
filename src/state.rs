@@ -1,9 +1,10 @@
+use crate::window::{Vertex, Window};
+use rand::Rng;
 use wgpu::util::DeviceExt;
 use winit::{
     dpi::PhysicalSize,
     event::{KeyboardInput, VirtualKeyCode},
 };
-use crate::window::{Vertex, Window};
 
 pub const WIDTH: usize = 800;
 pub const HEIGHT: usize = 600;
@@ -21,51 +22,67 @@ pub struct State {
 
 impl State {
     pub fn new(window: Window) -> Self {
+        let sampler =
+            window.device().create_sampler(&wgpu::SamplerDescriptor {
+                label: Some("Canvas Texture Sampler"),
+                address_mode_u: wgpu::AddressMode::ClampToEdge,
+                address_mode_v: wgpu::AddressMode::ClampToEdge,
+                address_mode_w: wgpu::AddressMode::ClampToEdge,
+                mag_filter: wgpu::FilterMode::Nearest,
+                min_filter: wgpu::FilterMode::Nearest,
+                mipmap_filter: wgpu::FilterMode::Nearest,
+                lod_min_clamp: 0.0,
+                lod_max_clamp: 1.0,
+                compare: None,
+                anisotropy_clamp: 1,
+                border_color: None,
+            });
 
-        let sampler = window.device().create_sampler(&wgpu::SamplerDescriptor {
-            label: Some("Canvas Texture Sampler"),
-            mag_filter: wgpu::FilterMode::Linear,
-            min_filter: wgpu::FilterMode::Nearest,
-            ..Default::default()
-        });
-
-        let size = wgpu::Extent3d {
+        let tex_size = wgpu::Extent3d {
             width: window.config().width,
             height: window.config().height,
             depth_or_array_layers: 1,
         };
 
-        let texture = window.device().create_texture(&wgpu::TextureDescriptor {
-            label: Some("Canvas Texture"),
-            size,
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Rgba8UnormSrgb,
-            usage: wgpu::TextureUsages::TEXTURE_BINDING,
-            view_formats: &[],
-        });
-        let size = (size.width * size.height) as usize;
-        let mut content: Vec<f32> = Vec::with_capacity(WIDTH * HEIGHT * 4);
-        for i in 0..size {
-            content.push(0.5);
-            content.push(0.6);
-            content.push(0.7);
-            content.push(1.0);
+        let texture =
+            window.device().create_texture(&wgpu::TextureDescriptor {
+                label: Some("Canvas Texture"),
+                size: tex_size,
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format: wgpu::TextureFormat::Rgba8UnormSrgb,
+                usage: wgpu::TextureUsages::TEXTURE_BINDING |wgpu::TextureUsages::COPY_DST,
+                view_formats: &[],
+            });
+        let size = (tex_size.width * tex_size.height) as usize;
+        let mut content: Vec<u8> = Vec::with_capacity(WIDTH * HEIGHT * 4);
+        let mut rng = rand::thread_rng();
+        for _ in 0..size {
+            content.push((255.0 * rng.gen::<f32>()) as u8);
+            content.push((255.0 * rng.gen::<f32>()) as u8);
+            content.push((255.0 * rng.gen::<f32>()) as u8);
+            content.push(255);
         }
 
-        window.queue().write_texture(wgpu::ImageCopyTexture {
-            texture: &texture,
-            mip_level: 0,
-            origin: wgpu::Origin3d::ZERO,
-            aspect: wgpu::TextureAspect::All,
-        }, bytemuck::cast_slice(&content), wgpu::ImageDataLayout {
-            offset: 0,
-            bytes_per_row: todo!(),
-            rows_per_image: todo!(),
-        }, size)
+        window.queue().write_texture(
+            wgpu::ImageCopyTexture {
+                texture: &texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            bytemuck::cast_slice(&content),
+            wgpu::ImageDataLayout {
+                offset: 0,
+                bytes_per_row: Some(tex_size.width * 4),
+                rows_per_image: None,
+            },
+            tex_size,
+        );
 
-        let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let texture_view =
+            texture.create_view(&wgpu::TextureViewDescriptor::default());
 
         let shader = window
             .device()
@@ -99,18 +116,25 @@ impl State {
             },
         );
 
-        let bind_group = window.device().create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Main Bind Group"),
-            layout: &bind_group_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: wgpu::BindingResource::TextureView(&texture_view)
-            },
-            wgpu::BindGroupEntry {
-                binding: 1,
-                resource: wgpu::BindingResource::Sampler(&sampler)
-            }],
-        });
+        let bind_group =
+            window
+                .device()
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("Main Bind Group"),
+                    layout: &bind_group_layout,
+                    entries: &[
+                        wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: wgpu::BindingResource::TextureView(
+                                &texture_view,
+                            ),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 1,
+                            resource: wgpu::BindingResource::Sampler(&sampler),
+                        },
+                    ],
+                });
 
         let pipeline_layout = window.device().create_pipeline_layout(
             &wgpu::PipelineLayoutDescriptor {
@@ -129,11 +153,7 @@ impl State {
                     entry_point: "vs_main",
                     buffers: &[Vertex::buffer_layout()],
                 },
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleList,
-                    front_face: wgpu::FrontFace::Cw,
-                    ..Default::default()
-                },
+                primitive: wgpu::PrimitiveState::default(),
                 depth_stencil: None,
                 multisample: wgpu::MultisampleState::default(),
                 fragment: Some(wgpu::FragmentState {
@@ -141,7 +161,7 @@ impl State {
                     entry_point: "fs_main",
                     targets: &[Some(wgpu::ColorTargetState {
                         format: window.config().format,
-                        blend: None,
+                        blend: Some(wgpu::BlendState::ALPHA_BLENDING),
                         write_mask: wgpu::ColorWrites::ALL,
                     })],
                 }),
@@ -156,11 +176,11 @@ impl State {
             },
             Vertex {
                 pos: [3.0, -1.0, 0.0], // bottom-right
-                tex_pos: [4.0, 1.0],
+                tex_pos: [2.0, 1.0],
             },
             Vertex {
                 pos: [-1.0, 3.0, 0.0], // top-left
-                tex_pos: [0.0, 4.0],
+                tex_pos: [0.0, -1.0],
             },
         ];
 
@@ -179,7 +199,7 @@ impl State {
 
             bind_group,
             texture,
-            
+
             should_exit: false,
         }
     }
