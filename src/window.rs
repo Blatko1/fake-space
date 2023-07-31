@@ -64,27 +64,64 @@ impl Window {
         }
     }
 
+    #[inline]
     pub fn recreate_sc(&self) {
         self.surface.configure(&self.device, &self.config);
     }
 
-    pub fn get_current_texture(&self) -> Result<wgpu::SurfaceTexture, wgpu::SurfaceError> {
+    #[inline]
+    pub fn get_current_texture(
+        &self,
+    ) -> Result<wgpu::SurfaceTexture, wgpu::SurfaceError> {
         self.surface.get_current_texture()
     }
 
+    #[inline]
     pub fn device(&self) -> &wgpu::Device {
         &self.device
     }
 
+    #[inline]
     pub fn config(&self) -> &wgpu::SurfaceConfiguration {
         &self.config
     }
 
+    #[inline]
     pub fn queue(&self) -> &wgpu::Queue {
         &self.queue
     }
 
+    #[inline]
     pub fn inner_window(&self) -> &InnerWindow {
         &self.winit_window
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct Vertex {
+    pub pos: [f32; 3],
+    pub tex_pos: [f32; 2],
+}
+
+impl Vertex {
+    pub fn buffer_layout<'a>() -> wgpu::VertexBufferLayout<'a> {
+        use std::mem::size_of;
+        wgpu::VertexBufferLayout {
+            array_stride: size_of::<Vertex>() as wgpu::BufferAddress,
+            step_mode: wgpu::VertexStepMode::Vertex,
+            attributes: &[
+                wgpu::VertexAttribute {
+                    format: wgpu::VertexFormat::Float32x3,
+                    offset: 0,
+                    shader_location: 0,
+                },
+                wgpu::VertexAttribute {
+                    format: wgpu::VertexFormat::Float32x2,
+                    offset: size_of::<[f32; 2]>() as wgpu::BufferAddress,
+                    shader_location: 1,
+                },
+            ],
+        }
     }
 }
