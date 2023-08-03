@@ -1,15 +1,18 @@
+mod canvas;
 mod state;
 mod window;
 
 use pollster::block_on;
-use state::{State, HEIGHT, WIDTH};
+use state::State;
 use window::Window;
 use winit::{
-    dpi::PhysicalSize,
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder as WinitWindowBuilder,
 };
+
+const WIDTH: u32 = 80;
+const HEIGHT: u32 = 60;
 
 fn main() {
     if std::env::var("RUST_LOG").is_err() {
@@ -20,11 +23,10 @@ fn main() {
     let event_loop = EventLoop::new();
     let winit_window = WinitWindowBuilder::new().build(&event_loop).unwrap();
     winit_window.set_title("False Space");
-    winit_window.set_inner_size(PhysicalSize::new(WIDTH as u32, HEIGHT as u32));
 
     let window = block_on(Window::init(winit_window)).unwrap();
 
-    let mut state = State::new(window);
+    let mut state = State::new(window, WIDTH, HEIGHT);
 
     event_loop.run(move |event, _, control| {
         match event {
@@ -36,11 +38,9 @@ fn main() {
                     state.process_keyboard_input(input)
                 }
                 WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
-                    state.window().resize(*new_inner_size);
+                    state.resize(*new_inner_size);
                 }
-                WindowEvent::Resized(new_size) => {
-                    state.window().resize(new_size)
-                }
+                WindowEvent::Resized(new_size) => state.resize(new_size),
                 _ => (),
             },
             Event::DeviceEvent { device_id, event } => (),

@@ -1,7 +1,9 @@
-struct VertexInput {
-    @location(0) pos: vec3<f32>,
-    @location(1) tex_pos: vec2<f32>,
-};
+struct Global {
+    matrix: mat4x4<f32>
+}
+
+@group(0) @binding(2)
+var<uniform> global: Global;
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
@@ -9,11 +11,11 @@ struct VertexOutput {
 };
 
 @vertex
-fn vs_main(in: VertexInput) -> VertexOutput {
+fn vs_main(@location(0) pos: vec2<f32>) -> VertexOutput {
     var out: VertexOutput;
 
-    out.clip_position = vec4<f32>(in.pos, 1.0);
-    out.tex_pos = in.tex_pos;
+    out.clip_position = global.matrix * vec4<f32>(pos, 0.0, 1.0);
+    out.tex_pos = fma(pos, vec2<f32>(0.5, -0.5), vec2<f32>(0.5, 0.5));
 
     return out;   
 }
