@@ -256,6 +256,10 @@ impl Canvas {
         Ok(())
     }
 
+    pub fn clear_data(&mut self) {
+        self.data.fill(0);
+    }
+
     pub fn data_mut(&mut self) -> &mut [u8] {
         &mut self.data
     }
@@ -292,13 +296,12 @@ impl Canvas {
             bytemuck::cast_slice(&matrix),
         );
 
-        let scissor_region = ScissorRegion {
+        self.region = ScissorRegion {
             x: ((window_width - scaled_width) / 2.0).floor() as u32,
             y: ((window_height - scaled_height) / 2.0).floor() as u32,
             width: scaled_width.min(window_width) as u32,
             height: scaled_height.min(window_height) as u32,
         };
-        self.region = scissor_region;
     }
 }
 
