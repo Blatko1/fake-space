@@ -14,20 +14,16 @@ pub struct State {
 
 impl State {
     pub fn new(window: Window, width: u32, height: u32) -> Self {
-        let canvas =
+        let mut canvas =
             Canvas::new(window.device(), window.config().format, width, height);
 
-        let texels = (width * height) as usize;
-        let mut content: Vec<u8> = Vec::with_capacity(texels * 4);
         let mut rng = rand::thread_rng();
-        for _ in 0..texels {
-            content.push((255.0 * rng.gen::<f32>()) as u8);
-            content.push((255.0 * rng.gen::<f32>()) as u8);
-            content.push((255.0 * rng.gen::<f32>()) as u8);
-            content.push(255);
+        for pixel in canvas.data_mut().chunks_exact_mut(4) {
+            pixel[0] = (255.0 * rng.gen::<f32>()) as u8;
+            pixel[1] = (255.0 * rng.gen::<f32>()) as u8;
+            pixel[2] = (255.0 * rng.gen::<f32>()) as u8;
+            pixel[3] = 255;
         }
-
-        canvas.update_texture(window.queue(), bytemuck::cast_slice(&content));
 
         Self {
             window,

@@ -9,18 +9,18 @@ const TRIANGLE_VERTICES: [[f32; 2]; 3] = [
 ];
 
 pub struct Canvas {
+    data: Vec<u8>,
     width: u32,
     height: u32,
 
     pipeline: wgpu::RenderPipeline,
     bind_group: wgpu::BindGroup,
 
-    matrix_buffer: wgpu::Buffer,
+    region: ScissorRegion,
     vertex_buffer: wgpu::Buffer,
+    matrix_buffer: wgpu::Buffer,
     texture: wgpu::Texture,
     size: wgpu::Extent3d,
-
-    region: ScissorRegion,
 }
 
 impl Canvas {
@@ -169,21 +169,42 @@ impl Canvas {
                 multiview: None,
             });
 
+        let data_len = (width * height * 4) as usize;
+
         Self {
+            // RGBA - 4 bytes per pixel
+            data: vec![0; data_len],
             width,
             height,
 
             pipeline,
+            bind_group,
+
             region: ScissorRegion::default(),
             vertex_buffer,
             matrix_buffer,
             texture,
             size,
-            bind_group,
         }
     }
 
     pub fn render(&self, window: &Window) -> Result<(), wgpu::SurfaceError> {
+        window.queue().write_texture(
+            wgpu::ImageCopyTexture {
+                texture: &self.texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            bytemuck::cast_slice(&self.data),
+            wgpu::ImageDataLayout {
+                offset: 0,
+                bytes_per_row: Some(self.width * 4),
+                rows_per_image: None,
+            },
+            self.size,
+        );
+
         let mut encoder = window.device().create_command_encoder(
             &wgpu::CommandEncoderDescriptor {
                 label: Some("Command Encoder"),
@@ -235,22 +256,8 @@ impl Canvas {
         Ok(())
     }
 
-    pub fn update_texture(&self, queue: &wgpu::Queue, data: &[u8]) {
-        queue.write_texture(
-            wgpu::ImageCopyTexture {
-                texture: &self.texture,
-                mip_level: 0,
-                origin: wgpu::Origin3d::ZERO,
-                aspect: wgpu::TextureAspect::All,
-            },
-            data,
-            wgpu::ImageDataLayout {
-                offset: 0,
-                bytes_per_row: Some(self.width * 4),
-                rows_per_image: None,
-            },
-            self.size,
-        );
+    pub fn data_mut(&mut self) -> &mut [u8] {
+        &mut self.data
     }
 
     pub fn resize(
