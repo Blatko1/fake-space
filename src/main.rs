@@ -1,4 +1,5 @@
 mod canvas;
+mod player;
 mod state;
 mod window;
 
@@ -11,8 +12,8 @@ use winit::{
     window::WindowBuilder as WinitWindowBuilder,
 };
 
-const WIDTH: u32 = 80;
-const HEIGHT: u32 = 60;
+const WIDTH: u32 = 320;
+const HEIGHT: u32 = 200;
 
 fn main() {
     if std::env::var("RUST_LOG").is_err() {
@@ -35,7 +36,7 @@ fn main() {
                     *control = ControlFlow::Exit
                 }
                 WindowEvent::KeyboardInput { input, .. } => {
-                    state.process_keyboard_input(input)
+                    state.process_input(input)
                 }
                 WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
                     state.resize(*new_inner_size);
@@ -43,7 +44,6 @@ fn main() {
                 WindowEvent::Resized(new_size) => state.resize(new_size),
                 _ => (),
             },
-            Event::DeviceEvent { device_id, event } => (),
             Event::MainEventsCleared => {
                 if state.should_exit() {
                     *control = ControlFlow::Exit;

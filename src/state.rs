@@ -1,4 +1,4 @@
-use crate::{canvas::Canvas, window::Window};
+use crate::{canvas::Canvas, player::Player, window::Window};
 use rand::Rng;
 use winit::{
     dpi::PhysicalSize,
@@ -8,6 +8,8 @@ use winit::{
 pub struct State {
     window: Window,
     canvas: Canvas,
+
+    player: Player,
 
     should_exit: bool,
 }
@@ -19,9 +21,9 @@ impl State {
 
         let mut rng = rand::thread_rng();
         for pixel in canvas.data_mut().chunks_exact_mut(4) {
-            pixel[0] = (255.0 * rng.gen::<f32>()) as u8;
-            pixel[1] = (255.0 * rng.gen::<f32>()) as u8;
-            pixel[2] = (255.0 * rng.gen::<f32>()) as u8;
+            pixel[0] = 100;
+            pixel[1] = 200;
+            pixel[2] = 250;
             pixel[3] = 255;
         }
 
@@ -29,9 +31,18 @@ impl State {
             window,
             canvas,
 
+            player: Player::default(),
+
             should_exit: false,
         }
     }
+
+    pub fn update(&mut self) {
+        let mut data = self.canvas.data_mut();
+        let pos_x = ((self.player.x / (MAP_WIDTH * TILE_SIZE) as f32) * self.canvas.width() as f32) as u32;
+        let pos_y = ((self.player.y / (MAP_HEIGHT * TILE_SIZE) as f32) * self.canvas.height() as f32) as u32;
+        
+    }   
 
     pub fn render(&self) -> Result<(), wgpu::SurfaceError> {
         self.canvas.render(&self.window)
@@ -46,9 +57,14 @@ impl State {
         );
     }
 
-    pub fn process_keyboard_input(&mut self, input: KeyboardInput) {
-        if let Some(VirtualKeyCode::Escape) = input.virtual_keycode {
-            self.should_exit = true;
+    pub fn process_input(&mut self, input: KeyboardInput) {
+        self.player.process_input(input);
+
+        if let Some(code) = input.virtual_keycode {
+            match code {
+                VirtualKeyCode::Escape => self.should_exit = true,
+                _ => (),
+            }
         }
     }
 
@@ -60,3 +76,20 @@ impl State {
         &mut self.window
     }
 }
+
+const TILE_SIZE: usize = 10;
+const MAP_WIDTH: usize = 16;
+const MAP_HEIGHT: usize = 16;
+const MAP: [usize; MAP_WIDTH * MAP_HEIGHT] = [
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0,
+    0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1,
+];

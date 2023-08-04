@@ -188,6 +188,14 @@ impl Canvas {
         }
     }
 
+    pub fn clear_data(&mut self) {
+        self.data.fill(0);
+    }
+
+    pub fn data_mut(&mut self) -> &mut [u8] {
+        &mut self.data
+    }
+
     pub fn render(&self, window: &Window) -> Result<(), wgpu::SurfaceError> {
         window.queue().write_texture(
             wgpu::ImageCopyTexture {
@@ -256,14 +264,6 @@ impl Canvas {
         Ok(())
     }
 
-    pub fn clear_data(&mut self) {
-        self.data.fill(0);
-    }
-
-    pub fn data_mut(&mut self) -> &mut [u8] {
-        &mut self.data
-    }
-
     pub fn resize(
         &mut self,
         queue: &wgpu::Queue,
@@ -302,6 +302,14 @@ impl Canvas {
             width: scaled_width.min(window_width) as u32,
             height: scaled_height.min(window_height) as u32,
         };
+    }
+
+    pub fn width(&self) -> u32 {
+        self.width
+    }
+
+    pub fn height(&self) -> u32 {
+        self.height
     }
 }
 
