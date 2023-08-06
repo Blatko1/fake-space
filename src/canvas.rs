@@ -9,7 +9,7 @@ const TRIANGLE_VERTICES: [[f32; 2]; 3] = [
 ];
 
 pub struct Canvas {
-    data: Vec<u8>,
+    data: Vec<Pixel>,
     width: u32,
     height: u32,
 
@@ -169,11 +169,9 @@ impl Canvas {
                 multiview: None,
             });
 
-        let data_len = (width * height * 4) as usize;
-
         Self {
             // RGBA - 4 bytes per pixel
-            data: vec![0; data_len],
+            data: vec![Pixel::default(); (width * height) as usize],
             width,
             height,
 
@@ -189,10 +187,10 @@ impl Canvas {
     }
 
     pub fn clear_data(&mut self) {
-        self.data.fill(0);
+        self.data.fill(Pixel::default());
     }
 
-    pub fn data_mut(&mut self) -> &mut [u8] {
+    pub fn data_mut(&mut self) -> &mut [Pixel] {
         &mut self.data
     }
 
@@ -275,7 +273,8 @@ impl Canvas {
 
         let scale = (window_width / texture_width)
             .min(window_height / texture_height)
-            .max(1.0);
+            .max(1.0)
+            .floor();
         let scaled_width = texture_width * scale;
         let scaled_height = texture_height * scale;
 
@@ -311,6 +310,15 @@ impl Canvas {
     pub fn height(&self) -> u32 {
         self.height
     }
+}
+
+#[repr(C)]
+#[derive(Debug, Default, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod)]
+pub struct Pixel {
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+    pub a: u8,
 }
 
 #[derive(Debug, Default)]

@@ -1,8 +1,12 @@
-use crate::{canvas::Canvas, player::Player, window::Window};
+use crate::{
+    canvas::{Canvas, Pixel},
+    player::Player,
+    window::Window,
+};
 use rand::Rng;
 use winit::{
     dpi::PhysicalSize,
-    event::{KeyboardInput, VirtualKeyCode},
+    event::{DeviceEvent, KeyboardInput},
 };
 
 pub struct State {
@@ -16,33 +20,66 @@ pub struct State {
 
 impl State {
     pub fn new(window: Window, width: u32, height: u32) -> Self {
-        let mut canvas =
+        let canvas =
             Canvas::new(window.device(), window.config().format, width, height);
-
-        let mut rng = rand::thread_rng();
-        for pixel in canvas.data_mut().chunks_exact_mut(4) {
-            pixel[0] = 100;
-            pixel[1] = 200;
-            pixel[2] = 250;
-            pixel[3] = 255;
-        }
 
         Self {
             window,
             canvas,
 
-            player: Player::default(),
+            player: Player::new(2.0, 2.0, 90.0),
 
             should_exit: false,
         }
     }
 
     pub fn update(&mut self) {
-        let mut data = self.canvas.data_mut();
-        let pos_x = ((self.player.x / (MAP_WIDTH * TILE_SIZE) as f32) * self.canvas.width() as f32) as u32;
-        let pos_y = ((self.player.y / (MAP_HEIGHT * TILE_SIZE) as f32) * self.canvas.height() as f32) as u32;
-        
-    }   
+        self.player.update();
+
+        self.canvas.clear_data();
+        let width = self.canvas.width();
+        let height = self.canvas.height();
+        let data = self.canvas.data_mut();
+        self.player.cast_rays(width, height, data);
+        //let hits = self.player.cast_rays(width, height);
+        //for hit in hits {
+        //    let pos_x = ((hit.pos.x / MAP_WIDTH as f32) * width as f32) as u32;
+        //    let pos_y = (((MAP_HEIGHT as f32 - hit.pos.y) / MAP_HEIGHT as f32)
+        //        * height as f32) as u32;
+        //    if ((pos_x + pos_y * width) as usize) < (data.len()) {
+        //        data[(pos_x + pos_y * width) as usize] = Pixel {
+        //            r: 150,
+        //            g: 150,
+        //            b: 150,
+        //            a: 150,
+        //        }
+        //    }
+        //}
+
+        //let lines = self.player.cast_rays(width, height);
+        //for (e, line) in lines.iter().enumerate() {
+        //    for i in line.0..line.1 {
+        //        data[(i as usize)*width as usize + e] = Pixel {
+        //            r: 100,
+        //            g: 150,
+        //            b: 0,
+        //            a: 150,
+        //        }
+        //    }
+        //}
+
+        //let pos_x =
+        //    ((self.player.pos.x / MAP_WIDTH as f32) * width as f32) as u32;
+        //let pos_y = (((MAP_HEIGHT as f32 - self.player.pos.y)
+        //    / MAP_HEIGHT as f32)
+        //    * height as f32) as u32;
+        //data[(pos_x + pos_y * width) as usize] = Pixel {
+        //    r: 250,
+        //    g: 250,
+        //    b: 250,
+        //    a: 250,
+        //};
+    }
 
     pub fn render(&self) -> Result<(), wgpu::SurfaceError> {
         self.canvas.render(&self.window)
@@ -57,15 +94,8 @@ impl State {
         );
     }
 
-    pub fn process_input(&mut self, input: KeyboardInput) {
-        self.player.process_input(input);
-
-        if let Some(code) = input.virtual_keycode {
-            match code {
-                VirtualKeyCode::Escape => self.should_exit = true,
-                _ => (),
-            }
-        }
+    pub fn process_input(&mut self, keyboard: KeyboardInput) {
+        self.player.process_input(keyboard);
     }
 
     pub fn should_exit(&self) -> bool {
@@ -77,19 +107,17 @@ impl State {
     }
 }
 
-const TILE_SIZE: usize = 10;
-const MAP_WIDTH: usize = 16;
-const MAP_HEIGHT: usize = 16;
-const MAP: [usize; MAP_WIDTH * MAP_HEIGHT] = [
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0,
-    0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1,
+pub const MAP_WIDTH: usize = 10;
+pub const MAP_HEIGHT: usize = 10;
+pub const MAP: [[u32; MAP_WIDTH]; MAP_HEIGHT] = [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 1, 1, 1, 1, 1, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 1, 0, 1, 0, 0, 1, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 ];

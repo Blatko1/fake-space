@@ -1,16 +1,16 @@
 use winit::{dpi::PhysicalSize, window::Window as WinitWindow};
 
 pub struct Window {
+    // TODO change name
     surface: wgpu::Surface,
     device: wgpu::Device,
     config: wgpu::SurfaceConfiguration,
     queue: wgpu::Queue,
-    inner: WinitWindow,
 }
 
 impl Window {
     pub async fn init(
-        winit_window: WinitWindow,
+        winit_window: &WinitWindow,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let backends = wgpu::util::backend_bits_from_env()
             .unwrap_or(wgpu::Backends::PRIMARY);
@@ -52,7 +52,6 @@ impl Window {
             device,
             config,
             queue,
-            inner: winit_window,
         })
     }
 
