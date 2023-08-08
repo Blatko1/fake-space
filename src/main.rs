@@ -1,7 +1,9 @@
 mod canvas;
-mod player;
+mod map;
+//mod player;
 mod raycaster;
 mod state;
+mod textures;
 mod window;
 
 use std::time::{Duration, Instant};
@@ -14,10 +16,7 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder as WinitWindowBuilder,
 };
-
-const WIDTH: u32 = 320;
-const HEIGHT: u32 = 200;
-
+// TODO add portals like in Portal game
 fn main() {
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "error");
@@ -30,9 +29,9 @@ fn main() {
 
     let window = block_on(Window::init(&winit_window)).unwrap();
 
-    let mut state = State::new(window, WIDTH, HEIGHT);
+    let mut state = State::new(window, 1800, 1000);
 
-    let framerate_delta = Duration::from_secs_f64(1.0 / 60.0);
+    let framerate_delta = Duration::from_secs_f64(1.0 / 30.0);
     let mut time_delta = Instant::now();
 
     event_loop.run(move |event, _, control| {
@@ -50,19 +49,16 @@ fn main() {
                         },
                     ..
                 } => *control = ControlFlow::Exit,
-                WindowEvent::KeyboardInput { input, .. } => {}
+                WindowEvent::KeyboardInput { input, .. } => {
+                    state.process_input(input)
+                }
                 WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
                     state.resize(*new_inner_size);
                 }
                 WindowEvent::Resized(new_size) => state.resize(new_size),
                 _ => (),
             },
-            Event::DeviceEvent { event, .. } => state.process_input(event),
             Event::RedrawRequested(..) => {
-                if state.should_exit() {
-                    *control = ControlFlow::Exit;
-                }
-
                 state.update();
 
                 match state.render() {

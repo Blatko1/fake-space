@@ -1,11 +1,12 @@
 use wgpu::util::DeviceExt;
+use wgpu::TextureFormatFeatureFlags as TexFlags;
 
 use crate::window::Window;
 
 const TRIANGLE_VERTICES: [[f32; 2]; 3] = [
-    [-1.0, -1.0], // bottom-left
-    [3.0, -1.0],  // bottom-right
-    [-1.0, 3.0],  // top-left
+    [-1.0*0.3, -1.0*0.3], // bottom-left
+    [3.0*0.3, -1.0*0.3],  // bottom-right
+    [-1.0*0.3, 3.0*0.3],  // top-left
 ];
 
 pub struct Canvas {
@@ -14,22 +15,57 @@ pub struct Canvas {
     height: u32,
 
     pipeline: wgpu::RenderPipeline,
+    pipeline_layout: wgpu::PipelineLayout,
+    shader: wgpu::ShaderModule,
     bind_group: wgpu::BindGroup,
+
+    canvas_format: wgpu::TextureFormat,
+    render_format: wgpu::TextureFormat,
 
     region: ScissorRegion,
     vertex_buffer: wgpu::Buffer,
-    matrix_buffer: wgpu::Buffer,
+    matrix_buffer: wgpu::Buffer, // TODO make up better names
     texture: wgpu::Texture,
     size: wgpu::Extent3d,
+
+    multisample_framebuffer: wgpu::TextureView,
+    max_sample_count: u32,
+    sample_count: u32,
 }
 
 impl Canvas {
     pub fn new(
         device: &wgpu::Device,
+        adapter: &wgpu::Adapter,
+        config: &wgpu::SurfaceConfiguration,
+        canvas_format: wgpu::TextureFormat,
         render_format: wgpu::TextureFormat,
-        width: u32,
-        height: u32,
+        canvas_width: u32,
+        canvas_height: u32,
     ) -> Self {
+        let flags = adapter.get_texture_format_features(render_format).flags;
+        let max_sample_count = if flags.contains(TexFlags::MULTISAMPLE_X16) {
+            16
+        } else if flags.contains(TexFlags::MULTISAMPLE_X8) {
+            8
+        } else if flags.contains(TexFlags::MULTISAMPLE_X4) {
+            4
+        } else if flags.contains(TexFlags::MULTISAMPLE_X2) {
+            2
+        } else {
+            1
+        };
+        println!("max_sample_count: {}", max_sample_count);
+        let sample_count = 1;
+
+        let multisample_framebuffer =
+            Self::create_multisample_framebuffer(
+                device,
+                config,
+                render_format,
+                sample_count,
+            );
+
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("Canvas Texture Sampler"),
             lod_min_clamp: 0.0,
@@ -38,8 +74,8 @@ impl Canvas {
         });
 
         let size = wgpu::Extent3d {
-            width,
-            height,
+            width: canvas_width,
+            height: canvas_height,
             depth_or_array_layers: 1,
         };
 
@@ -49,7 +85,7 @@ impl Canvas {
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            format: canvas_format,
             usage: wgpu::TextureUsages::TEXTURE_BINDING
                 | wgpu::TextureUsages::COPY_DST,
             view_formats: &[],
@@ -123,12 +159,6 @@ impl Canvas {
             ],
         });
 
-        let vertex_buffer_layout = wgpu::VertexBufferLayout {
-            array_stride: std::mem::size_of::<[f32; 2]>()
-                as wgpu::BufferAddress,
-            step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: &wgpu::vertex_attr_array![0 => Float32x2],
-        };
         let vertex_buffer =
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Vertex Buffer"),
@@ -136,7 +166,7 @@ impl Canvas {
                 usage: wgpu::BufferUsages::VERTEX,
             });
 
-        let shader = device
+        let shader: wgpu::ShaderModule = device
             .create_shader_module(wgpu::include_wgsl!("shaders/shader.wgsl"));
 
         let pipeline_layout =
@@ -145,37 +175,24 @@ impl Canvas {
                 bind_group_layouts: &[&bind_group_layout],
                 push_constant_ranges: &[],
             });
-        let pipeline =
-            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: Some("Render Pipeline"),
-                layout: Some(&pipeline_layout),
-                vertex: wgpu::VertexState {
-                    module: &shader,
-                    entry_point: "vs_main",
-                    buffers: &[vertex_buffer_layout],
-                },
-                primitive: wgpu::PrimitiveState::default(),
-                multisample: wgpu::MultisampleState::default(),
-                fragment: Some(wgpu::FragmentState {
-                    module: &shader,
-                    entry_point: "fs_main",
-                    targets: &[Some(wgpu::ColorTargetState {
-                        format: render_format,
-                        blend: Some(wgpu::BlendState::ALPHA_BLENDING),
-                        write_mask: wgpu::ColorWrites::ALL,
-                    })],
-                }),
-                depth_stencil: None,
-                multiview: None,
-            });
+
+        let pipeline = Self::create_pipeline(&device, Some(&pipeline_layout), &shader, sample_count, render_format);
 
         Self {
             // RGBA - 4 bytes per pixel
-            data: vec![Pixel::default(); (width * height) as usize],
-            width,
-            height,
+            data: vec![
+                Pixel::default();
+                (canvas_width * canvas_height) as usize
+            ],
+            width: canvas_width,
+            height: canvas_height,
+
+            canvas_format,
+            render_format,
 
             pipeline,
+            pipeline_layout,
+            shader,
             bind_group,
 
             region: ScissorRegion::default(),
@@ -183,6 +200,10 @@ impl Canvas {
             matrix_buffer,
             texture,
             size,
+
+            multisample_framebuffer,
+            max_sample_count,
+            sample_count,
         }
     }
 
@@ -221,25 +242,42 @@ impl Canvas {
         let view = frame
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
-
         {
+            let color_attachment = if self.sample_count > 1 {
+                wgpu::RenderPassColorAttachment {
+                    view: &self.multisample_framebuffer,
+                    resolve_target: Some(&view),
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color {
+                            r: 0.1,
+                            g: 0.2,
+                            b: 0.3,
+                            a: 1.0,
+                        }),
+                        store: false, // TODO test this
+                    },
+                }
+            } else {
+                wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color {
+                            r: 0.1,
+                            g: 0.2,
+                            b: 0.3,
+                            a: 1.0,
+                        }),
+                        store: true,
+                    },
+                }
+            };
+
             let mut rpass =
                 encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                     label: Some("Main RenderPass"),
                     color_attachments: &[Some(
-                        wgpu::RenderPassColorAttachment {
-                            view: &view,
-                            resolve_target: None,
-                            ops: wgpu::Operations {
-                                load: wgpu::LoadOp::Clear(wgpu::Color {
-                                    r: 0.1,
-                                    g: 0.2,
-                                    b: 0.3,
-                                    a: 1.0,
-                                }),
-                                store: true,
-                            },
-                        },
+                        color_attachment
                     )],
                     depth_stencil_attachment: None,
                 });
@@ -264,10 +302,20 @@ impl Canvas {
 
     pub fn resize(
         &mut self,
+        device: &wgpu::Device,
         queue: &wgpu::Queue,
-        window_width: f32,
-        window_height: f32,
+        config: &wgpu::SurfaceConfiguration,
     ) {
+        self.multisample_framebuffer =
+            Self::create_multisample_framebuffer(
+                device,
+                config,
+                self.render_format,
+                self.max_sample_count,
+            );
+
+        let window_width = config.width as f32;
+        let window_height = config.height as f32;
         let (texture_width, texture_height) =
             (self.width as f32, self.height as f32);
 
@@ -303,12 +351,73 @@ impl Canvas {
         };
     }
 
-    pub fn width(&self) -> u32 {
-        self.width
+    pub fn decrease_multisampling(&mut self) {
+
     }
 
-    pub fn height(&self) -> u32 {
-        self.height
+    fn modify_multisampling(&mut self, device: &wgpu::Device, config: &wgpu::SurfaceConfiguration, sample_count: u32) {
+        self.multisample_framebuffer = Self::create_multisample_framebuffer(device, config, self.render_format, sample_count);
+        self.pipeline = Self::create_pipeline(device, Some(&self.pipeline_layout), &self.shader, sample_count, self.render_format);
+        self.sample_count = sample_count;
+    }
+
+    fn create_multisample_framebuffer(
+        device: &wgpu::Device,
+        config: &wgpu::SurfaceConfiguration,
+        format: wgpu::TextureFormat,
+        sample_count: u32,
+    ) -> wgpu::TextureView {
+        let multisample_texture =
+            device.create_texture(&wgpu::TextureDescriptor {
+                label: Some("Multisample FrameBuffer Texture"),
+                size: wgpu::Extent3d {
+                    width: config.width,
+                    height: config.height,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count,
+                dimension: wgpu::TextureDimension::D2,
+                format,
+                usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+                view_formats: &[],
+            }); // TODO look if can be neater
+
+        multisample_texture
+            .create_view(&wgpu::TextureViewDescriptor::default())
+    }
+
+    fn create_pipeline(device: &wgpu::Device, layout: Option<&wgpu::PipelineLayout>, shader: &wgpu::ShaderModule, sample_count: u32, format: wgpu::TextureFormat) -> wgpu::RenderPipeline {
+        device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("Render Pipeline"),
+            layout,
+            vertex: wgpu::VertexState {
+                module: shader,
+                entry_point: "vs_main",
+                buffers: &[wgpu::VertexBufferLayout {
+                    array_stride: std::mem::size_of::<[f32; 2]>()
+                        as wgpu::BufferAddress,
+                    step_mode: wgpu::VertexStepMode::Vertex,
+                    attributes: &wgpu::vertex_attr_array![0 => Float32x2],
+                }],
+            },
+            primitive: wgpu::PrimitiveState::default(),
+            multisample: wgpu::MultisampleState {
+                count: sample_count,
+                ..Default::default()
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: shader,
+                entry_point: "fs_main",
+                targets: &[Some(wgpu::ColorTargetState {
+                    format,
+                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+            }),
+            depth_stencil: None,
+            multiview: None,
+        })
     }
 }
 

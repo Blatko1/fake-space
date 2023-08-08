@@ -1,16 +1,13 @@
 use std::f32::consts::PI;
 
 use glam::Vec2;
-use winit::event::{DeviceEvent, ElementState, KeyboardInput, VirtualKeyCode};
+use winit::event::{ElementState, KeyboardInput, VirtualKeyCode};
 
-use crate::{
-    canvas::Pixel,
-    raycaster::Raycaster,
-    state::{MAP, MAP_HEIGHT, MAP_WIDTH},
-    HEIGHT, WIDTH,
-};
+use crate::{canvas::Pixel, raycaster::Raycaster};
 
 const MOVEMENT_SPEED: f32 = 0.05;
+
+thread_local! {static ALA: u32 = 1;}
 
 #[derive(Debug)]
 pub struct Player {
@@ -22,9 +19,22 @@ pub struct Player {
 
 impl Player {
     /// - angle - in degrees
-    pub fn new(x: f32, y: f32, angle: f32) -> Self {
+    pub fn new(
+        pos_x: f32,
+        pos_y: f32,
+        angle: f32,
+        screen_w: u32,
+        screen_h: u32,
+    ) -> Self {
         let fov = 80f32.to_radians();
-        let raycaster = Raycaster::new(x, y, angle.to_radians(), fov);
+        let raycaster = Raycaster::new(
+            pos_x,
+            pos_y,
+            angle.to_radians(),
+            fov,
+            screen_w,
+            screen_h,
+        );
 
         Self {
             raycaster,
@@ -34,27 +44,13 @@ impl Player {
         }
     }
 
-    pub fn update(&mut self) {}
+    pub fn update(&mut self, texture: [Pixel; 64 * 64], data: &mut [Pixel]) {
+        self.raycaster.update();
+        self.raycaster.cast_rays(data);
+    }
 
     pub fn process_input(&mut self, keyboard: KeyboardInput) {
-        if let Some(key) = keyboard.virtual_keycode {
-            let value = match keyboard.state {
-                ElementState::Pressed => 1.0,
-                ElementState::Released => 0.0,
-            };
-
-            match key {
-                // Turn left:
-                VirtualKeyCode::A => self.rotation = value,
-                // Turn right:
-                VirtualKeyCode::D => self.rotation = -value,
-                // Move forward:
-                VirtualKeyCode::W => self.movement = value,
-                // Move backward:
-                VirtualKeyCode::S => self.movement = -value,
-                _ => (),
-            }
-        }
+        self.raycaster.process_input(keyboard);
     }
 }
 
@@ -69,18 +65,6 @@ pub struct Hit {
 pub enum Side {
     Vertical,
     Horizontal,
-}
-
-fn verline(x: u32, start: u32, end: u32, data: &mut [Pixel], color: u8) {
-    for i in start..end {
-        data[(HEIGHT as usize - 1 - i as usize) * WIDTH as usize + x as usize] =
-            Pixel {
-                r: color,
-                g: color,
-                b: color,
-                a: 255,
-            }
-    }
 }
 
 #[inline]

@@ -2,6 +2,7 @@ use winit::{dpi::PhysicalSize, window::Window as WinitWindow};
 
 pub struct Window {
     // TODO change name
+    adapter: wgpu::Adapter,
     surface: wgpu::Surface,
     device: wgpu::Device,
     config: wgpu::SurfaceConfiguration,
@@ -34,7 +35,7 @@ impl Window {
             .request_device(
                 &wgpu::DeviceDescriptor {
                     label: Some("Request Device"),
-                    features: wgpu::Features::empty(),
+                    features: wgpu::Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES,
                     limits: wgpu::Limits::default(),
                 },
                 None,
@@ -46,8 +47,9 @@ impl Window {
             .get_default_config(&adapter, size.width, size.height)
             .expect("Surface isn't supported by the adapter.");
         surface.configure(&device, &config);
-
+        // TODO maybe add textures to config.view_format
         Ok(Self {
+            adapter,
             surface,
             device,
             config,
@@ -88,5 +90,20 @@ impl Window {
     #[inline]
     pub fn queue(&self) -> &wgpu::Queue {
         &self.queue
+    }
+
+    #[inline]
+    pub fn adapter(&self) -> &wgpu::Adapter {
+        &self.adapter
+    }
+
+    #[inline]
+    pub fn width(&self) -> u32 {
+        self.config.width
+    }
+
+    #[inline]
+    pub fn height(&self) -> u32 {
+        self.config.height
     }
 }
