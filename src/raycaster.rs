@@ -201,9 +201,10 @@ impl Raycaster {
                         }
                     };
                     let wall_x = wall_x - wall_x.floor();
+                    let wall_dist = perp_wall_dist.max(0.0);
                     self.hits.push(RayHit {
                         screen_x: x,
-                        wall_dist: perp_wall_dist,
+                        wall_dist,
                         tile,
                         side,
                         wall_x,

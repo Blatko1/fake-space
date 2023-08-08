@@ -1,7 +1,6 @@
 struct Global {
     matrix: mat4x4<f32>
 }
-
 @group(0) @binding(2)
 var<uniform> global: Global;
 
@@ -22,13 +21,11 @@ fn vs_main(@location(0) pos: vec2<f32>) -> VertexOutput {
 
 @group(0) @binding(0)
 var texture: texture_2d<f32>;
-
 @group(0) @binding(1)
 var t_sampler: sampler;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    // return vec4<f32>(0.3, 0.2, 0.1, 1.0);
     let texel = textureSample(texture, t_sampler, in.tex_pos);
     return texel;
 }

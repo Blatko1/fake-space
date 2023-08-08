@@ -29,7 +29,7 @@ fn main() {
 
     let window = block_on(Window::init(&winit_window)).unwrap();
 
-    let mut state = State::new(window, 1800, 1000);
+    let mut state = State::new(window, 960, 540);
 
     let framerate_delta = Duration::from_secs_f64(1.0 / 30.0);
     let mut time_delta = Instant::now();

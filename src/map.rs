@@ -34,8 +34,12 @@ impl Map {
     /// Returns [`Tile::Void`] if coordinates are out of bounds.
     #[inline]
     pub fn get_value(&self, x: usize, y: usize) -> Tile {
+        let val = match (self.height - 1).checked_sub(y) {
+            Some(v) => v,
+            None => return Tile::Void,
+        };
         if let Some(&val) =
-            self.data.get((self.height - y - 1) * self.width + x)
+            self.data.get(val * self.width + x)
         {
             return val;
         }

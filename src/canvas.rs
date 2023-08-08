@@ -1,13 +1,29 @@
 use wgpu::util::DeviceExt;
-use wgpu::TextureFormatFeatureFlags as TexFlags;
 
 use crate::window::Window;
 
 const TRIANGLE_VERTICES: [[f32; 2]; 3] = [
-    [-1.0*0.3, -1.0*0.3], // bottom-left
-    [3.0*0.3, -1.0*0.3],  // bottom-right
-    [-1.0*0.3, 3.0*0.3],  // top-left
+    [-1.0, -1.0], // bottom-left
+    [3.0, -1.0],  // bottom-right
+    [-1.0, 3.0],  // top-left
 ];
+
+#[repr(C)]
+#[derive(Debug, Default, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod)]
+pub struct Pixel {
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+    pub a: u8,
+}
+
+#[derive(Debug, Default)]
+struct ScissorRegion {
+    pub x: u32,
+    pub y: u32,
+    pub width: u32,
+    pub height: u32,
+}
 
 pub struct Canvas {
     data: Vec<Pixel>,
@@ -15,91 +31,63 @@ pub struct Canvas {
     height: u32,
 
     pipeline: wgpu::RenderPipeline,
-    pipeline_layout: wgpu::PipelineLayout,
-    shader: wgpu::ShaderModule,
-    bind_group: wgpu::BindGroup,
-
-    canvas_format: wgpu::TextureFormat,
-    render_format: wgpu::TextureFormat,
+    canvas_bind_group: wgpu::BindGroup,
+    fill_bind_group: wgpu::BindGroup,
+    bind_group_layout: wgpu::BindGroupLayout,
 
     region: ScissorRegion,
     vertex_buffer: wgpu::Buffer,
-    matrix_buffer: wgpu::Buffer, // TODO make up better names
-    texture: wgpu::Texture,
-    size: wgpu::Extent3d,
+    canvas_matrix_buffer: wgpu::Buffer,
+    fill_matrix_buffer: wgpu::Buffer,
 
-    multisample_framebuffer: wgpu::TextureView,
-    max_sample_count: u32,
-    sample_count: u32,
+    canvas_texture: DrawTexture,
+    fill_texture: DrawTexture,
 }
 
 impl Canvas {
     pub fn new(
         device: &wgpu::Device,
-        adapter: &wgpu::Adapter,
         config: &wgpu::SurfaceConfiguration,
-        canvas_format: wgpu::TextureFormat,
         render_format: wgpu::TextureFormat,
         canvas_width: u32,
         canvas_height: u32,
     ) -> Self {
-        let flags = adapter.get_texture_format_features(render_format).flags;
-        let max_sample_count = if flags.contains(TexFlags::MULTISAMPLE_X16) {
-            16
-        } else if flags.contains(TexFlags::MULTISAMPLE_X8) {
-            8
-        } else if flags.contains(TexFlags::MULTISAMPLE_X4) {
-            4
-        } else if flags.contains(TexFlags::MULTISAMPLE_X2) {
-            2
-        } else {
-            1
-        };
-        println!("max_sample_count: {}", max_sample_count);
-        let sample_count = 1;
-
-        let multisample_framebuffer =
-            Self::create_multisample_framebuffer(
-                device,
-                config,
-                render_format,
-                sample_count,
-            );
-
-        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            label: Some("Canvas Texture Sampler"),
-            lod_min_clamp: 0.0,
-            lod_max_clamp: 1.0,
-            ..Default::default()
-        });
-
-        let size = wgpu::Extent3d {
-            width: canvas_width,
-            height: canvas_height,
-            depth_or_array_layers: 1,
-        };
-
-        let texture = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("Canvas Texture"),
-            size,
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: canvas_format,
-            usage: wgpu::TextureUsages::TEXTURE_BINDING
-                | wgpu::TextureUsages::COPY_DST,
-            view_formats: &[],
-        });
-        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let canvas_texture =
+            DrawTexture::new_canvas_tex(device, canvas_width, canvas_height);
+        let fill_texture = DrawTexture::new_fill_tex(
+            device,
+            config.width,
+            config.height,
+            render_format,
+        );
 
         let matrix_buffer_size =
             std::mem::size_of::<[[f32; 4]; 4]>() as wgpu::BufferAddress;
-        let matrix_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Matrix Uniform Buffer"),
-            size: matrix_buffer_size,
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
+        let canvas_matrix_buffer =
+            device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("Canvas Matrix Uniform Buffer"),
+                size: matrix_buffer_size,
+                usage: wgpu::BufferUsages::UNIFORM
+                    | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            });
+        let fill_matrix_buffer =
+            device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("Fill Matrix Uniform Buffer"),
+                size: matrix_buffer_size,
+                usage: wgpu::BufferUsages::UNIFORM
+                    | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            });
+        let vertex_buffer =
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Vertex Buffer"),
+                contents: bytemuck::cast_slice(&TRIANGLE_VERTICES),
+                usage: wgpu::BufferUsages::VERTEX,
+            });
+
+        let shader: wgpu::ShaderModule = device
+            .create_shader_module(wgpu::include_wgsl!("shaders/shader.wgsl"));
 
         let bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -140,34 +128,53 @@ impl Canvas {
                 ],
             });
 
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Main Bind Group"),
-            layout: &bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&sampler),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: matrix_buffer.as_entire_binding(),
-                },
-            ],
-        });
-
-        let vertex_buffer =
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Vertex Buffer"),
-                contents: bytemuck::cast_slice(&TRIANGLE_VERTICES),
-                usage: wgpu::BufferUsages::VERTEX,
+        let canvas_bind_group =
+            device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("Canvas Bind Group"),
+                layout: &bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(
+                            &canvas_texture.view,
+                        ),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::Sampler(
+                            &canvas_texture.sampler,
+                        ),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: canvas_matrix_buffer.as_entire_binding(),
+                    },
+                ],
             });
 
-        let shader: wgpu::ShaderModule = device
-            .create_shader_module(wgpu::include_wgsl!("shaders/shader.wgsl"));
+        let fill_bind_group =
+            device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("Fill Bind Group"),
+                layout: &bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(
+                            &fill_texture.view,
+                        ),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::Sampler(
+                            &fill_texture.sampler,
+                        ),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: fill_matrix_buffer.as_entire_binding(),
+                    },
+                ],
+            });
 
         let pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -176,10 +183,36 @@ impl Canvas {
                 push_constant_ranges: &[],
             });
 
-        let pipeline = Self::create_pipeline(&device, Some(&pipeline_layout), &shader, sample_count, render_format);
+        let pipeline =
+            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: Some("Render Pipeline"),
+                layout: Some(&pipeline_layout),
+                vertex: wgpu::VertexState {
+                    module: &shader,
+                    entry_point: "vs_main",
+                    buffers: &[wgpu::VertexBufferLayout {
+                        array_stride: std::mem::size_of::<[f32; 2]>()
+                            as wgpu::BufferAddress,
+                        step_mode: wgpu::VertexStepMode::Vertex,
+                        attributes: &wgpu::vertex_attr_array![0 => Float32x2],
+                    }],
+                },
+                primitive: wgpu::PrimitiveState::default(),
+                multisample: wgpu::MultisampleState::default(),
+                fragment: Some(wgpu::FragmentState {
+                    module: &shader,
+                    entry_point: "fs_main",
+                    targets: &[Some(wgpu::ColorTargetState {
+                        format: render_format,
+                        blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                        write_mask: wgpu::ColorWrites::ALL,
+                    })],
+                }),
+                depth_stencil: None,
+                multiview: None,
+            });
 
         Self {
-            // RGBA - 4 bytes per pixel
             data: vec![
                 Pixel::default();
                 (canvas_width * canvas_height) as usize
@@ -187,23 +220,18 @@ impl Canvas {
             width: canvas_width,
             height: canvas_height,
 
-            canvas_format,
-            render_format,
-
             pipeline,
-            pipeline_layout,
-            shader,
-            bind_group,
+            canvas_bind_group,
+            fill_bind_group,
+            bind_group_layout,
 
             region: ScissorRegion::default(),
             vertex_buffer,
-            matrix_buffer,
-            texture,
-            size,
+            canvas_matrix_buffer,
+            fill_matrix_buffer,
 
-            multisample_framebuffer,
-            max_sample_count,
-            sample_count,
+            canvas_texture,
+            fill_texture,
         }
     }
 
@@ -218,7 +246,7 @@ impl Canvas {
     pub fn render(&self, window: &Window) -> Result<(), wgpu::SurfaceError> {
         window.queue().write_texture(
             wgpu::ImageCopyTexture {
-                texture: &self.texture,
+                texture: &self.canvas_texture.texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
                 aspect: wgpu::TextureAspect::All,
@@ -229,7 +257,7 @@ impl Canvas {
                 bytes_per_row: Some(self.width * 4),
                 rows_per_image: None,
             },
-            self.size,
+            self.canvas_texture.size,
         );
 
         let mut encoder = window.device().create_command_encoder(
@@ -243,54 +271,64 @@ impl Canvas {
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
         {
-            let color_attachment = if self.sample_count > 1 {
-                wgpu::RenderPassColorAttachment {
-                    view: &self.multisample_framebuffer,
-                    resolve_target: Some(&view),
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.1,
-                            g: 0.2,
-                            b: 0.3,
-                            a: 1.0,
-                        }),
-                        store: false, // TODO test this
-                    },
-                }
-            } else {
-                wgpu::RenderPassColorAttachment {
-                    view: &view,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.1,
-                            g: 0.2,
-                            b: 0.3,
-                            a: 1.0,
-                        }),
-                        store: true,
-                    },
-                }
-            };
-
             let mut rpass =
                 encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                     label: Some("Main RenderPass"),
                     color_attachments: &[Some(
-                        color_attachment
+                        wgpu::RenderPassColorAttachment {
+                            view: &self.fill_texture.view,
+                            resolve_target: None,
+                            ops: wgpu::Operations {
+                                load: wgpu::LoadOp::Clear(wgpu::Color {
+                                    r: 0.1,
+                                    g: 0.2,
+                                    b: 0.3,
+                                    a: 1.0,
+                                }),
+                                store: true,
+                            },
+                        },
                     )],
                     depth_stencil_attachment: None,
                 });
 
             rpass.set_pipeline(&self.pipeline);
             rpass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-            rpass.set_bind_group(0, &self.bind_group, &[]);
+            rpass.set_bind_group(0, &self.canvas_bind_group, &[]);
             rpass.set_scissor_rect(
                 self.region.x,
                 self.region.y,
                 self.region.width,
                 self.region.height,
             );
+            rpass.draw(0..3, 0..1);
+        }
+
+        {
+            let mut rpass =
+                encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                    label: Some("Main RenderPass"),
+                    color_attachments: &[Some(
+                        wgpu::RenderPassColorAttachment {
+                            view: &view,
+                            resolve_target: None,
+                            ops: wgpu::Operations {
+                                load: wgpu::LoadOp::Clear(wgpu::Color {
+                                    r: 0.1,
+                                    g: 0.2,
+                                    b: 0.3,
+                                    a: 1.0,
+                                }),
+                                store: true,
+                            },
+                        },
+                    )],
+                    depth_stencil_attachment: None,
+                });
+
+            rpass.set_pipeline(&self.pipeline);
+            rpass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+            rpass.set_bind_group(0, &self.fill_bind_group, &[]);
             rpass.draw(0..3, 0..1);
         }
 
@@ -301,19 +339,12 @@ impl Canvas {
     }
 
     pub fn resize(
+        // TODO maybe take window dimensions as two arguments
         &mut self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         config: &wgpu::SurfaceConfiguration,
     ) {
-        self.multisample_framebuffer =
-            Self::create_multisample_framebuffer(
-                device,
-                config,
-                self.render_format,
-                self.max_sample_count,
-            );
-
         let window_width = config.width as f32;
         let window_height = config.height as f32;
         let (texture_width, texture_height) =
@@ -321,8 +352,7 @@ impl Canvas {
 
         let scale = (window_width / texture_width)
             .min(window_height / texture_height)
-            .max(1.0)
-            .floor();
+            .max(1.0);
         let scaled_width = texture_width * scale;
         let scaled_height = texture_height * scale;
 
@@ -338,7 +368,7 @@ impl Canvas {
         ];
 
         queue.write_buffer(
-            &self.matrix_buffer,
+            &self.canvas_matrix_buffer,
             0,
             bytemuck::cast_slice(&matrix),
         );
@@ -349,91 +379,153 @@ impl Canvas {
             width: scaled_width.min(window_width) as u32,
             height: scaled_height.min(window_height) as u32,
         };
+        self.resize_fill(device, queue, config);
     }
 
-    pub fn decrease_multisampling(&mut self) {
-
-    }
-
-    fn modify_multisampling(&mut self, device: &wgpu::Device, config: &wgpu::SurfaceConfiguration, sample_count: u32) {
-        self.multisample_framebuffer = Self::create_multisample_framebuffer(device, config, self.render_format, sample_count);
-        self.pipeline = Self::create_pipeline(device, Some(&self.pipeline_layout), &self.shader, sample_count, self.render_format);
-        self.sample_count = sample_count;
-    }
-
-    fn create_multisample_framebuffer(
+    pub fn resize_fill(
+        // TODO maybe take window dimensions as two arguments
+        &mut self,
         device: &wgpu::Device,
-        config: &wgpu::SurfaceConfiguration,
-        format: wgpu::TextureFormat,
-        sample_count: u32,
-    ) -> wgpu::TextureView {
-        let multisample_texture =
-            device.create_texture(&wgpu::TextureDescriptor {
-                label: Some("Multisample FrameBuffer Texture"),
-                size: wgpu::Extent3d {
-                    width: config.width,
-                    height: config.height,
-                    depth_or_array_layers: 1,
+        queue: &wgpu::Queue,
+        config: &wgpu::SurfaceConfiguration
+    ) {
+        // TODO change this possibly (arguments; it would be better to provide only width and height)
+        self.fill_texture = DrawTexture::new_fill_tex(device, config.width, config.height, config.format);
+        self.fill_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Fill Bind Group"),
+            layout: &self.bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(
+                        &self.fill_texture.view,
+                    ),
                 },
-                mip_level_count: 1,
-                sample_count,
-                dimension: wgpu::TextureDimension::D2,
-                format,
-                usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-                view_formats: &[],
-            }); // TODO look if can be neater
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(
+                        &self.fill_texture.sampler,
+                    ),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: self.fill_matrix_buffer.as_entire_binding(),
+                },
+            ],
+        });
+        
+        let window_width = config.width as f32;
+        let window_height = config.height as f32;
+        let (texture_width, texture_height) =
+            (self.region.width as f32, self.region.height as f32);
 
-        multisample_texture
-            .create_view(&wgpu::TextureViewDescriptor::default())
-    }
+        let scale = (window_width / texture_width)
+            .min(window_height / texture_height);
+        let scaled_width = texture_width * scale;
+        let scaled_height = texture_height * scale;
 
-    fn create_pipeline(device: &wgpu::Device, layout: Option<&wgpu::PipelineLayout>, shader: &wgpu::ShaderModule, sample_count: u32, format: wgpu::TextureFormat) -> wgpu::RenderPipeline {
-        device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("Render Pipeline"),
-            layout,
-            vertex: wgpu::VertexState {
-                module: shader,
-                entry_point: "vs_main",
-                buffers: &[wgpu::VertexBufferLayout {
-                    array_stride: std::mem::size_of::<[f32; 2]>()
-                        as wgpu::BufferAddress,
-                    step_mode: wgpu::VertexStepMode::Vertex,
-                    attributes: &wgpu::vertex_attr_array![0 => Float32x2],
-                }],
-            },
-            primitive: wgpu::PrimitiveState::default(),
-            multisample: wgpu::MultisampleState {
-                count: sample_count,
-                ..Default::default()
-            },
-            fragment: Some(wgpu::FragmentState {
-                module: shader,
-                entry_point: "fs_main",
-                targets: &[Some(wgpu::ColorTargetState {
-                    format,
-                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
-                    write_mask: wgpu::ColorWrites::ALL,
-                })],
-            }),
-            depth_stencil: None,
-            multiview: None,
-        })
+        let s_w = scaled_width / window_width;
+        let s_h = scaled_height / window_height;
+        let t_x = (window_width / 2.0).fract() / window_width;
+        let t_y = (window_height / 2.0).fract() / window_height;
+        let matrix = [
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [t_x, t_y, 0.0, 1.0],
+        ];
+
+        // TODO this is temp!!
+        queue.write_buffer(
+            &self.fill_matrix_buffer,
+            0,
+            bytemuck::cast_slice(&matrix),
+        );
     }
 }
 
-#[repr(C)]
-#[derive(Debug, Default, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod)]
-pub struct Pixel {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
-    pub a: u8,
+struct DrawTexture {
+    pub sampler: wgpu::Sampler,
+    pub texture: wgpu::Texture,
+    pub view: wgpu::TextureView,
+    pub size: wgpu::Extent3d,
 }
 
-#[derive(Debug, Default)]
-struct ScissorRegion {
-    pub x: u32,
-    pub y: u32,
-    pub width: u32,
-    pub height: u32,
+impl DrawTexture {
+    const CANVAS_FORMAT: wgpu::TextureFormat =
+        wgpu::TextureFormat::Rgba8UnormSrgb;
+
+    fn new(
+        device: &wgpu::Device,
+        width: u32,
+        height: u32,
+        format: wgpu::TextureFormat,
+        sampler_desc: wgpu::SamplerDescriptor,
+        usage: wgpu::TextureUsages,
+    ) -> Self {
+        let sampler = device.create_sampler(&sampler_desc);
+        let size = wgpu::Extent3d {
+            width,
+            height,
+            depth_or_array_layers: 1,
+        };
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("Canvas Texture"),
+            size,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format,
+            usage,
+            view_formats: &[],
+        });
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+        Self {
+            sampler,
+            texture,
+            view,
+            size,
+        }
+    }
+
+    #[inline]
+    fn new_canvas_tex(device: &wgpu::Device, width: u32, height: u32) -> Self {
+        let sampler_desc = wgpu::SamplerDescriptor {
+            label: Some("Canvas Texture Sampler"),
+            lod_min_clamp: 0.0,
+            lod_max_clamp: 1.0,
+            ..Default::default()
+        };
+        let usage = wgpu::TextureUsages::TEXTURE_BINDING
+            | wgpu::TextureUsages::COPY_DST;
+        Self::new(
+            device,
+            width,
+            height,
+            Self::CANVAS_FORMAT,
+            sampler_desc,
+            usage,
+        )
+    }
+
+    #[inline]
+    fn new_fill_tex(
+        device: &wgpu::Device,
+        width: u32,
+        height: u32,
+        format: wgpu::TextureFormat,
+    ) -> Self {
+        let sampler_desc = wgpu::SamplerDescriptor {
+            label: Some("Fill Texture Sampler"),
+            lod_min_clamp: 0.0,
+            lod_max_clamp: 1.0,
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Linear,
+            ..Default::default()
+        };
+        let usage = wgpu::TextureUsages::TEXTURE_BINDING
+            | wgpu::TextureUsages::RENDER_ATTACHMENT;
+        Self::new(device, width, height, format, sampler_desc, usage)
+    }
 }

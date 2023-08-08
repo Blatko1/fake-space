@@ -1,5 +1,8 @@
 use crate::{canvas::Canvas, map::Map, raycaster::Raycaster, window::Window};
-use winit::{dpi::PhysicalSize, event::{KeyboardInput, VirtualKeyCode}};
+use winit::{
+    dpi::PhysicalSize,
+    event::{KeyboardInput, VirtualKeyCode},
+};
 
 pub struct State {
     window: Window,
@@ -8,15 +11,11 @@ pub struct State {
     map: Map,
 }
 
-const CANVAS_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
-
 impl State {
     pub fn new(window: Window, width: u32, height: u32) -> Self {
         let canvas = Canvas::new(
             window.device(),
-            window.adapter(),
             window.config(),
-            CANVAS_FORMAT,
             window.config().format,
             width,
             height,
@@ -51,20 +50,11 @@ impl State {
 
     pub fn resize(&mut self, new_size: PhysicalSize<u32>) {
         self.window.resize(new_size);
-        self.canvas.resize(
-            self.window.device(),
-            self.window.queue(),
-            self.window.config());
+        self.canvas
+            .resize(self.window.device(), self.window.queue(), self.window.config());
     }
 
     pub fn process_input(&mut self, keyboard: KeyboardInput) {
-        if let Some(key) = keyboard.virtual_keycode {
-            match key {
-                VirtualKeyCode::Plus => (),
-                VirtualKeyCode::Minus => (),
-                _ => ()
-            }
-        }
         self.raycaster.process_input(keyboard);
     }
 

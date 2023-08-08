@@ -2,7 +2,6 @@ use winit::{dpi::PhysicalSize, window::Window as WinitWindow};
 
 pub struct Window {
     // TODO change name
-    adapter: wgpu::Adapter,
     surface: wgpu::Surface,
     device: wgpu::Device,
     config: wgpu::SurfaceConfiguration,
@@ -49,7 +48,6 @@ impl Window {
         surface.configure(&device, &config);
         // TODO maybe add textures to config.view_format
         Ok(Self {
-            adapter,
             surface,
             device,
             config,
@@ -90,11 +88,6 @@ impl Window {
     #[inline]
     pub fn queue(&self) -> &wgpu::Queue {
         &self.queue
-    }
-
-    #[inline]
-    pub fn adapter(&self) -> &wgpu::Adapter {
-        &self.adapter
     }
 
     #[inline]
