@@ -1,7 +1,7 @@
 use crate::{canvas::Canvas, map::Map, raycaster::Raycaster, window::Window};
 use winit::{
     dpi::PhysicalSize,
-    event::{KeyboardInput, VirtualKeyCode},
+    event::KeyboardInput,
 };
 
 pub struct State {
@@ -51,7 +51,7 @@ impl State {
     pub fn resize(&mut self, new_size: PhysicalSize<u32>) {
         self.window.resize(new_size);
         self.canvas
-            .resize(self.window.device(), self.window.queue(), self.window.config());
+            .resize(self.window.queue(), self.window.config());
     }
 
     pub fn process_input(&mut self, keyboard: KeyboardInput) {

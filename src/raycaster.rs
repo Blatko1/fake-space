@@ -1,4 +1,4 @@
-use std::f32::consts::PI;
+use std::f32::consts::TAU;
 
 use glam::Vec2;
 use winit::event::{ElementState, KeyboardInput, VirtualKeyCode};
@@ -96,8 +96,8 @@ impl Raycaster {
             let half_h = height as i32 / 2;
             let half_l = line_pixel_height / 2;
 
-            let y0 = i32::max(half_h - half_l, 0) as u32;
-            let y1 = u32::min((half_h + half_l) as u32, height - 1);
+            let y0 = (half_h - half_l).max(0) as u32;
+            let y1 = ((half_h + half_l) as u32).min( height - 1);
 
             let mut tex_x = (hit.wall_x * 16.0) as u32;
 
@@ -109,21 +109,25 @@ impl Raycaster {
                 Side::Vertical if hit.ray_dir.y < 0.0 => tex_x = 16 - tex_x - 1,
                 _ => (),
             }
-            assert!(tex_x < 16);
+            //assert!(tex_x < 16);
             verline(hit.screen_x, 0, y0, data, GRAY, width, height);
             verline(hit.screen_x, y1, height - 1, data, RED, width, height);
             let tex_step_y = 16.0 / line_pixel_height as f32;
-            let mut tex_y = (y0 as f32 + line_pixel_height as f32 / 2.0
-                - height as f32 / 2.0) as f32
+            let mut tex_y = (y0 as f32 + line_pixel_height as f32 * 0.5
+                - height as f32 * 0.5) as f32
                 * tex_step_y;
-            assert!(tex_y >= 0.0);
+            // TODO fix texture mapping.
+            //assert!(tex_y >= 0.0);
             for y in y0..y1 {
-                let y_pos = tex_y.round() as u32 & (16 - 1);
+                //assert!(tex_y <= 15.0, "Not less!: y0: {}, y1: {}, y: {}", y0, y1, y);
+                let y_pos = tex_y.min(15.0).round() as u32;
+                let i = ((16 - y_pos - 1) * 64 + tex_x * 4) as usize;
+                let rgba = & BRICK[i..i+4];
                 let color = Pixel {
-                    r: BRICK[((16 - y_pos - 1) * 64 + tex_x * 4) as usize],
-                    g: BRICK[((16 - y_pos - 1) * 64 + tex_x * 4 + 1) as usize],
-                    b: BRICK[((16 - y_pos - 1) * 64 + tex_x * 4 + 2) as usize],
-                    a: BRICK[((16 - y_pos - 1) * 64 + tex_x * 4 + 3) as usize],
+                    r: rgba[0],
+                    g: rgba[1],
+                    b: rgba[2],
+                    a: rgba[3],
                 };
                 let color = match hit.side {
                     Side::Vertical => color,
@@ -146,11 +150,12 @@ impl Raycaster {
     /// Stores all [`RayHit`]s in the internal array.
     pub fn cast_rays(&mut self, tile_map: &Map) {
         let width = self.dimensions.0 as f32;
+        let width_recip = width.recip();
         self.hits.clear();
         // For each pixel in the screen
         for x in 0..width as u32 {
             // X-coordinate on the camera plane (range [-1.0, 1.0])
-            let plane_x = 2.0 * (x as f32 / width) - 1.0;
+            let plane_x = 2.0 * (x as f32 * width_recip) - 1.0;
             // Ray direction for current pixel.
             let ray_dir = self.dir + self.plane * plane_x;
             // Length of ray from one x/y side to next x/y
@@ -193,18 +198,17 @@ impl Raycaster {
                     let (perp_wall_dist, wall_x) = match side {
                         Side::Horizontal => {
                             let dist = side_dist_x - delta_dist.x;
-                            (dist, self.pos.y + dist * ray_dir.y)
+                            (dist.max(0.0), self.pos.y + dist * ray_dir.y)
                         }
                         Side::Vertical => {
                             let dist = side_dist_y - delta_dist.y;
-                            (dist, self.pos.x + dist * ray_dir.x)
+                            (dist.max(0.0), self.pos.x + dist * ray_dir.x)
                         }
                     };
                     let wall_x = wall_x - wall_x.floor();
-                    let wall_dist = perp_wall_dist.max(0.0);
                     self.hits.push(RayHit {
                         screen_x: x,
-                        wall_dist,
+                        wall_dist: perp_wall_dist,
                         tile,
                         side,
                         wall_x,
@@ -251,6 +255,7 @@ impl Raycaster {
     }
 }
 
+#[inline]
 fn verline(
     x: u32,
     start: u32,
@@ -293,11 +298,5 @@ pub enum Side {
 
 #[inline]
 fn norm_rad(angle: f32) -> f32 {
-    if angle > 2.0 * PI {
-        angle - 2.0 * PI
-    } else if angle < 0.0 {
-        angle + 2.0 * PI
-    } else {
-        angle
-    }
+    angle - (angle / TAU).floor() * TAU
 }

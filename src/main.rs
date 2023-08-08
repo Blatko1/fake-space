@@ -1,3 +1,7 @@
+/// For the record: 
+/// I have tried adding FXAA in the fragment shader, which ended up in a weird
+/// output, have tried MSAA but it doesn't work on textures, have tried applying
+/// bilinear texture filtering but unnoticeable. 
 mod canvas;
 mod map;
 //mod player;
@@ -17,6 +21,9 @@ use winit::{
     window::WindowBuilder as WinitWindowBuilder,
 };
 // TODO add portals like in Portal game
+
+const FPS: u32 = 60;
+
 fn main() {
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "error");
@@ -29,10 +36,11 @@ fn main() {
 
     let window = block_on(Window::init(&winit_window)).unwrap();
 
-    let mut state = State::new(window, 960, 540);
+    let mut state = State::new(window, 640, 480);
 
-    let framerate_delta = Duration::from_secs_f64(1.0 / 30.0);
+    let framerate_delta = Duration::from_secs_f64(1.0 / FPS as f64);
     let mut time_delta = Instant::now();
+    let mut framerate = 0;
 
     event_loop.run(move |event, _, control| {
         match event {
@@ -75,12 +83,16 @@ fn main() {
                 }
             }
             Event::MainEventsCleared => {
-                // Regulate to 60 FPS
                 let elapsed = time_delta.elapsed();
 
                 if framerate_delta <= elapsed {
                     winit_window.request_redraw();
                     time_delta = Instant::now();
+                    framerate += 1;
+                    if framerate >= FPS {
+                        println!("FPS time: {}", elapsed.as_micros());
+                        framerate = 0;
+                    }
                 } else {
                     *control = ControlFlow::WaitUntil(
                         Instant::now() + framerate_delta - elapsed,
