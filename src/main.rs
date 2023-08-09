@@ -1,7 +1,7 @@
-/// For the record: 
+/// For the record:
 /// I have tried adding FXAA in the fragment shader, which ended up in a weird
 /// output, have tried MSAA but it doesn't work on textures, have tried applying
-/// bilinear texture filtering but unnoticeable. 
+/// bilinear texture filtering but unnoticeable.
 mod canvas;
 mod map;
 //mod player;
@@ -41,6 +41,7 @@ fn main() {
     let framerate_delta = Duration::from_secs_f64(1.0 / FPS as f64);
     let mut time_delta = Instant::now();
     let mut framerate = 0;
+    let mut fps_avg = 0;
 
     event_loop.run(move |event, _, control| {
         match event {
@@ -71,9 +72,7 @@ fn main() {
 
                 match state.render() {
                     Ok(_) => (),
-                    Err(wgpu::SurfaceError::Lost) => {
-                        state.window().recreate_sc()
-                    }
+                    Err(wgpu::SurfaceError::Lost) => state.on_surface_lost(),
                     // The system is out of memory, we should probably quit
                     Err(wgpu::SurfaceError::OutOfMemory) => {
                         *control = ControlFlow::Exit
@@ -89,9 +88,13 @@ fn main() {
                     winit_window.request_redraw();
                     time_delta = Instant::now();
                     framerate += 1;
+                    fps_avg +=
+                        elapsed.as_micros() - framerate_delta.as_micros();
+                    // println!() every second instead.
                     if framerate >= FPS {
-                        println!("FPS time: {}", elapsed.as_micros());
+                        println!("avg frame time: {}", fps_avg / 60);
                         framerate = 0;
+                        fps_avg = 0;
                     }
                 } else {
                     *control = ControlFlow::WaitUntil(

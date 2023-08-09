@@ -2,8 +2,8 @@
 /// The (0,0) coordinate is positioned at the bottom-left
 /// and (`width`, `height`) at the top-right.
 pub struct Map {
-    width: usize,
-    height: usize,
+    width: u32,
+    height: u32,
     data: Vec<Tile>,
 }
 // TODO anti-aliasing
@@ -20,8 +20,8 @@ impl Map {
         let data = data.iter().map(|&v| Tile::from(v)).collect();
 
         Self {
-            width: width as usize,
-            height: height as usize,
+            width,
+            height,
             data,
         }
     }
@@ -33,17 +33,24 @@ impl Map {
     ///Returns the value at the provided map coordinates.
     /// Returns [`Tile::Void`] if coordinates are out of bounds.
     #[inline]
-    pub fn get_value(&self, x: usize, y: usize) -> Tile {
-        let val = match (self.height - 1).checked_sub(y) {
-            Some(v) => v,
-            None => return Tile::Void,
-        };
-        if let Some(&val) =
-            self.data.get(val * self.width + x)
-        {
-            return val;
+    pub fn get_value(&self, x: i32, y: i32) -> Tile {
+        if y < 0 || y >= self.height as i32 || x < 0 || x >= self.width as i32 {
+            return Tile::Void;
         }
-        Tile::Void
+        let index = (self.height as i32 - 1 - y) as usize * self.width as usize
+            + x as usize;
+
+        *self.data.get(index).unwrap_or(&Tile::Void)
+    }
+
+    #[inline]
+    pub fn width(&self) -> u32 {
+        self.width as u32
+    }
+
+    #[inline]
+    pub fn height(&self) -> u32 {
+        self.height as u32
     }
 }
 
@@ -53,7 +60,9 @@ pub enum Tile {
     Empty,
     /// Non-walkable tile.
     Wall,
-    /// Represents space out of map (non-tile)
+    /// Represents all tiles which have transparent parts.
+    Transparent,
+    /// Represents space out of map (non-tile).
     Void,
 }
 
@@ -62,6 +71,7 @@ impl From<u32> for Tile {
         match value {
             0 => Tile::Empty,
             1 => Tile::Wall,
+            2 => Tile::Transparent,
             _ => Tile::Void,
         }
     }
@@ -77,7 +87,7 @@ const TEST_MAP_DATA: &[u32; (TEST_MAP_WIDTH * TEST_MAP_HEIGHT) as usize] = &[
     1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0,
     1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1,
+    1, 0, 0, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1,

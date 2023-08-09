@@ -1,5 +1,6 @@
 use winit::{dpi::PhysicalSize, window::Window as WinitWindow};
 
+// TODO store this in Canvas struct instead
 pub struct Window {
     // TODO change name
     surface: wgpu::Surface,

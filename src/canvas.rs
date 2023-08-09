@@ -9,7 +9,7 @@ const TRIANGLE_VERTICES: [[f32; 2]; 3] = [
 ];
 
 pub struct Canvas {
-    data: Vec<Pixel>,
+    data: Vec<u8>,
     width: u32,
     height: u32,
 
@@ -25,8 +25,9 @@ pub struct Canvas {
 }
 
 impl Canvas {
-    const CANVAS_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
-    
+    const CANVAS_FORMAT: wgpu::TextureFormat =
+        wgpu::TextureFormat::Rgba8UnormSrgb;
+
     pub fn new(
         device: &wgpu::Device,
         config: &wgpu::SurfaceConfiguration,
@@ -143,40 +144,38 @@ impl Canvas {
                 push_constant_ranges: &[],
             });
 
-        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("Render Pipeline"),
-            layout: Some(&pipeline_layout),
-            vertex: wgpu::VertexState {
-                module: &shader,
-                entry_point: "vs_main",
-                buffers: &[wgpu::VertexBufferLayout {
-                    array_stride: std::mem::size_of::<[f32; 2]>()
-                        as wgpu::BufferAddress,
-                    step_mode: wgpu::VertexStepMode::Vertex,
-                    attributes: &wgpu::vertex_attr_array![0 => Float32x2],
-                }],
-            },
-            primitive: wgpu::PrimitiveState::default(),
-            multisample: wgpu::MultisampleState::default(),
-            fragment: Some(wgpu::FragmentState {
-                module: &shader,
-                entry_point: "fs_main",
-                targets: &[Some(wgpu::ColorTargetState {
-                    format: render_format,
-                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
-                    write_mask: wgpu::ColorWrites::ALL,
-                })],
-            }),
-            depth_stencil: None,
-            multiview: None,
-        });
+        let pipeline =
+            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: Some("Render Pipeline"),
+                layout: Some(&pipeline_layout),
+                vertex: wgpu::VertexState {
+                    module: &shader,
+                    entry_point: "vs_main",
+                    buffers: &[wgpu::VertexBufferLayout {
+                        array_stride: std::mem::size_of::<[f32; 2]>()
+                            as wgpu::BufferAddress,
+                        step_mode: wgpu::VertexStepMode::Vertex,
+                        attributes: &wgpu::vertex_attr_array![0 => Float32x2],
+                    }],
+                },
+                primitive: wgpu::PrimitiveState::default(),
+                multisample: wgpu::MultisampleState::default(),
+                fragment: Some(wgpu::FragmentState {
+                    module: &shader,
+                    entry_point: "fs_main",
+                    targets: &[Some(wgpu::ColorTargetState {
+                        format: render_format,
+                        blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                        write_mask: wgpu::ColorWrites::ALL,
+                    })],
+                }),
+                depth_stencil: None,
+                multiview: None,
+            });
 
         Self {
             // RGBA - 4 bytes per pixel
-            data: vec![
-                Pixel::default();
-                (canvas_width * canvas_height) as usize
-            ],
+            data: vec![0; (canvas_width * canvas_height * 4) as usize],
             width: canvas_width,
             height: canvas_height,
             render_format,
@@ -193,10 +192,10 @@ impl Canvas {
     }
 
     pub fn clear_data(&mut self) {
-        self.data.fill(Pixel::default());
+        self.data.fill(0);
     }
 
-    pub fn data_mut(&mut self) -> &mut [Pixel] {
+    pub fn data_mut(&mut self) -> &mut [u8] {
         &mut self.data
     }
 
@@ -231,19 +230,21 @@ impl Canvas {
             let mut rpass =
                 encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                     label: Some("Main RenderPass"),
-                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                        view: &view,
-                        resolve_target: None,
-                        ops: wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(wgpu::Color {
-                                r: 0.1,
-                                g: 0.2,
-                                b: 0.3,
-                                a: 1.0,
-                            }),
-                            store: true,
+                    color_attachments: &[Some(
+                        wgpu::RenderPassColorAttachment {
+                            view: &view,
+                            resolve_target: None,
+                            ops: wgpu::Operations {
+                                load: wgpu::LoadOp::Clear(wgpu::Color {
+                                    r: 0.1,
+                                    g: 0.2,
+                                    b: 0.3,
+                                    a: 1.0,
+                                }),
+                                store: true,
+                            },
                         },
-                    })],
+                    )],
                     depth_stencil_attachment: None,
                 });
 
@@ -265,7 +266,8 @@ impl Canvas {
         Ok(())
     }
 
-    pub fn resize(// TODO maybe take window dimensions as two arguments
+    pub fn resize(
+        // TODO maybe take window dimensions as two arguments
         &mut self,
         queue: &wgpu::Queue,
         config: &wgpu::SurfaceConfiguration,
@@ -306,15 +308,6 @@ impl Canvas {
             height: scaled_height.min(window_height) as u32,
         };
     }
-}
-
-#[repr(C)]
-#[derive(Debug, Default, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod)]
-pub struct Pixel {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
-    pub a: u8,
 }
 
 #[derive(Debug, Default)]

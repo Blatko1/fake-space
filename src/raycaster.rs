@@ -4,26 +4,15 @@ use glam::Vec2;
 use winit::event::{ElementState, KeyboardInput, VirtualKeyCode};
 
 use crate::{
-    canvas::Pixel,
     map::{Map, Tile},
     textures::BRICK,
 };
 // TODO rotation control with mouse and/or keyboard
 const MOVEMENT_SPEED: f32 = 0.1;
 
-const RED: Pixel = Pixel {
-    r: 200,
-    g: 10,
-    b: 10,
-    a: 255,
-};
+const RED: [u8; 4] = [200, 10, 10, 255];
 
-const GRAY: Pixel = Pixel {
-    r: 100,
-    g: 100,
-    b: 100,
-    a: 255,
-};
+const GRAY: [u8; 4] = [100, 100, 100, 255];
 
 #[derive(Debug)]
 pub struct Raycaster {
@@ -44,7 +33,7 @@ pub struct Raycaster {
     /// Width and height of the output screen/texture.
     dimensions: (u32, u32),
 
-    hits: Vec<RayHit>,
+    hits: Vec<RayCast>,
 
     turn_left: f32,
     turn_right: f32,
@@ -88,30 +77,31 @@ impl Raycaster {
         }
     }
 
-    pub fn render(&self, data: &mut [Pixel]) {
+    pub fn render(&self, data: &mut [u8]) {
         let width = self.dimensions.0;
         let height = self.dimensions.1;
-        for hit in self.hits.iter() {
+        for ray in self.hits.iter() {
+            let hit = ray.hit;
             let line_pixel_height = (height as f32 / hit.wall_dist) as i32;
             let half_h = height as i32 / 2;
             let half_l = line_pixel_height / 2;
 
             let y0 = (half_h - half_l).max(0) as u32;
-            let y1 = ((half_h + half_l) as u32).min( height - 1);
+            let y1 = ((half_h + half_l) as u32).min(height - 1);
 
             let mut tex_x = (hit.wall_x * 16.0) as u32;
 
             match hit.side {
-                Side::Horizontal if hit.ray_dir.x > 0.0 => {
+                Side::Horizontal if ray.dir.x > 0.0 => {
                     tex_x = 16 - tex_x - 1
                 }
 
-                Side::Vertical if hit.ray_dir.y < 0.0 => tex_x = 16 - tex_x - 1,
+                Side::Vertical if ray.dir.y < 0.0 => tex_x = 16 - tex_x - 1,
                 _ => (),
             }
             //assert!(tex_x < 16);
-            verline(hit.screen_x, 0, y0, data, GRAY, width, height);
-            verline(hit.screen_x, y1, height - 1, data, RED, width, height);
+            verline(ray.screen_x, 0, y0, data, GRAY, width, height);
+            verline(ray.screen_x, y1, height - 1, data, RED, width, height);
             let tex_step_y = 16.0 / line_pixel_height as f32;
             let mut tex_y = (y0 as f32 + line_pixel_height as f32 * 0.5
                 - height as f32 * 0.5) as f32
@@ -122,24 +112,14 @@ impl Raycaster {
                 //assert!(tex_y <= 15.0, "Not less!: y0: {}, y1: {}, y: {}", y0, y1, y);
                 let y_pos = tex_y.min(15.0).round() as u32;
                 let i = ((16 - y_pos - 1) * 64 + tex_x * 4) as usize;
-                let rgba = & BRICK[i..i+4];
-                let color = Pixel {
-                    r: rgba[0],
-                    g: rgba[1],
-                    b: rgba[2],
-                    a: rgba[3],
+                let rgba = &mut BRICK[i..i + 4];
+                match hit.side {
+                    Side::Vertical => (),
+                    Side::Horizontal => {rgba[0] = rgba[0] - 15; rgba[1] = rgba[1] - 15; rgba[2] = rgba[2] - 15; rgba[3] = rgba[3] - 15;},
                 };
-                let color = match hit.side {
-                    Side::Vertical => color,
-                    Side::Horizontal => Pixel {
-                        r: color.r - 15,
-                        g: color.g - 15,
-                        b: color.b - 15,
-                        a: color.a,
-                    },
-                };
-                data[(height as usize - 1 - y as usize) * width as usize
-                    + (width - hit.screen_x - 1) as usize] = color;
+                let index = (height as usize - 1 - y as usize) * 4 * width as usize
+                    + 4 * (width - ray.screen_x - 1) as usize;
+                data[index..index+4].copy_from_slice(rgba);
                 tex_y += tex_step_y;
                 //assert!(tex_y <= 16.0);
             }
@@ -152,13 +132,13 @@ impl Raycaster {
         let width = self.dimensions.0 as f32;
         let width_recip = width.recip();
         self.hits.clear();
-        // For each pixel in the screen
+        // For each pixel column on the screen
         for x in 0..width as u32 {
             // X-coordinate on the camera plane (range [-1.0, 1.0])
             let plane_x = 2.0 * (x as f32 * width_recip) - 1.0;
-            // Ray direction for current pixel.
+            // Ray direction for current pixel column
             let ray_dir = self.dir + self.plane * plane_x;
-            // Length of ray from one x/y side to next x/y
+            // Length of ray from one x/y side to next x/y side on the tile_map
             let delta_dist = Vec2::new(1.0 / ray_dir.x, 1.0 / ray_dir.y).abs();
 
             // Distance to nearest x side
@@ -177,23 +157,28 @@ impl Raycaster {
                 };
 
             // Coordinates of the map tile the raycaster is in
-            let mut map = self.pos.floor();
-            let (step_x, step_y) = (ray_dir.x.signum(), ray_dir.y.signum());
+            let mut map_x = self.pos.x as i32;
+            let mut map_y = self.pos.y as i32;
+            let (step_x, step_y) =
+                (ray_dir.x.signum() as i32, ray_dir.y.signum() as i32);
 
+            let mut through_hit = None;
             // DDA loop
-            // Iterates over all hit sides until it hits a wall
+            // Iterates over all hit sides until it hits a non empty tile.
+            // If a transparent tile is hit, continue iterating.
+            // If another transparent tile was hit, store it as a final hit.
             loop {
                 // Distance to the first hit wall's x/y side if exists
                 let side = if side_dist_x < side_dist_y {
-                    map.x += step_x;
+                    map_x += step_x;
                     side_dist_x += delta_dist.x;
                     Side::Horizontal
                 } else {
-                    map.y += step_y;
+                    map_y += step_y;
                     side_dist_y += delta_dist.y;
                     Side::Vertical
                 };
-                let tile = tile_map.get_value(map.x as usize, map.y as usize);
+                let tile = tile_map.get_value(map_x, map_y);
                 if tile != Tile::Empty {
                     let (perp_wall_dist, wall_x) = match side {
                         Side::Horizontal => {
@@ -206,15 +191,23 @@ impl Raycaster {
                         }
                     };
                     let wall_x = wall_x - wall_x.floor();
-                    self.hits.push(RayHit {
-                        screen_x: x,
+                    let hit = RayHit {
                         wall_dist: perp_wall_dist,
                         tile,
                         side,
                         wall_x,
-                        ray_dir,
-                    });
-                    break;
+                    };
+                    if tile == Tile::Transparent && through_hit.is_none() {
+                        through_hit = Some(hit);
+                    } else {
+                        self.hits.push(RayCast {
+                            screen_x: x,
+                            dir: ray_dir,
+                            hit,
+                            through_hit,
+                        });
+                        break;
+                    }
                 }
             }
         }
@@ -260,21 +253,34 @@ fn verline(
     x: u32,
     start: u32,
     end: u32,
-    data: &mut [Pixel],
-    color: Pixel,
+    data: &mut [u8],
+    color: [u8; 4],
     width: u32,
     height: u32,
 ) {
+    // TODO invert the image instead
     for i in start..end {
-        data[(height as usize - 1 - i as usize) * width as usize
-            + (width - x - 1) as usize] = color
+        let index = (height as usize - 1 - i as usize) * 4 * width as usize
+        + 4 * (width - x - 1) as usize;
+        data[index..index+4].copy_from_slice(&color);
     }
 }
-// TODO invert the image instead
+
 #[derive(Debug)]
-pub struct RayHit {
+pub struct RayCast {
     /// X-coordinate of a pixel column out of which the ray was casted.
     screen_x: u32,
+    /// Direction of the ray which hit the tile (wall).
+    dir: Vec2,
+    /// Data about the ray's final hit point, ray doesn't continue.
+    hit: RayHit,
+    /// Data about the ray's hit point through which the ray passes if
+    /// the hit tile is transparent (i.e. window, glass, different shapes).
+    through_hit: Option<RayHit>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct RayHit {
     /// Perpetual distance from the raycaster to the hit point on tile (wall).
     wall_dist: f32,
     /// Data of the hit tile.
@@ -285,9 +291,7 @@ pub struct RayHit {
     /// the hit tile side (wall).
     /// If the ray hit the left portion of the tile side (wall), the
     /// x-coordinate would be somewhere in range [0.0, 0.5].
-    wall_x: f32,
-    /// Direction of the ray which hit the tile (wall).
-    ray_dir: Vec2,
+    wall_x: f32
 }
 
 #[derive(Debug, Clone, Copy)]

@@ -1,8 +1,5 @@
 use crate::{canvas::Canvas, map::Map, raycaster::Raycaster, window::Window};
-use winit::{
-    dpi::PhysicalSize,
-    event::KeyboardInput,
-};
+use winit::{dpi::PhysicalSize, event::KeyboardInput};
 
 pub struct State {
     window: Window,
@@ -58,7 +55,8 @@ impl State {
         self.raycaster.process_input(keyboard);
     }
 
-    pub fn window(&mut self) -> &mut Window {
-        &mut self.window
+    #[inline]
+    pub fn on_surface_lost(&mut self) {
+        self.window.recreate_sc()
     }
 }
