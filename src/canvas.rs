@@ -30,7 +30,6 @@ impl Canvas {
 
     pub fn new(
         device: &wgpu::Device,
-        config: &wgpu::SurfaceConfiguration,
         render_format: wgpu::TextureFormat,
         canvas_width: u32,
         canvas_height: u32,

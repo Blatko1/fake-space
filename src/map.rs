@@ -59,19 +59,31 @@ pub enum Tile {
     /// Empty walkable tile.
     Empty,
     /// Non-walkable tile.
-    Wall,
+    Wall(WallTexture),
     /// Represents all tiles which have transparent parts.
-    Transparent,
+    Transparent(TransparentTexture),
     /// Represents space out of map (non-tile).
     Void,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WallTexture {
+    BlueBrick,
+    LightPlank,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TransparentTexture {
+    Fence,
 }
 
 impl From<u32> for Tile {
     fn from(value: u32) -> Self {
         match value {
             0 => Tile::Empty,
-            1 => Tile::Wall,
-            2 => Tile::Transparent,
+            1 => Tile::Wall(WallTexture::BlueBrick),
+            2 => Tile::Wall(WallTexture::LightPlank),
+            3 => Tile::Transparent(TransparentTexture::Fence),
             _ => Tile::Void,
         }
     }
@@ -87,10 +99,10 @@ const TEST_MAP_DATA: &[u32; (TEST_MAP_WIDTH * TEST_MAP_HEIGHT) as usize] = &[
     1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0,
     1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-    1, 0, 0, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1,
+    1, 0, 0, 1, 3, 3, 2, 2, 2, 1, 1, 1, 1, 1, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1,

@@ -1,11 +1,14 @@
-use std::f32::consts::TAU;
+use std::f32::consts::{TAU, PI};
 
 use glam::Vec2;
 use winit::event::{ElementState, KeyboardInput, VirtualKeyCode};
 
 use crate::{
-    map::{Map, Tile},
-    textures::BRICK,
+    map::{Map, Tile, TransparentTexture, WallTexture},
+    textures::{
+        BLUE_BRICK, BLUE_BRICK_HEIGHT, BLUE_BRICK_WIDTH, FENCE, FENCE_HEIGHT,
+        FENCE_WIDTH, LIGHT_PLANK, LIGHT_PLANK_HEIGHT, LIGHT_PLANK_WIDTH,
+    },
 };
 // TODO rotation control with mouse and/or keyboard
 const MOVEMENT_SPEED: f32 = 0.1;
@@ -13,6 +16,8 @@ const MOVEMENT_SPEED: f32 = 0.1;
 const RED: [u8; 4] = [200, 10, 10, 255];
 
 const GRAY: [u8; 4] = [100, 100, 100, 255];
+
+const PURPLE: [u8; 4] = [200, 0, 220, 255];
 
 #[derive(Debug)]
 pub struct Raycaster {
@@ -80,48 +85,155 @@ impl Raycaster {
     pub fn render(&self, data: &mut [u8]) {
         let width = self.dimensions.0;
         let height = self.dimensions.1;
+
+        let index = (height / 2 * width * 4) as usize;
+        data[0..index]
+            .chunks_exact_mut(4)
+            .for_each(|c| c.copy_from_slice(&RED));
+        data[index..]
+            .chunks_exact_mut(4)
+            .for_each(|c| c.copy_from_slice(&GRAY));
+
+        let four_width = 4 * width as usize;
+        let half_h_i = height as i32 / 2;
+        let half_h_f = height as f32 * 0.5;
+        let mut color = [0, 0, 0, 0];
         for ray in self.hits.iter() {
             let hit = ray.hit;
-            let line_pixel_height = (height as f32 / hit.wall_dist) as i32;
-            let half_h = height as i32 / 2;
-            let half_l = line_pixel_height / 2;
-
-            let y0 = (half_h - half_l).max(0) as u32;
-            let y1 = ((half_h + half_l) as u32).min(height - 1);
-
-            let mut tex_x = (hit.wall_x * 16.0) as u32;
-
-            match hit.side {
-                Side::Horizontal if ray.dir.x > 0.0 => {
-                    tex_x = 16 - tex_x - 1
+            let draw_x_offset = 4 * (width - ray.screen_x - 1) as usize;
+            
+            // Draw the void (non-tile; out of bounds)
+            if let Tile::Void = hit.tile {
+                for y in 0..height - 1 {
+                    let index = (height as usize - 1 - y as usize) * four_width
+                        + draw_x_offset;
+                    data[index..index + 4].copy_from_slice(&PURPLE);
                 }
-
-                Side::Vertical if ray.dir.y < 0.0 => tex_x = 16 - tex_x - 1,
-                _ => (),
+                continue;
             }
-            //assert!(tex_x < 16);
-            verline(ray.screen_x, 0, y0, data, GRAY, width, height);
-            verline(ray.screen_x, y1, height - 1, data, RED, width, height);
-            let tex_step_y = 16.0 / line_pixel_height as f32;
-            let mut tex_y = (y0 as f32 + line_pixel_height as f32 * 0.5
-                - height as f32 * 0.5) as f32
-                * tex_step_y;
-            // TODO fix texture mapping.
-            //assert!(tex_y >= 0.0);
-            for y in y0..y1 {
-                //assert!(tex_y <= 15.0, "Not less!: y0: {}, y1: {}, y: {}", y0, y1, y);
-                let y_pos = tex_y.min(15.0).round() as u32;
-                let i = ((16 - y_pos - 1) * 64 + tex_x * 4) as usize;
-                let rgba = &mut BRICK[i..i + 4];
-                match hit.side {
-                    Side::Vertical => (),
-                    Side::Horizontal => {rgba[0] = rgba[0] - 15; rgba[1] = rgba[1] - 15; rgba[2] = rgba[2] - 15; rgba[3] = rgba[3] - 15;},
+
+            // Draw the hit impassable wall tile:
+            if let Tile::Wall(tex) = hit.tile {
+                let (texture, tex_width, tex_height) = match tex {
+
+                        WallTexture::BlueBrick => {
+                            (BLUE_BRICK, BLUE_BRICK_WIDTH, BLUE_BRICK_HEIGHT)
+                        }
+                        WallTexture::LightPlank => {
+                            (LIGHT_PLANK, LIGHT_PLANK_WIDTH, LIGHT_PLANK_HEIGHT)
+                        }
                 };
-                let index = (height as usize - 1 - y as usize) * 4 * width as usize
-                    + 4 * (width - ray.screen_x - 1) as usize;
-                data[index..index+4].copy_from_slice(rgba);
-                tex_y += tex_step_y;
-                //assert!(tex_y <= 16.0);
+
+                let line_pixel_height = (height as f32 / hit.wall_dist) as i32;
+                let half_l = line_pixel_height / 2;
+
+                let begin = (half_h_i - half_l).max(0) as u32;
+                let end = ((half_h_i + half_l) as u32).min(height - 1);
+
+                let tex_height_minus_one = tex_height as f32 - 1.0;
+                let tex_x = match hit.side {
+                    Side::Vertical if ray.dir.x > 0.0 => {
+                        tex_width - (hit.wall_x * tex_width as f32) as u32 - 1
+                    }
+
+                    Side::Horizontal if ray.dir.y < 0.0 => {
+                        tex_width - (hit.wall_x * tex_width as f32) as u32 - 1
+                    }
+                    _ => (hit.wall_x * tex_width as f32) as u32,
+                };
+                let four_tex_x = tex_x * 4;
+                //assert!(tex_x < 16);
+                let tex_y_step = 16.0 / line_pixel_height as f32;
+                let mut tex_y = (begin as f32 + line_pixel_height as f32 * 0.5
+                    - half_h_f)
+                    * tex_y_step;
+                // TODO fix texture mapping.
+                //assert!(tex_y >= 0.0);
+                for y in begin..end {
+                    //assert!(tex_y <= 15.0, "Not less!: y0: {}, y1: {}, y: {}", y0, y1, y);
+                    let y_pos = tex_y.min(tex_height_minus_one).round() as u32;
+                    let i = ((tex_height - y_pos - 1) * tex_width * 4
+                        + four_tex_x) as usize;
+                    color.copy_from_slice(&texture[i..i + 4]);
+                    match hit.side {
+                        Side::Vertical => (),
+                        Side::Horizontal => {
+                            color[0] = color[0] - 15;
+                            color[1] = color[1] - 15;
+                            color[2] = color[2] - 15;
+                            color[3] = color[3] - 15
+                        }
+                    };
+                    let index = (height as usize - 1 - y as usize) * four_width
+                        + draw_x_offset;
+                    data[index..index + 4].copy_from_slice(&color);
+                    tex_y += tex_y_step;
+                    //assert!(tex_y <= 16.0);
+                }
+            }
+
+            // Draw the hit tile with transparency:
+            if let Some(hit) = ray.through_hit {
+                let (texture, tex_width, tex_height) = match hit.tile {
+                    Tile::Transparent(tex) => match tex {
+                        TransparentTexture::Fence => {
+                            //(FENCE, FENCE_WIDTH, FENCE_HEIGHT)
+                            (BLUE_BRICK, BLUE_BRICK_WIDTH, BLUE_BRICK_HEIGHT)
+                        }
+                    },
+                    _ => unreachable!(),
+                };
+                //let wall_x = (hit.wall_x + 0.45/f32::atan2(ray.dir.y, ray.dir.x).tan()).clamp(0.0, 1.0 - f32::EPSILON);
+                //let offset_dist = 0.45 / f32::atan2(ray.dir.y, ray.dir.x).sin();
+                let line_pixel_height = (height as f32 / (hit.wall_dist)) as i32;
+                let half_l = line_pixel_height / 2;
+
+                let begin = (half_h_i - half_l).max(0) as u32;
+                let end = ((half_h_i + half_l) as u32).min(height - 1);
+
+                let tex_height_minus_one = tex_height as f32 - 1.0;
+                let tex_x = match hit.side {
+                    Side::Vertical if ray.dir.x > 0.0 => {
+                        tex_width - (hit.wall_x * tex_width as f32) as u32 - 1
+                    }
+
+                    Side::Horizontal if ray.dir.y < 0.0 => {
+                        tex_width - (hit.wall_x * tex_width as f32) as u32 - 1
+                    }
+                    _ => (hit.wall_x * tex_width as f32) as u32,
+                };
+                let four_tex_x = tex_x * 4;
+                //assert!(tex_x < 16);
+                let tex_y_step = 16.0 / line_pixel_height as f32;
+                let mut tex_y = (begin as f32 + line_pixel_height as f32 * 0.5
+                    - half_h_f)
+                    * tex_y_step;
+                // TODO fix texture mapping.
+                //assert!(tex_y >= 0.0);
+                for y in begin..end {
+                    //assert!(tex_y <= 15.0, "Not less!: y0: {}, y1: {}, y: {}", y0, y1, y);
+                    let y_pos = tex_y.min(tex_height_minus_one).round() as u32;
+                    let i = ((tex_height - y_pos - 1) * tex_width * 4
+                        + four_tex_x) as usize;
+                    color.copy_from_slice(&texture[i..i + 4]);
+                    match hit.side {
+                        Side::Vertical => (),
+                        Side::Horizontal => {
+                            color[0] = color[0] - 15;
+                            color[1] = color[1] - 15;
+                            color[2] = color[2] - 15;
+                            color[3] = color[3] - 15
+                        }
+                    };
+                    if color[3] == 0 {
+                        continue;
+                    }
+                    let index = (height as usize - 1 - y as usize) * four_width
+                        + draw_x_offset;
+                    data[index..index + 4].copy_from_slice(&color);
+                    tex_y += tex_y_step;
+                    //assert!(tex_y <= 16.0);
+                }
             }
         }
     }
@@ -172,22 +284,44 @@ impl Raycaster {
                 let side = if side_dist_x < side_dist_y {
                     map_x += step_x;
                     side_dist_x += delta_dist.x;
-                    Side::Horizontal
+                    Side::Vertical
                 } else {
                     map_y += step_y;
                     side_dist_y += delta_dist.y;
-                    Side::Vertical
+                    Side::Horizontal
                 };
                 let tile = tile_map.get_value(map_x, map_y);
                 if tile != Tile::Empty {
+                    //TODO temp:
+                    let mut off = 0.0;
+                    if let Tile::Transparent(_) = tile {
+                        let angle = ray_dir.y.atan2(ray_dir.x);
+                        off = match side {
+                            Side::Vertical => 0.45 / angle.cos(),
+                            Side::Horizontal => 0.45 / angle.sin(),
+                        }.abs()
+                    };
                     let (perp_wall_dist, wall_x) = match side {
-                        Side::Horizontal => {
-                            let dist = side_dist_x - delta_dist.x;
-                            (dist.max(0.0), self.pos.y + dist * ray_dir.y)
-                        }
                         Side::Vertical => {
+                            let dist = side_dist_x - delta_dist.x;
+                            let wall_x = self.pos.y + dist * ray_dir.y;
+                            //let wall_x_in = self.pos.y + (dist + off) * ray_dir.y;
+                            //if wall_x.ceil() < wall_x_in || wall_x.floor() > wall_x_in {
+                            //    continue;
+                            //}
+                            if off != 0.0 {
+                                continue;
+                            }
+                            ((dist+off).max(0.0), wall_x)
+                        }
+                        Side::Horizontal => {
                             let dist = side_dist_y - delta_dist.y;
-                            (dist.max(0.0), self.pos.x + dist * ray_dir.x)
+                            let wall_x = self.pos.x + dist * ray_dir.x;
+                            let wall_x_in = self.pos.x + (dist + off) * ray_dir.x;
+                            if wall_x.ceil() < wall_x_in || wall_x.floor() > wall_x_in {
+                                continue;
+                            }
+                            ((dist+off).max(0.0), wall_x_in)
                         }
                     };
                     let wall_x = wall_x - wall_x.floor();
@@ -197,17 +331,19 @@ impl Raycaster {
                         side,
                         wall_x,
                     };
-                    if tile == Tile::Transparent && through_hit.is_none() {
-                        through_hit = Some(hit);
-                    } else {
-                        self.hits.push(RayCast {
-                            screen_x: x,
-                            dir: ray_dir,
-                            hit,
-                            through_hit,
-                        });
-                        break;
+                    if let Tile::Transparent(_) = tile {
+                        if through_hit.is_none() {
+                            through_hit = Some(hit);
+                            continue;
+                        }
                     }
+                    self.hits.push(RayCast {
+                        screen_x: x,
+                        dir: ray_dir,
+                        hit,
+                        through_hit,
+                    });
+                    break;
                 }
             }
         }
@@ -248,24 +384,6 @@ impl Raycaster {
     }
 }
 
-#[inline]
-fn verline(
-    x: u32,
-    start: u32,
-    end: u32,
-    data: &mut [u8],
-    color: [u8; 4],
-    width: u32,
-    height: u32,
-) {
-    // TODO invert the image instead
-    for i in start..end {
-        let index = (height as usize - 1 - i as usize) * 4 * width as usize
-        + 4 * (width - x - 1) as usize;
-        data[index..index+4].copy_from_slice(&color);
-    }
-}
-
 #[derive(Debug)]
 pub struct RayCast {
     /// X-coordinate of a pixel column out of which the ray was casted.
@@ -291,7 +409,7 @@ pub struct RayHit {
     /// the hit tile side (wall).
     /// If the ray hit the left portion of the tile side (wall), the
     /// x-coordinate would be somewhere in range [0.0, 0.5].
-    wall_x: f32
+    wall_x: f32,
 }
 
 #[derive(Debug, Clone, Copy)]

@@ -12,6 +12,7 @@ mod window;
 
 use std::time::{Duration, Instant};
 
+use glam::Vec2;
 use pollster::block_on;
 use state::State;
 use window::Window;
@@ -88,8 +89,7 @@ fn main() {
                     winit_window.request_redraw();
                     time_delta = Instant::now();
                     framerate += 1;
-                    fps_avg +=
-                        elapsed.as_micros() - framerate_delta.as_micros();
+                    fps_avg += elapsed.as_micros();
                     // println!() every second instead.
                     if framerate >= FPS {
                         println!("avg frame time: {}", fps_avg / 60);

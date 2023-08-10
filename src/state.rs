@@ -10,13 +10,8 @@ pub struct State {
 
 impl State {
     pub fn new(window: Window, width: u32, height: u32) -> Self {
-        let canvas = Canvas::new(
-            window.device(),
-            window.config(),
-            window.config().format,
-            width,
-            height,
-        );
+        let canvas =
+            Canvas::new(window.device(), window.config().format, width, height);
         let raycaster = Raycaster::new(
             2.0,
             2.0,
