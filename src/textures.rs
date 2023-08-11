@@ -137,11 +137,10 @@ pub const LIGHT_PLANK: [u8; LIGHT_PLANK_DATA_SIZE as usize] = [
     62, 255, 141, 108, 67, 255, 134, 99, 61, 255,
 ];
 
+pub const FENCE_HEIGHT_FACTOR: f32 = 0.5;
 pub const FENCE_HEIGHT: u32 = 16;
 pub const FENCE_WIDTH: u32 = 16;
 pub const FENCE_DATA_SIZE: u32 = FENCE_WIDTH * FENCE_HEIGHT * 4;
-
-// array size is 1024
 pub const FENCE: [u8; FENCE_DATA_SIZE as usize] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

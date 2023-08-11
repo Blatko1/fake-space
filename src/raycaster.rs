@@ -98,6 +98,7 @@ impl Raycaster {
         let half_h_i = height as i32 / 2;
         let half_h_f = height as f32 * 0.5;
         let mut color = [0, 0, 0, 0];
+        let mut color_2 = [0, 0, 0, 0];
         for ray in self.hits.iter() {
             let hit = ray.hit;
             let draw_x_offset = 4 * (width - ray.screen_x - 1) as usize;
@@ -173,65 +174,102 @@ impl Raycaster {
 
             // Draw the hit tile with transparency:
             if let Some(hit) = ray.through_hit {
-                let (texture, tex_width, tex_height) = match hit.tile {
+                let tile = hit[0].tile;
+                let hit1 = hit[0];
+                let hit2 = hit[1]; 
+                let (texture, tex_width, tex_height) = match tile {
                     Tile::Transparent(tex) => match tex {
                         TransparentTexture::Fence => {
-                            //(FENCE, FENCE_WIDTH, FENCE_HEIGHT)
-                            (BLUE_BRICK, BLUE_BRICK_WIDTH, BLUE_BRICK_HEIGHT)
+                            (FENCE, FENCE_WIDTH, FENCE_HEIGHT)
                         }
                     },
                     _ => unreachable!(),
                 };
                 //let wall_x = (hit.wall_x + 0.45/f32::atan2(ray.dir.y, ray.dir.x).tan()).clamp(0.0, 1.0 - f32::EPSILON);
                 //let offset_dist = 0.45 / f32::atan2(ray.dir.y, ray.dir.x).sin();
-                let line_pixel_height =
-                    (height as f32 / (hit.wall_dist)) as i32;
-                let half_l = line_pixel_height / 2;
+                let line_pixel_height_hit1 =
+                    (height as f32 / (hit1.wall_dist)) as i32;
+                let half_l_hit1 = line_pixel_height_hit1 / 2;
 
-                let begin = (half_h_i - half_l).max(0) as u32;
-                let end = ((half_h_i + half_l) as u32).min(height - 1);
+                let line_pixel_height_hit2 =
+                    (height as f32 / (hit2.wall_dist)) as i32;
+                let half_l_hit2 = line_pixel_height_hit2 / 2;
 
+                let begin_hit1 = (half_h_i - half_l_hit1).max(0) as u32;
+                let end_hit1 = ((half_h_i + half_l_hit1) as u32).min(height - 1);
+
+                let begin_hit2 = (half_h_i - half_l_hit2).max(0) as u32;
+                let end_hit2 = ((half_h_i + half_l_hit2) as u32).min(height - 1);
+                
                 let tex_height_minus_one = tex_height as f32 - 1.0;
-                let tex_x = match hit.side {
+                let tex_x_hit1 = match hit1.side {
                     Side::Vertical if ray.dir.x > 0.0 => {
-                        tex_width - (hit.wall_x * tex_width as f32) as u32 - 1
+                        tex_width - (hit1.wall_x * tex_width as f32) as u32 - 1
                     }
 
                     Side::Horizontal if ray.dir.y < 0.0 => {
-                        tex_width - (hit.wall_x * tex_width as f32) as u32 - 1
+                        tex_width - (hit1.wall_x * tex_width as f32) as u32 - 1
                     }
-                    _ => (hit.wall_x * tex_width as f32) as u32,
+                    _ => (hit1.wall_x * tex_width as f32) as u32,
                 };
-                let four_tex_x = tex_x * 4;
+                let tex_x_hit2 = match hit2.side {
+                    Side::Vertical if ray.dir.x > 0.0 => {
+                        tex_width - (hit2.wall_x * tex_width as f32) as u32 - 1
+                    }
+
+                    Side::Horizontal if ray.dir.y < 0.0 => {
+                        tex_width - (hit2.wall_x * tex_width as f32) as u32 - 1
+                    }
+                    _ => (hit2.wall_x * tex_width as f32) as u32,
+                };
+                let four_tex_x_hit1 = tex_x_hit1 * 4;
+                let four_tex_x_hit2 = tex_x_hit2 * 4;
                 //assert!(tex_x < 16);
-                let tex_y_step = 16.0 / line_pixel_height as f32;
-                let mut tex_y = (begin as f32 + line_pixel_height as f32 * 0.5
+                let tex_y_step_hit1 = 16.0 / line_pixel_height_hit1 as f32;
+                let mut tex_y_hit1 = (begin_hit1 as f32 + line_pixel_height_hit1 as f32 * 0.5
                     - half_h_f)
-                    * tex_y_step;
+                    * tex_y_step_hit1;
+                let tex_y_step_hit2 = 16.0 / line_pixel_height_hit2 as f32;
+                let mut tex_y_hit2 = (begin_hit2 as f32 + line_pixel_height_hit2 as f32 * 0.5
+                    - half_h_f)
+                    * tex_y_step_hit2;
                 // TODO fix texture mapping.
                 //assert!(tex_y >= 0.0);
-                for y in begin..end {
+                for y in begin_hit1..end_hit2 {
                     //assert!(tex_y <= 15.0, "Not less!: y0: {}, y1: {}, y: {}", y0, y1, y);
-                    let y_pos = tex_y.min(tex_height_minus_one).round() as u32;
-                    let i = ((tex_height - y_pos - 1) * tex_width * 4
-                        + four_tex_x) as usize;
+                    let y_pos_hit1 = tex_y_hit1.min(tex_height_minus_one).round() as u32;
+                    let y_pos_hit2 = tex_y_hit2.min(tex_height_minus_one).round() as u32;
+ 
+                    let i = ((tex_height - y_pos_hit1 - 1) * tex_width * 4
+                        + four_tex_x_hit1) as usize;
                     color.copy_from_slice(&texture[i..i + 4]);
-                    match hit.side {
+                    match hit1.side {
                         Side::Vertical => (),
                         Side::Horizontal => {
-                            color[0] = color[0] - 15;
-                            color[1] = color[1] - 15;
-                            color[2] = color[2] - 15;
-                            color[3] = color[3] - 15
+                            color[0] = color[0].saturating_sub(15);
+                            color[1] = color[1].saturating_sub(15);
+                            color[2] = color[2].saturating_sub(15);
                         }
                     };
-                    if color[3] == 0 {
+                    let i = ((tex_height - y_pos_hit2 - 1) * tex_width * 4
+                        + four_tex_x_hit2) as usize;
+                        color_2.copy_from_slice(&texture[i..i + 4]);
+                    match hit2.side {
+                        Side::Vertical => (),
+                        Side::Horizontal => {
+                            color_2[0] = color_2[0].saturating_sub(15);
+                            color_2[1] = color_2[1].saturating_sub(15);
+                            color_2[2] = color_2[2].saturating_sub(15);
+                        }
+                    };
+                    if color[3] == 0{
                         continue;
                     }
-                    let index = (height as usize - 1 - y as usize) * four_width
-                        + draw_x_offset;
+                    let index = (height as usize - 1 - y as usize) * four_width + draw_x_offset;
+                        data[index..index + 4].copy_from_slice(&color_2);
                     data[index..index + 4].copy_from_slice(&color);
-                    tex_y += tex_y_step;
+                    tex_y_hit1 += tex_y_step_hit1;
+                    tex_y_hit2 += tex_y_step_hit2;
                     //assert!(tex_y <= 16.0);
                 }
             }
@@ -296,15 +334,14 @@ impl Raycaster {
                         Side::Vertical => {
                             let dist = side_dist_x - delta_dist.x;
                             let wall_x = self.pos.y + dist * ray_dir.y;
-                            (dist.max(0.0), wall_x)
+                            (dist.max(0.0), wall_x - wall_x.floor())
                         }
                         Side::Horizontal => {
                             let dist = side_dist_y - delta_dist.y;
                             let wall_x = self.pos.x + dist * ray_dir.x;
-                            (dist.max(0.0), wall_x)
+                            (dist.max(0.0), wall_x - wall_x.floor())
                         }
                     };
-                    let wall_x = wall_x - wall_x.floor();
                     let hit = RayHit {
                         wall_dist: perp_wall_dist,
                         tile,
@@ -324,13 +361,15 @@ impl Raycaster {
                             };
                             let (perp_wall_dist, wall_x) = match side {
                                 Side::Vertical => {
-                                    let dist = side_dist_x - delta_dist.x;
+                                    let dist = side_dist_x;
                                     let wall_x = self.pos.y + dist * ray_dir.y;
+                                    side_dist_x -= delta_dist.x;
                                     (dist.max(0.0), wall_x)
                                 }
                                 Side::Horizontal => {
-                                    let dist = side_dist_y - delta_dist.y;
+                                    let dist = side_dist_y;
                                     let wall_x = self.pos.x + dist * ray_dir.x;
+                                    side_dist_y -= delta_dist.y;
                                     (dist.max(0.0), wall_x)
                                 }
                             };
