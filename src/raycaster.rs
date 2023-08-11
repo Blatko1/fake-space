@@ -1,4 +1,4 @@
-use std::f32::consts::{TAU, PI};
+use std::f32::consts::{PI, TAU};
 
 use glam::Vec2;
 use winit::event::{ElementState, KeyboardInput, VirtualKeyCode};
@@ -101,7 +101,7 @@ impl Raycaster {
         for ray in self.hits.iter() {
             let hit = ray.hit;
             let draw_x_offset = 4 * (width - ray.screen_x - 1) as usize;
-            
+
             // Draw the void (non-tile; out of bounds)
             if let Tile::Void = hit.tile {
                 for y in 0..height - 1 {
@@ -115,13 +115,12 @@ impl Raycaster {
             // Draw the hit impassable wall tile:
             if let Tile::Wall(tex) = hit.tile {
                 let (texture, tex_width, tex_height) = match tex {
-
-                        WallTexture::BlueBrick => {
-                            (BLUE_BRICK, BLUE_BRICK_WIDTH, BLUE_BRICK_HEIGHT)
-                        }
-                        WallTexture::LightPlank => {
-                            (LIGHT_PLANK, LIGHT_PLANK_WIDTH, LIGHT_PLANK_HEIGHT)
-                        }
+                    WallTexture::BlueBrick => {
+                        (BLUE_BRICK, BLUE_BRICK_WIDTH, BLUE_BRICK_HEIGHT)
+                    }
+                    WallTexture::LightPlank => {
+                        (LIGHT_PLANK, LIGHT_PLANK_WIDTH, LIGHT_PLANK_HEIGHT)
+                    }
                 };
 
                 let line_pixel_height = (height as f32 / hit.wall_dist) as i32;
@@ -185,7 +184,8 @@ impl Raycaster {
                 };
                 //let wall_x = (hit.wall_x + 0.45/f32::atan2(ray.dir.y, ray.dir.x).tan()).clamp(0.0, 1.0 - f32::EPSILON);
                 //let offset_dist = 0.45 / f32::atan2(ray.dir.y, ray.dir.x).sin();
-                let line_pixel_height = (height as f32 / (hit.wall_dist)) as i32;
+                let line_pixel_height =
+                    (height as f32 / (hit.wall_dist)) as i32;
                 let half_l = line_pixel_height / 2;
 
                 let begin = (half_h_i - half_l).max(0) as u32;
@@ -292,36 +292,16 @@ impl Raycaster {
                 };
                 let tile = tile_map.get_value(map_x, map_y);
                 if tile != Tile::Empty {
-                    //TODO temp:
-                    let mut off = 0.0;
-                    if let Tile::Transparent(_) = tile {
-                        let angle = ray_dir.y.atan2(ray_dir.x);
-                        off = match side {
-                            Side::Vertical => 0.45 / angle.cos(),
-                            Side::Horizontal => 0.45 / angle.sin(),
-                        }.abs()
-                    };
                     let (perp_wall_dist, wall_x) = match side {
                         Side::Vertical => {
                             let dist = side_dist_x - delta_dist.x;
                             let wall_x = self.pos.y + dist * ray_dir.y;
-                            //let wall_x_in = self.pos.y + (dist + off) * ray_dir.y;
-                            //if wall_x.ceil() < wall_x_in || wall_x.floor() > wall_x_in {
-                            //    continue;
-                            //}
-                            if off != 0.0 {
-                                continue;
-                            }
-                            ((dist+off).max(0.0), wall_x)
+                            (dist.max(0.0), wall_x)
                         }
                         Side::Horizontal => {
                             let dist = side_dist_y - delta_dist.y;
                             let wall_x = self.pos.x + dist * ray_dir.x;
-                            let wall_x_in = self.pos.x + (dist + off) * ray_dir.x;
-                            if wall_x.ceil() < wall_x_in || wall_x.floor() > wall_x_in {
-                                continue;
-                            }
-                            ((dist+off).max(0.0), wall_x_in)
+                            (dist.max(0.0), wall_x)
                         }
                     };
                     let wall_x = wall_x - wall_x.floor();
@@ -333,7 +313,36 @@ impl Raycaster {
                     };
                     if let Tile::Transparent(_) = tile {
                         if through_hit.is_none() {
-                            through_hit = Some(hit);
+                            let side = if side_dist_x < side_dist_y {
+                                map_x += step_x;
+                                side_dist_x += delta_dist.x;
+                                Side::Vertical
+                            } else {
+                                map_y += step_y;
+                                side_dist_y += delta_dist.y;
+                                Side::Horizontal
+                            };
+                            let (perp_wall_dist, wall_x) = match side {
+                                Side::Vertical => {
+                                    let dist = side_dist_x - delta_dist.x;
+                                    let wall_x = self.pos.y + dist * ray_dir.y;
+                                    (dist.max(0.0), wall_x)
+                                }
+                                Side::Horizontal => {
+                                    let dist = side_dist_y - delta_dist.y;
+                                    let wall_x = self.pos.x + dist * ray_dir.x;
+                                    (dist.max(0.0), wall_x)
+                                }
+                            };
+                            let wall_x = wall_x - wall_x.floor();
+                            let hit2 = RayHit {
+                                wall_dist: perp_wall_dist,
+                                tile,
+                                side,
+                                wall_x,
+                            };
+
+                            through_hit = Some([hit, hit2]);
                             continue;
                         }
                     }
@@ -394,7 +403,10 @@ pub struct RayCast {
     hit: RayHit,
     /// Data about the ray's hit point through which the ray passes if
     /// the hit tile is transparent (i.e. window, glass, different shapes).
-    through_hit: Option<RayHit>,
+    /// Since the object has transparency, all four sides should be rendered,
+    /// meaning that each ray passes through two sides (adjacent or opposite).
+    /// First in array is the first hit tile side and second is the other.
+    through_hit: Option<[RayHit; 2]>,
 }
 
 #[derive(Debug, Clone, Copy)]
