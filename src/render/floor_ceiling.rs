@@ -25,6 +25,9 @@ impl Raycaster {
             let mut floor_x = self.pos.x + row_dist * ray_dir_x0;
             let mut floor_y = self.pos.y + row_dist * ray_dir_y0;
 
+            let draw_ceiling_y_offset = (self.height - y - 1) * 4 * self.width;
+            let draw_floor_y_offset = y * 4 * self.width;
+
             for x in 0..self.width {
                 let cellx = floor_x as i32;
                 let celly = floor_y as i32;
@@ -39,11 +42,11 @@ impl Raycaster {
 
                 color.copy_from_slice(&LIGHT_PLANK[i..i + 4]);
                 let index =
-                    (y * 4 * self.width + (self.width - x - 1) * 4) as usize;
+                    (draw_floor_y_offset + (self.width - x - 1) * 4) as usize;
                 data[index..index + 4].copy_from_slice(&color);
 
                 color.copy_from_slice(&BLUE_BRICK[i..i + 4]);
-                let index = ((self.height - y - 1) * 4 * self.width
+                let index = (draw_ceiling_y_offset
                     + (self.width - x - 1) * 4)
                     as usize;
                 data[index..index + 4].copy_from_slice(&color);

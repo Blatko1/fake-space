@@ -52,14 +52,12 @@ impl Raycaster {
                 _ => (through_hit.wall_x * tex_width as f32) as u32,
             };
             let four_tex_x = tex_x * 4;
-            //assert!(tex_x < 16);
             let tex_y_step = tex_height as f32 / line_height as f32;
             let mut tex_y =
                 (begin as f32 + bottom_height as f32 - self.float_half_height) * tex_y_step;
             // TODO fix texture mapping.
-            //assert!(tex_y >= 0.0);
+
             for y in begin..end {
-                //assert!(tex_y <= 15.0, "Not less!: y0: {}, y1: {}, y: {}", y0, y1, y);
                 let y_pos = tex_y.min(tex_height_minus_one).round() as u32;
 
                 let i = ((tex_height - y_pos - 1) * tex_width * 4 + four_tex_x)

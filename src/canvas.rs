@@ -16,7 +16,6 @@ pub struct Canvas {
 
     pipeline: wgpu::RenderPipeline,
     bind_group: wgpu::BindGroup,
-    render_format: wgpu::TextureFormat,
 
     region: ScissorRegion,
     vertex_buffer: wgpu::Buffer,
@@ -180,7 +179,6 @@ impl Canvas {
             data: vec![0; data_len],
             width: canvas_width,
             height: canvas_height,
-            render_format,
 
             pipeline,
             bind_group,
