@@ -1,21 +1,13 @@
-mod ceiling;
-mod floor;
+mod floor_ceiling;
 mod transparent;
 mod void;
 mod wall;
 
 use glam::Vec2;
-use std::f32::consts::{PI, TAU};
+use std::f32::consts::TAU;
 use winit::event::{ElementState, KeyboardInput, VirtualKeyCode};
 
-use crate::{
-    canvas::Canvas,
-    map::{Map, Tile, TransparentTexture, WallTexture},
-    textures::{
-        BLUE_BRICK, BLUE_BRICK_HEIGHT, BLUE_BRICK_WIDTH, FENCE, FENCE_HEIGHT,
-        FENCE_WIDTH, LIGHT_PLANK, LIGHT_PLANK_HEIGHT, LIGHT_PLANK_WIDTH,
-    },
-};
+use crate::map::{Map, Tile};
 // TODO rotation control with mouse and/or keyboard
 const MOVEMENT_SPEED: f32 = 0.1;
 
@@ -33,6 +25,8 @@ pub struct RayCast {
     /// meaning that each ray passes through two sides (adjacent or opposite).
     /// First in array is the first hit tile side and second is the other.
     through_hits: Vec<RayHit>,
+    /// Precomputed specific use variable for improving performance.
+    draw_x_offset: usize
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -79,6 +73,9 @@ pub struct Raycaster {
 
     // Specific use variables with goal to improve performance.
     four_width: usize,
+    width_recip: f32,
+    int_half_height: i32,
+    float_half_height: f32,
 
     hits: Vec<RayCast>,
 
@@ -99,7 +96,6 @@ impl Raycaster {
         height: u32,
     ) -> Self {
         let hits = Vec::with_capacity(width as usize);
-        let column_buffer = vec![0; 4 * height as usize];
         let plane_mag = f32::tan(fov / 2.0);
 
         // Raycaster position and main direction (is always normalized)
@@ -108,6 +104,7 @@ impl Raycaster {
         // Raycaster's (camera's) 2D plane
         let dir_perpendicular = dir.perp();
         let plane = dir_perpendicular * plane_mag;
+        let f_width = width as f32;
 
         Self {
             fov,
@@ -118,7 +115,11 @@ impl Raycaster {
             angle,
             width,
             height,
+
             four_width: 4 * width as usize,
+            width_recip: f_width.recip(),
+            int_half_height: height as i32 / 2,
+            float_half_height: height as f32 * 0.5,
 
             hits,
 
@@ -131,7 +132,7 @@ impl Raycaster {
 
     pub fn render(&self, data: &mut [u8]) {
         // TODO don't forget to remove temp '&'
-        floor::fill(&self, data);
+        self.draw_floor_and_ceiling(data);
         //ceiling::fill(self, data);
 
         for ray in self.hits.iter() {
@@ -157,13 +158,11 @@ impl Raycaster {
     /// Casts rays from the current position and angle on the provided map.
     /// Stores all [`RayHit`]s in the internal array.
     pub fn cast_rays(&mut self, tile_map: &Map) {
-        let width = self.width as f32;
-        let width_recip = width.recip();
         self.hits.clear();
         // For each pixel column on the screen
-        for x in 0..width as u32 {
+        for x in 0..self.width {
             // X-coordinate on the camera plane (range [-1.0, 1.0])
-            let plane_x = 2.0 * (x as f32 * width_recip) - 1.0;
+            let plane_x = 2.0 * (x as f32 * self.width_recip) - 1.0;
             // Ray direction for current pixel column
             let ray_dir = self.dir + self.plane * plane_x;
             // Length of ray from one x/y side to next x/y side on the tile_map
@@ -234,22 +233,15 @@ impl Raycaster {
                     // If the hit tile has transparency, also calculate the Hit to the next closest
                     // Vertical or Horizontal side on the ray path
                     if let Tile::Transparent(_) = tile {
-                        let side = if side_dist_x < side_dist_y {
-                            Side::Vertical
-                        } else {
-                            Side::Horizontal
-                        };
-                        let (perp_wall_dist, wall_x) = match side {
-                            Side::Vertical => {
-                                let dist = side_dist_x.max(0.0);
+                        let (perp_wall_dist, wall_x, side) = if side_dist_x < side_dist_y {
+                            let dist = side_dist_x.max(0.0);
                                 let wall_x = self.pos.y + dist * ray_dir.y;
-                                (dist, wall_x - wall_x.floor())
-                            }
-                            Side::Horizontal => {
-                                let dist = side_dist_y.max(0.0);
+                                (dist, wall_x - wall_x.floor(), Side::Vertical)
+                            
+                        } else {
+                            let dist = side_dist_y.max(0.0);
                                 let wall_x = self.pos.x + dist * ray_dir.x;
-                                (dist, wall_x - wall_x.floor())
-                            }
+                                (dist, wall_x - wall_x.floor(), Side::Horizontal)
                         };
                         let hit2 = RayHit {
                             wall_dist: perp_wall_dist,
@@ -266,6 +258,7 @@ impl Raycaster {
                         dir: ray_dir,
                         hit,
                         through_hits,
+                        draw_x_offset: 4 * (self.width - x - 1) as usize
                     });
                     break;
                 }

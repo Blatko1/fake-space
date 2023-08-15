@@ -197,10 +197,6 @@ impl Canvas {
         self.data.fill(0);
     }
 
-    pub fn fliped_data_mut(&mut self) -> &mut [u8] {
-        &mut self.data
-    }
-
     pub fn data_mut(&mut self) -> &mut [u8] {
         &mut self.data
     }
@@ -318,14 +314,6 @@ impl Canvas {
             height: scaled_height.min(window_height) as u32,
         };
     }
-
-    // TODO maybe remove end_y and use data.len() instead
-    //#[inline(always)]
-    //pub fn draw_line(&mut self, x: usize, begin_y: usize, end_y: usize, data: &[u8]) {
-    //    let begin = x * 4 * self.height as usize + begin_y * 4;
-    //    let end = begin + end_y * 4;
-    //    self.data[begin..end].copy_from_slice(data);
-    //}
 }
 
 #[derive(Debug, Default)]

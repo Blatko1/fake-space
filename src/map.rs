@@ -30,10 +30,6 @@ impl Map {
         Self::new(TEST_MAP_WIDTH, TEST_MAP_HEIGHT, TEST_MAP_DATA)
     }
 
-    pub fn new_void() -> Self {
-        Self::new(VOID_MAP_WIDTH, VOID_MAP_HEIGHT, VOID_MAP_DATA)
-    }
-
     ///Returns the value at the provided map coordinates.
     /// Returns [`Tile::Void`] if coordinates are out of bounds.
     #[inline]
@@ -49,12 +45,12 @@ impl Map {
 
     #[inline]
     pub fn width(&self) -> u32 {
-        self.width as u32
+        self.width
     }
 
     #[inline]
     pub fn height(&self) -> u32 {
-        self.height as u32
+        self.height
     }
 }
 
@@ -115,8 +111,3 @@ const TEST_MAP_DATA: &[u32; (TEST_MAP_WIDTH * TEST_MAP_HEIGHT) as usize] = &[
     1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 ];
-
-const VOID_MAP_WIDTH: u32 = 100;
-const VOID_MAP_HEIGHT: u32 = 100;
-#[rustfmt::skip]
-const VOID_MAP_DATA: &[u32; (VOID_MAP_WIDTH * VOID_MAP_HEIGHT) as usize] = &[0;(VOID_MAP_WIDTH * VOID_MAP_HEIGHT) as usize];

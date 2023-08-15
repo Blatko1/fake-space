@@ -1,21 +1,14 @@
 use super::{RayCast, Raycaster, Side};
 use crate::{
-    canvas::Canvas,
-    map::{Map, Tile, TransparentTexture, WallTexture},
+    map::{Tile, TransparentTexture},
     textures::{
-        BLUE_BRICK, BLUE_BRICK_HEIGHT, BLUE_BRICK_WIDTH, FENCE,
-        FENCE_BOTTOM_HEIGHT, FENCE_HEIGHT, FENCE_TOP_HEIGHT, FENCE_WIDTH,
-        LIGHT_PLANK, LIGHT_PLANK_HEIGHT, LIGHT_PLANK_WIDTH,
+        FENCE, FENCE_BOTTOM_HEIGHT, FENCE_HEIGHT, FENCE_TOP_HEIGHT, FENCE_WIDTH,
     },
 };
-
+// TODO add blue glass texture
 impl Raycaster {
     pub fn draw_transparent(&self, ray: &RayCast, data: &mut [u8]) {
-        let draw_x_offset = 4 * (self.width - ray.screen_x - 1) as usize;
         let mut color = [0, 0, 0, 0];
-        // TODO write 'height' instead of 'h'
-        let half_h_i = self.height as i32 / 2;
-        let half_h_f = self.height as f32 * 0.5;
 
         for through_hit in ray.through_hits.iter().rev() {
             let (texture, tex_width, tex_height, bottom_height, top_height) =
@@ -39,9 +32,9 @@ impl Raycaster {
                 ((full_line_pixel_height / 2) as f32 * bottom_height) as i32;
             let line_height = top_height + bottom_height;
 
-            let begin = (half_h_i - bottom_height).max(0) as u32;
+            let begin = (self.int_half_height - bottom_height).max(0) as u32;
             let end =
-                ((half_h_i + top_height).max(0) as u32).min(self.height - 1);
+                ((self.int_half_height + top_height).max(0) as u32).min(self.height - 1);
 
             let tex_height_minus_one = tex_height as f32 - 1.0;
             let tex_x = match through_hit.side {
@@ -62,7 +55,7 @@ impl Raycaster {
             //assert!(tex_x < 16);
             let tex_y_step = tex_height as f32 / line_height as f32;
             let mut tex_y =
-                (begin as f32 + bottom_height as f32 - half_h_f) * tex_y_step;
+                (begin as f32 + bottom_height as f32 - self.float_half_height) * tex_y_step;
             // TODO fix texture mapping.
             //assert!(tex_y >= 0.0);
             for y in begin..end {
@@ -82,14 +75,31 @@ impl Raycaster {
                 };
                 let index = (self.height as usize - 1 - y as usize)
                     * self.four_width
-                    + draw_x_offset;
+                    + ray.draw_x_offset;
                 tex_y += tex_y_step;
                 if color[3] == 0 {
                     continue;
                 }
-                data[index..index + 4].copy_from_slice(&color);
+                let rgba = &mut data[index..index + 4];
+                rgba.copy_from_slice(&blend(rgba, color))
                 //assert!(tex_y <= 16.0);
             }
         }
     }
+}
+
+#[inline(always)]
+fn blend(background: &[u8], foreground: [u8; 4]) -> [u8; 4] {
+    let alpha = foreground[3] as f32 / 255.0;
+    let inv_alpha = 1.0 - alpha;
+
+    let blended_r =
+        (foreground[0] as f32 * alpha + background[0] as f32 * inv_alpha) as u8;
+    let blended_g =
+        (foreground[1] as f32 * alpha + background[1] as f32 * inv_alpha) as u8;
+    let blended_b =
+        (foreground[2] as f32 * alpha + background[2] as f32 * inv_alpha) as u8;
+    let blended_a = (255.0 * alpha + background[3] as f32 * inv_alpha) as u8;
+
+    [blended_r, blended_g, blended_b, blended_a]
 }
