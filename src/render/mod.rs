@@ -25,14 +25,14 @@ pub struct RayCast {
     screen_x: u32,
     /// Direction of the ray which hit the tile (wall).
     dir: Vec2,
-    /// Data about the ray's final hit point, ray doesn't continue.
+    /// Data about the ray's final hit point, ray doesn't continue after the hit.
     hit: RayHit,
     /// Data about the ray's hit point through which the ray passes if
     /// the hit tile is transparent (i.e. window, glass, different shapes).
     /// Since the object has transparency, all four sides should be rendered,
     /// meaning that each ray passes through two sides (adjacent or opposite).
     /// First in array is the first hit tile side and second is the other.
-    through_hit: Option<[RayHit; 2]>,
+    through_hits: Vec<RayHit>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -80,11 +80,6 @@ pub struct Raycaster {
     // Specific use variables with goal to improve performance.
     four_width: usize,
 
-    /// A constantly changing buffer which holds color RGBA data a single column.
-    /// It can specify some small color slice in the column or the whole column.
-    /// It's max length is the height of the Canvas texture.
-    column_buffer: Vec<u8>,
-
     hits: Vec<RayCast>,
 
     // Variables for controlling and moving the scene.
@@ -125,8 +120,6 @@ impl Raycaster {
             height,
             four_width: 4 * width as usize,
 
-            column_buffer,
-
             hits,
 
             turn_left: 0.0,
@@ -139,25 +132,24 @@ impl Raycaster {
     pub fn render(&self, data: &mut [u8]) {
         // TODO don't forget to remove temp '&'
         floor::fill(&self, data);
-        ceiling::fill(self, data);
+        //ceiling::fill(self, data);
 
         for ray in self.hits.iter() {
             let hit = ray.hit;
 
-            // Draw the void (non-tile; out of map bounds)
+            // Draw the void (non-tile; out of map bounds):
             if let Tile::Void = hit.tile {
-                void::draw(&self, ray, data);
-                continue;
+                self.draw_void(ray, data);
             }
 
             // Draw the hit impassable wall tile:
             if let Tile::Wall(_) = hit.tile {
-                wall::draw(self, ray, data);
+                self.draw_wall(ray, data);
             }
 
-            // Draw the hit tile with transparency:
-            if let Some(_) = ray.through_hit {
-                transparent::draw(self, ray, data);
+            //Draw the hit tile with transparency:
+            if !ray.through_hits.is_empty() {
+                self.draw_transparent(ray, data);
             }
         }
     }
@@ -198,7 +190,7 @@ impl Raycaster {
             let (step_x, step_y) =
                 (ray_dir.x.signum() as i32, ray_dir.y.signum() as i32);
 
-            let mut through_hit = None;
+            let mut through_hits = Vec::new();
             // DDA loop
             // Iterates over all hit sides until it hits a non empty tile.
             // If a transparent tile is hit, continue iterating.
@@ -214,8 +206,13 @@ impl Raycaster {
                     side_dist_y += delta_dist.y;
                     Side::Horizontal
                 };
+                // Get value of the hit tile
                 let tile = tile_map.get_value(map_x, map_y);
+                // If the hit tile is not Tile::Empty (out of bounds != Tile::Empty) store data
                 if tile != Tile::Empty {
+                    // Calculate perpetual wall distance from the camera and wall_x.
+                    // wall_x represents which part of wall was hit from the left border (0.0)
+                    // to the right border (0.99999) and everything in between in range <0.0, 1.0>
                     let (perp_wall_dist, wall_x) = match side {
                         Side::Vertical => {
                             let dist = side_dist_x - delta_dist.x;
@@ -234,46 +231,41 @@ impl Raycaster {
                         side,
                         wall_x,
                     };
+                    // If the hit tile has transparency, also calculate the Hit to the next closest
+                    // Vertical or Horizontal side on the ray path
                     if let Tile::Transparent(_) = tile {
-                        if through_hit.is_none() {
-                            let side = if side_dist_x < side_dist_y {
-                                //side_dist_x += delta_dist.x;
-                                Side::Vertical
-                            } else {
-                                //side_dist_y += delta_dist.y;
-                                Side::Horizontal
-                            };
-                            let (perp_wall_dist, wall_x) = match side {
-                                Side::Vertical => {
-                                    let dist = side_dist_x;
-                                    let wall_x = self.pos.y + dist * ray_dir.y;
-                                    //side_dist_x -= delta_dist.x;
-                                    (dist.max(0.0), wall_x - wall_x.floor())
-                                }
-                                Side::Horizontal => {
-                                    let dist = side_dist_y;
-                                    let wall_x = self.pos.x + dist * ray_dir.x;
-                                    //side_dist_y -= delta_dist.y;
-                                    (dist.max(0.0), wall_x - wall_x.floor())
-                                }
-                            };
-                            let wall_x = wall_x - wall_x.floor();
-                            let hit2 = RayHit {
-                                wall_dist: perp_wall_dist,
-                                tile,
-                                side,
-                                wall_x,
-                            };
-
-                            through_hit = Some([hit, hit2]);
-                            continue;
-                        }
+                        let side = if side_dist_x < side_dist_y {
+                            Side::Vertical
+                        } else {
+                            Side::Horizontal
+                        };
+                        let (perp_wall_dist, wall_x) = match side {
+                            Side::Vertical => {
+                                let dist = side_dist_x.max(0.0);
+                                let wall_x = self.pos.y + dist * ray_dir.y;
+                                (dist, wall_x - wall_x.floor())
+                            }
+                            Side::Horizontal => {
+                                let dist = side_dist_y.max(0.0);
+                                let wall_x = self.pos.x + dist * ray_dir.x;
+                                (dist, wall_x - wall_x.floor())
+                            }
+                        };
+                        let hit2 = RayHit {
+                            wall_dist: perp_wall_dist,
+                            tile,
+                            side,
+                            wall_x,
+                        };
+                        through_hits.push(hit);
+                        through_hits.push(hit2);
+                        continue;
                     }
                     self.hits.push(RayCast {
                         screen_x: x,
                         dir: ray_dir,
                         hit,
-                        through_hit,
+                        through_hits,
                     });
                     break;
                 }
