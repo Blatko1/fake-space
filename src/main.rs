@@ -4,15 +4,13 @@
 /// bilinear texture filtering but unnoticeable.
 mod canvas;
 mod map;
-//mod player;
-mod raycaster;
+mod render;
 mod state;
 mod textures;
 mod window;
 
 use std::time::{Duration, Instant};
 
-use glam::Vec2;
 use pollster::block_on;
 use state::State;
 use window::Window;

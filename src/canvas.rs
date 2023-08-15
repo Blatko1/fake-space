@@ -8,6 +8,7 @@ const TRIANGLE_VERTICES: [[f32; 2]; 3] = [
     [-1.0, 3.0],  // top-left
 ];
 
+// TODO better explanation
 pub struct Canvas {
     data: Vec<u8>,
     width: u32,
@@ -172,9 +173,11 @@ impl Canvas {
                 multiview: None,
             });
 
+        let data_len = (canvas_width * canvas_height * 4) as usize;
+
         Self {
             // RGBA - 4 bytes per pixel
-            data: vec![0; (canvas_width * canvas_height * 4) as usize],
+            data: vec![0; data_len],
             width: canvas_width,
             height: canvas_height,
             render_format,
@@ -194,11 +197,19 @@ impl Canvas {
         self.data.fill(0);
     }
 
+    pub fn fliped_data_mut(&mut self) -> &mut [u8] {
+        &mut self.data
+    }
+
     pub fn data_mut(&mut self) -> &mut [u8] {
         &mut self.data
     }
 
-    pub fn render(&self, window: &Window) -> Result<(), wgpu::SurfaceError> {
+    // TODO maybe mut self isn't good at a render function
+    pub fn render(
+        &mut self,
+        window: &Window,
+    ) -> Result<(), wgpu::SurfaceError> {
         window.queue().write_texture(
             wgpu::ImageCopyTexture {
                 texture: &self.texture,
@@ -307,6 +318,14 @@ impl Canvas {
             height: scaled_height.min(window_height) as u32,
         };
     }
+
+    // TODO maybe remove end_y and use data.len() instead
+    //#[inline(always)]
+    //pub fn draw_line(&mut self, x: usize, begin_y: usize, end_y: usize, data: &[u8]) {
+    //    let begin = x * 4 * self.height as usize + begin_y * 4;
+    //    let end = begin + end_y * 4;
+    //    self.data[begin..end].copy_from_slice(data);
+    //}
 }
 
 #[derive(Debug, Default)]

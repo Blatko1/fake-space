@@ -1,4 +1,4 @@
-use crate::{canvas::Canvas, map::Map, raycaster::Raycaster, window::Window};
+use crate::{canvas::Canvas, map::Map, render::Raycaster, window::Window};
 use winit::{dpi::PhysicalSize, event::KeyboardInput};
 
 pub struct State {
@@ -36,7 +36,7 @@ impl State {
         self.raycaster.render(self.canvas.data_mut());
     }
 
-    pub fn render(&self) -> Result<(), wgpu::SurfaceError> {
+    pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         self.canvas.render(&self.window)
     }
 
