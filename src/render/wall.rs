@@ -2,10 +2,7 @@ use super::{RayCast, Raycaster, Side};
 
 use crate::{
     map::{Tile, WallTexture},
-    textures::{
-        BLUE_BRICK, BLUE_BRICK_HEIGHT, BLUE_BRICK_WIDTH, LIGHT_PLANK,
-        LIGHT_PLANK_HEIGHT, LIGHT_PLANK_WIDTH,
-    },
+    textures::{BLUE_BRICK_TEXTURE, LIGHT_PLANK_TEXTURE},
 };
 
 impl Raycaster {
@@ -18,12 +15,8 @@ impl Raycaster {
             _ => unreachable!(),
         };
         let (texture, tex_width, tex_height) = match tex {
-            WallTexture::BlueBrick => {
-                (BLUE_BRICK, BLUE_BRICK_WIDTH, BLUE_BRICK_HEIGHT)
-            }
-            WallTexture::LightPlank => {
-                (LIGHT_PLANK, LIGHT_PLANK_WIDTH, LIGHT_PLANK_HEIGHT)
-            }
+            WallTexture::BlueBrick => BLUE_BRICK_TEXTURE,
+            WallTexture::LightPlank => LIGHT_PLANK_TEXTURE,
         };
 
         let line_pixel_height = (self.height as f32 / hit.wall_dist) as i32;

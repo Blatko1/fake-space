@@ -1,9 +1,7 @@
 use super::{RayCast, Raycaster, Side};
 use crate::{
     map::{Tile, TransparentTexture},
-    textures::{
-        FENCE, FENCE_BOTTOM_HEIGHT, FENCE_HEIGHT, FENCE_TOP_HEIGHT, FENCE_WIDTH,
-    },
+    textures::{BLUE_GLASS_TEXTURE, FENCE_TEXTURE},
 };
 // TODO add blue glass texture
 impl Raycaster {
@@ -14,13 +12,8 @@ impl Raycaster {
             let (texture, tex_width, tex_height, bottom_height, top_height) =
                 match through_hit.tile {
                     Tile::Transparent(tex) => match tex {
-                        TransparentTexture::Fence => (
-                            FENCE,
-                            FENCE_WIDTH,
-                            FENCE_HEIGHT,
-                            FENCE_BOTTOM_HEIGHT,
-                            FENCE_TOP_HEIGHT,
-                        ),
+                        TransparentTexture::Fence => FENCE_TEXTURE,
+                        TransparentTexture::BlueGlass => BLUE_GLASS_TEXTURE,
                     },
                     _ => unreachable!(),
                 };
@@ -33,8 +26,8 @@ impl Raycaster {
             let line_height = top_height + bottom_height;
 
             let begin = (self.int_half_height - bottom_height).max(0) as u32;
-            let end =
-                ((self.int_half_height + top_height).max(0) as u32).min(self.height - 1);
+            let end = ((self.int_half_height + top_height).max(0) as u32)
+                .min(self.height - 1);
 
             let tex_height_minus_one = tex_height as f32 - 1.0;
             let tex_x = match through_hit.side {
@@ -53,8 +46,9 @@ impl Raycaster {
             };
             let four_tex_x = tex_x * 4;
             let tex_y_step = tex_height as f32 / line_height as f32;
-            let mut tex_y =
-                (begin as f32 + bottom_height as f32 - self.float_half_height) * tex_y_step;
+            let mut tex_y = (begin as f32 + bottom_height as f32
+                - self.float_half_height)
+                * tex_y_step;
             // TODO fix texture mapping.
 
             for y in begin..end {
@@ -88,6 +82,9 @@ impl Raycaster {
 
 #[inline(always)]
 fn blend(background: &[u8], foreground: [u8; 4]) -> [u8; 4] {
+    if foreground[3] == 255 {
+        return foreground;
+    }
     let alpha = foreground[3] as f32 / 255.0;
     let inv_alpha = 1.0 - alpha;
 

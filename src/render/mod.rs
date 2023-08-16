@@ -26,7 +26,7 @@ pub struct RayCast {
     /// First in array is the first hit tile side and second is the other.
     through_hits: Vec<RayHit>,
     /// Precomputed specific use variable for improving performance.
-    draw_x_offset: usize
+    draw_x_offset: usize,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -233,15 +233,16 @@ impl Raycaster {
                     // If the hit tile has transparency, also calculate the Hit to the next closest
                     // Vertical or Horizontal side on the ray path
                     if let Tile::Transparent(_) = tile {
-                        let (perp_wall_dist, wall_x, side) = if side_dist_x < side_dist_y {
+                        let (perp_wall_dist, wall_x, side) = if side_dist_x
+                            < side_dist_y
+                        {
                             let dist = side_dist_x.max(0.0);
-                                let wall_x = self.pos.y + dist * ray_dir.y;
-                                (dist, wall_x - wall_x.floor(), Side::Vertical)
-                            
+                            let wall_x = self.pos.y + dist * ray_dir.y;
+                            (dist, wall_x - wall_x.floor(), Side::Vertical)
                         } else {
                             let dist = side_dist_y.max(0.0);
-                                let wall_x = self.pos.x + dist * ray_dir.x;
-                                (dist, wall_x - wall_x.floor(), Side::Horizontal)
+                            let wall_x = self.pos.x + dist * ray_dir.x;
+                            (dist, wall_x - wall_x.floor(), Side::Horizontal)
                         };
                         let hit2 = RayHit {
                             wall_dist: perp_wall_dist,
@@ -258,7 +259,7 @@ impl Raycaster {
                         dir: ray_dir,
                         hit,
                         through_hits,
-                        draw_x_offset: 4 * (self.width - x - 1) as usize
+                        draw_x_offset: 4 * (self.width - x - 1) as usize,
                     });
                     break;
                 }

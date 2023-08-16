@@ -1,4 +1,4 @@
-use crate::textures::{BLUE_BRICK, LIGHT_PLANK};
+use crate::textures::{LIGHT_PLANK, MOSSY_STONE};
 
 use super::Raycaster;
 
@@ -32,23 +32,34 @@ impl Raycaster {
                 let cellx = floor_x as i32;
                 let celly = floor_y as i32;
 
-                let tx = (16.0 * (floor_x - cellx as f32)) as u32 & (16 - 1);
-                let ty = (16.0 * (floor_y - celly as f32)) as u32 & (16 - 1);
+                let (texture, tex_width, tex_height) = 
+
+                let tx_ceiling =
+                    (16.0 * (floor_x - cellx as f32)) as u32 & (16 - 1);
+                let ty_ceiling =
+                    (16.0 * (floor_y - celly as f32)) as u32 & (16 - 1);
+
+                let tx_floor =
+                    (32.0 * (floor_x - cellx as f32)) as u32 & (32 - 1);
+                let ty_floor =
+                    (32.0 * (floor_y - celly as f32)) as u32 & (32 - 1);
 
                 floor_x += floor_step_x;
                 floor_y += floor_step_y;
 
-                let i = (16 * 4 * ty + tx * 4) as usize;
+                let i_ceiling = (16 * 4 * ty_ceiling + tx_ceiling * 4) as usize;
+                let i_floor = (32 * 4 * ty_floor + tx_floor * 4) as usize;
 
-                color.copy_from_slice(&LIGHT_PLANK[i..i + 4]);
+                // FLOOR
+                color.copy_from_slice(&MOSSY_STONE[i_floor..i_floor + 4]);
                 let index =
                     (draw_floor_y_offset + (self.width - x - 1) * 4) as usize;
                 data[index..index + 4].copy_from_slice(&color);
 
-                color.copy_from_slice(&BLUE_BRICK[i..i + 4]);
-                let index = (draw_ceiling_y_offset
-                    + (self.width - x - 1) * 4)
-                    as usize;
+                // CEILING
+                color.copy_from_slice(&LIGHT_PLANK[i_ceiling..i_ceiling + 4]);
+                let index =
+                    (draw_ceiling_y_offset + (self.width - x - 1) * 4) as usize;
                 data[index..index + 4].copy_from_slice(&color);
             }
         }

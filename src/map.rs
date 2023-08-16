@@ -75,6 +75,7 @@ pub enum WallTexture {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TransparentTexture {
     Fence,
+    BlueGlass,
 }
 
 impl From<u32> for Tile {
@@ -84,6 +85,7 @@ impl From<u32> for Tile {
             1 => Tile::Wall(WallTexture::BlueBrick),
             2 => Tile::Wall(WallTexture::LightPlank),
             3 => Tile::Transparent(TransparentTexture::Fence),
+            4 => Tile::Transparent(TransparentTexture::BlueGlass),
             _ => Tile::Void,
         }
     }
@@ -104,10 +106,10 @@ const TEST_MAP_DATA: &[u32; (TEST_MAP_WIDTH * TEST_MAP_HEIGHT) as usize] = &[
     1, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1,
     1, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1,
     1, 0, 0, 0, 0, 3, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1,
-    1, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1,
+    1, 0, 0, 0, 0, 3, 0, 0, 4, 0, 0, 0, 1, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 4, 2, 0, 0, 1, 0, 0, 1,
+    1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 1,
     1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 ];
