@@ -3,17 +3,17 @@
 /// output, have tried MSAA but it doesn't work on textures, have tried applying
 /// bilinear texture filtering but unnoticeable.
 mod canvas;
+mod draw;
 mod map;
-mod render;
 mod state;
 mod textures;
-mod window;
+mod cube;
 
 use std::time::{Duration, Instant};
 
+use canvas::Canvas;
 use pollster::block_on;
 use state::State;
-use window::Window;
 use winit::{
     event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
@@ -33,9 +33,9 @@ fn main() {
     let winit_window = WinitWindowBuilder::new().build(&event_loop).unwrap();
     winit_window.set_title("False Space");
 
-    let window = block_on(Window::init(&winit_window)).unwrap();
+    let canvas = block_on(Canvas::init(&winit_window, 640, 480));
 
-    let mut state = State::new(window, 640, 480);
+    let mut state = State::new(canvas);
 
     let framerate_delta = Duration::from_secs_f64(1.0 / FPS as f64);
     let mut time_delta = Instant::now();
@@ -88,9 +88,9 @@ fn main() {
                     time_delta = Instant::now();
                     framerate += 1;
                     fps_avg += elapsed.as_micros();
-                    // println!() every second instead.
+                    // TODO println!() every second instead.
                     if framerate >= FPS {
-                        println!("avg frame time: {}", fps_avg / 60);
+                        println!("avg frame time: {}", fps_avg / FPS as u128);
                         framerate = 0;
                         fps_avg = 0;
                     }

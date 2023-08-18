@@ -32,8 +32,6 @@ impl Raycaster {
                 let cellx = floor_x as i32;
                 let celly = floor_y as i32;
 
-                let (texture, tex_width, tex_height) = 
-
                 let tx_ceiling =
                     (16.0 * (floor_x - cellx as f32)) as u32 & (16 - 1);
                 let ty_ceiling =

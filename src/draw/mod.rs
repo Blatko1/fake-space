@@ -131,9 +131,7 @@ impl Raycaster {
     }
 
     pub fn render(&self, data: &mut [u8]) {
-        // TODO don't forget to remove temp '&'
         self.draw_floor_and_ceiling(data);
-        //ceiling::fill(self, data);
 
         for ray in self.hits.iter() {
             let hit = ray.hit;

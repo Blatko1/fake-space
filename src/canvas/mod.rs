@@ -1,6 +1,8 @@
-use wgpu::util::DeviceExt;
+mod gfx;
 
-use crate::window::Window;
+use gfx::Gfx;
+use wgpu::util::DeviceExt;
+use winit::dpi::PhysicalSize;
 
 const TRIANGLE_VERTICES: [[f32; 2]; 3] = [
     [-1.0, -1.0], // bottom-left
@@ -14,12 +16,13 @@ pub struct Canvas {
     width: u32,
     height: u32,
 
+    gfx: Gfx,
     pipeline: wgpu::RenderPipeline,
     bind_group: wgpu::BindGroup,
 
     region: ScissorRegion,
     vertex_buffer: wgpu::Buffer,
-    matrix_buffer: wgpu::Buffer, // TODO make up better names
+    matrix_buffer: wgpu::Buffer,
     texture: wgpu::Texture,
     size: wgpu::Extent3d,
 }
@@ -28,12 +31,15 @@ impl Canvas {
     const CANVAS_FORMAT: wgpu::TextureFormat =
         wgpu::TextureFormat::Rgba8UnormSrgb;
 
-    pub fn new(
-        device: &wgpu::Device,
-        render_format: wgpu::TextureFormat,
+    pub async fn init(
+        winit_window: &winit::window::Window,
         canvas_width: u32,
         canvas_height: u32,
     ) -> Self {
+        let gfx = Gfx::init(winit_window).await.unwrap();
+        let device = gfx.device();
+        let render_format = gfx.config().format;
+
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("Canvas Texture Sampler"),
             lod_min_clamp: 0.0,
@@ -133,8 +139,8 @@ impl Canvas {
                 usage: wgpu::BufferUsages::VERTEX,
             });
 
-        let shader: wgpu::ShaderModule = device
-            .create_shader_module(wgpu::include_wgsl!("shaders/shader.wgsl"));
+        let shader: wgpu::ShaderModule =
+            device.create_shader_module(wgpu::include_wgsl!("shader.wgsl"));
 
         let pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -180,6 +186,7 @@ impl Canvas {
             width: canvas_width,
             height: canvas_height,
 
+            gfx,
             pipeline,
             bind_group,
 
@@ -199,12 +206,8 @@ impl Canvas {
         &mut self.data
     }
 
-    // TODO maybe mut self isn't good at a render function
-    pub fn render(
-        &mut self,
-        window: &Window,
-    ) -> Result<(), wgpu::SurfaceError> {
-        window.queue().write_texture(
+    pub fn render(&self) -> Result<(), wgpu::SurfaceError> {
+        self.gfx.queue().write_texture(
             wgpu::ImageCopyTexture {
                 texture: &self.texture,
                 mip_level: 0,
@@ -220,13 +223,13 @@ impl Canvas {
             self.size,
         );
 
-        let mut encoder = window.device().create_command_encoder(
+        let mut encoder = self.gfx.device().create_command_encoder(
             &wgpu::CommandEncoderDescriptor {
                 label: Some("Command Encoder"),
             },
         );
 
-        let frame = window.get_current_texture()?;
+        let frame = self.gfx.get_current_texture()?;
         let view = frame
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
@@ -264,18 +267,16 @@ impl Canvas {
             rpass.draw(0..3, 0..1);
         }
 
-        window.queue().submit(Some(encoder.finish()));
+        self.gfx.queue().submit(Some(encoder.finish()));
         frame.present();
 
         Ok(())
     }
 
-    pub fn resize(
-        // TODO maybe take window dimensions as two arguments
-        &mut self,
-        queue: &wgpu::Queue,
-        config: &wgpu::SurfaceConfiguration,
-    ) {
+    pub fn resize(&mut self, new_size: PhysicalSize<u32>) {
+        self.gfx.resize(new_size);
+        let config = self.gfx.config();
+
         let window_width = config.width as f32;
         let window_height = config.height as f32;
         let (texture_width, texture_height) =
@@ -299,7 +300,7 @@ impl Canvas {
             [t_x, t_y, 0.0, 1.0],
         ];
 
-        queue.write_buffer(
+        self.gfx.queue().write_buffer(
             &self.matrix_buffer,
             0,
             bytemuck::cast_slice(&matrix),
@@ -311,6 +312,18 @@ impl Canvas {
             width: scaled_width.min(window_width) as u32,
             height: scaled_height.min(window_height) as u32,
         };
+    }
+
+    pub fn on_surface_lost(&self) {
+        self.gfx.recreate_sc()
+    }
+
+    pub fn width(&self) -> u32 {
+        self.width
+    }
+
+    pub fn height(&self) -> u32 {
+        self.height
     }
 }
 

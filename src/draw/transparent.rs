@@ -3,7 +3,7 @@ use crate::{
     map::{Tile, TransparentTexture},
     textures::{BLUE_GLASS_TEXTURE, FENCE_TEXTURE},
 };
-// TODO add blue glass texture
+
 impl Raycaster {
     pub fn draw_transparent(&self, ray: &RayCast, data: &mut [u8]) {
         let mut color = [0, 0, 0, 0];
@@ -17,6 +17,8 @@ impl Raycaster {
                     },
                     _ => unreachable!(),
                 };
+
+            // TODO better names
             let full_line_pixel_height =
                 (self.height as f32 / (through_hit.wall_dist)) as i32;
             let top_height =

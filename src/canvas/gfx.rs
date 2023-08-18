@@ -1,15 +1,13 @@
 use winit::{dpi::PhysicalSize, window::Window as WinitWindow};
 
-// TODO store this in Canvas struct instead
-pub struct Window {
-    // TODO change name
+pub struct Gfx {
     surface: wgpu::Surface,
     device: wgpu::Device,
     config: wgpu::SurfaceConfiguration,
     queue: wgpu::Queue,
 }
 
-impl Window {
+impl Gfx {
     pub async fn init(
         winit_window: &WinitWindow,
     ) -> Result<Self, Box<dyn std::error::Error>> {
@@ -47,7 +45,6 @@ impl Window {
             .get_default_config(&adapter, size.width, size.height)
             .expect("Surface isn't supported by the adapter.");
         surface.configure(&device, &config);
-        // TODO maybe add textures to config.view_format
         Ok(Self {
             surface,
             device,
@@ -89,15 +86,5 @@ impl Window {
     #[inline]
     pub fn queue(&self) -> &wgpu::Queue {
         &self.queue
-    }
-
-    #[inline]
-    pub fn width(&self) -> u32 {
-        self.config.width
-    }
-
-    #[inline]
-    pub fn height(&self) -> u32 {
-        self.config.height
     }
 }

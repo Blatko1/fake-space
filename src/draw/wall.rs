@@ -14,16 +14,24 @@ impl Raycaster {
             Tile::Wall(tex) => tex,
             _ => unreachable!(),
         };
-        let (texture, tex_width, tex_height) = match tex {
-            WallTexture::BlueBrick => BLUE_BRICK_TEXTURE,
-            WallTexture::LightPlank => LIGHT_PLANK_TEXTURE,
-        };
+        let (texture, tex_width, tex_height, bottom_height, top_height) =
+            match tex {
+                WallTexture::BlueBrick => BLUE_BRICK_TEXTURE,
+                WallTexture::LightPlank => LIGHT_PLANK_TEXTURE,
+            };
 
-        let line_pixel_height = (self.height as f32 / hit.wall_dist) as i32;
-        let half_l = line_pixel_height / 2;
+        // TODO better names
+        let full_line_pixel_height =
+            (self.height as f32 / hit.wall_dist) as i32;
+        let top_height =
+            ((full_line_pixel_height / 2) as f32 * top_height) as i32;
+        let bottom_height =
+            ((full_line_pixel_height / 2) as f32 * bottom_height) as i32;
+        let line_height = top_height + bottom_height;
 
-        let begin = (self.int_half_height - half_l).max(0) as u32;
-        let end = ((self.int_half_height + half_l) as u32).min(self.height - 1);
+        let begin = (self.int_half_height - bottom_height).max(0) as u32;
+        let end = ((self.int_half_height + top_height).max(0) as u32)
+            .min(self.height - 1);
 
         let tex_height_minus_one = tex_height as f32 - 1.0;
         let tex_x = match hit.side {
@@ -37,13 +45,11 @@ impl Raycaster {
             _ => (hit.wall_x * tex_width as f32) as u32,
         };
         let four_tex_x = tex_x * 4;
-        //assert!(tex_x < 16);
-        let tex_y_step = tex_height as f32 / line_pixel_height as f32;
-        let mut tex_y = (begin as f32 + line_pixel_height as f32 * 0.5
+        let tex_y_step = tex_height as f32 / line_height as f32;
+        let mut tex_y = (begin as f32 + bottom_height as f32
             - self.float_half_height)
             * tex_y_step;
         // TODO fix texture mapping.
-        //assert!(tex_y >= 0.0);
         for y in begin..end {
             //assert!(tex_y <= 15.0, "Not less!: y0: {}, y1: {}, y: {}", y0, y1, y);
             let y_pos = tex_y.min(tex_height_minus_one).round() as u32;
@@ -63,7 +69,6 @@ impl Raycaster {
                 + ray.draw_x_offset;
             data[index..index + 4].copy_from_slice(&color);
             tex_y += tex_y_step;
-            //assert!(tex_y <= 16.0);
         }
     }
 }
