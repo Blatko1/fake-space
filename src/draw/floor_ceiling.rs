@@ -4,10 +4,10 @@ use super::Raycaster;
 
 impl Raycaster {
     pub fn draw_floor_and_ceiling(&self, data: &mut [u8]) {
-        let ray_dir_x0 = self.dir.x - self.plane.x;
-        let ray_dir_y0 = self.dir.y - self.plane.y;
-        let ray_dir_x1 = self.dir.x + self.plane.x;
-        let ray_dir_y1 = self.dir.y + self.plane.y;
+        let ray_dir_x0 = self.dir.x - self.plane_h.x;
+        let ray_dir_y0 = self.dir.y - self.plane_h.y;
+        let ray_dir_x1 = self.dir.x + self.plane_h.x;
+        let ray_dir_y1 = self.dir.y + self.plane_h.y;
         let pos_z = 0.5 * self.height as f32;
 
         let mut color = [0; 4];
@@ -15,7 +15,7 @@ impl Raycaster {
         for y in self.height / 2..self.height {
             let p = y as f32 - self.height as f32 / 2.0;
 
-            let row_dist = pos_z / p;
+            let row_dist = pos_z / p / self.aspect;
 
             let floor_step_x =
                 row_dist * (ray_dir_x1 - ray_dir_x0) / self.width as f32;
@@ -50,14 +50,12 @@ impl Raycaster {
 
                 // FLOOR
                 color.copy_from_slice(&MOSSY_STONE[i_floor..i_floor + 4]);
-                let index =
-                    (draw_floor_y_offset + (self.width - x - 1) * 4) as usize;
+                let index = (draw_floor_y_offset + x * 4) as usize;
                 data[index..index + 4].copy_from_slice(&color);
 
                 // CEILING
                 color.copy_from_slice(&LIGHT_PLANK[i_ceiling..i_ceiling + 4]);
-                let index =
-                    (draw_ceiling_y_offset + (self.width - x - 1) * 4) as usize;
+                let index = (draw_ceiling_y_offset + x * 4) as usize;
                 data[index..index + 4].copy_from_slice(&color);
             }
         }

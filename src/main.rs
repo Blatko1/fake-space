@@ -5,9 +5,9 @@
 mod canvas;
 mod draw;
 mod map;
+mod object;
 mod state;
 mod textures;
-mod cube;
 
 use std::time::{Duration, Instant};
 

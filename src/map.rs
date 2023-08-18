@@ -1,3 +1,5 @@
+use crate::object::ObjectType;
+
 /// A map where the player is positioned. Contains all map data.
 /// The (0,0) coordinate is positioned at the bottom-left
 /// and (`width`, `height`) at the top-right.
@@ -40,7 +42,7 @@ impl Map {
         let index = (self.height as i32 - 1 - y) as usize * self.width as usize
             + x as usize;
 
-        *self.data.get(index).unwrap_or(&Tile::Void)
+        self.data.get(index).unwrap_or(&Tile::Void).clone()
     }
 
     #[inline]
@@ -54,14 +56,16 @@ impl Map {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Tile {
     /// Empty walkable tile.
     Empty,
-    /// Non-walkable tile.
+    /// Non-walkable, non-transparent wall tile.
     Wall(WallTexture),
     /// Represents all tiles which have transparent parts.
     Transparent(TransparentTexture),
+    /// Represents a tile which contains a voxel model and possible a Wall or a Transparent tile.
+    Object(ObjectType),
     /// Represents space out of map (non-tile).
     Void,
 }
@@ -86,6 +90,7 @@ impl From<u32> for Tile {
             2 => Tile::Wall(WallTexture::LightPlank),
             3 => Tile::Transparent(TransparentTexture::Fence),
             4 => Tile::Transparent(TransparentTexture::BlueGlass),
+            5 => Tile::Object(ObjectType::Cube),
             _ => Tile::Void,
         }
     }
@@ -109,7 +114,7 @@ const TEST_MAP_DATA: &[u32; (TEST_MAP_WIDTH * TEST_MAP_HEIGHT) as usize] = &[
     1, 0, 0, 0, 0, 3, 0, 0, 4, 0, 0, 0, 1, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 4, 2, 0, 0, 1, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 1,
+    1, 0, 0, 0, 0, 5, 0, 0, 2, 0, 0, 0, 1, 0, 0, 1,
     1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 ];

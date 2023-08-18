@@ -4,7 +4,7 @@ use crate::{
     map::{Tile, WallTexture},
     textures::{BLUE_BRICK_TEXTURE, LIGHT_PLANK_TEXTURE},
 };
-
+// TODO write tests for each draw call function to check for overflows
 impl Raycaster {
     pub fn draw_wall(&self, ray: &RayCast, data: &mut [u8]) {
         let mut color = [0, 0, 0, 0];
@@ -22,12 +22,12 @@ impl Raycaster {
 
         // TODO better names
         let full_line_pixel_height =
-            (self.height as f32 / hit.wall_dist) as i32;
+            (self.height as f32 / hit.wall_dist / self.aspect) as i32;
         let top_height =
             ((full_line_pixel_height / 2) as f32 * top_height) as i32;
         let bottom_height =
             ((full_line_pixel_height / 2) as f32 * bottom_height) as i32;
-        let line_height = top_height + bottom_height;
+        let line_height = top_height.saturating_add(bottom_height);
 
         let begin = (self.int_half_height - bottom_height).max(0) as u32;
         let end = ((self.int_half_height + top_height).max(0) as u32)
@@ -66,7 +66,7 @@ impl Raycaster {
             };
             let index = (self.height as usize - 1 - y as usize)
                 * self.four_width
-                + ray.draw_x_offset;
+                + ray.screen_x as usize * 4;
             data[index..index + 4].copy_from_slice(&color);
             tex_y += tex_y_step;
         }

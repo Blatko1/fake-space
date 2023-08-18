@@ -3,11 +3,14 @@ mod transparent;
 mod void;
 mod wall;
 
-use glam::Vec2;
+use glam::{Vec2, Vec3};
 use std::f32::consts::TAU;
 use winit::event::{ElementState, KeyboardInput, VirtualKeyCode};
 
-use crate::map::{Map, Tile};
+use crate::{
+    map::{Map, Tile},
+    object::ModelManager,
+};
 // TODO rotation control with mouse and/or keyboard
 const MOVEMENT_SPEED: f32 = 0.1;
 
@@ -25,8 +28,6 @@ pub struct RayCast {
     /// meaning that each ray passes through two sides (adjacent or opposite).
     /// First in array is the first hit tile side and second is the other.
     through_hits: Vec<RayHit>,
-    /// Precomputed specific use variable for improving performance.
-    draw_x_offset: usize,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -62,18 +63,23 @@ pub struct Raycaster {
     pos: Vec2,
     /// Direction of the raycaster.
     dir: Vec2,
-    /// Raycaster (camera) 2D plane.
-    plane: Vec2,
+    /// Raycaster (camera) 2D horizontal plane.
+    plane_h: Vec2,
+    /// Raycaster (camera) 2D vertical plane.
+    plane_v: Vec3,
     /// Angle in radians.
     angle: f32,
     /// Width of the output screen/texture.
     width: u32,
     /// Height of the output screen/texture.
     height: u32,
+    /// Output screen dimension aspect (width/height)
+    aspect: f32,
 
     // Specific use variables with goal to improve performance.
     four_width: usize,
     width_recip: f32,
+    height_recip: f32,
     int_half_height: i32,
     float_half_height: f32,
 
@@ -96,28 +102,34 @@ impl Raycaster {
         height: u32,
     ) -> Self {
         let hits = Vec::with_capacity(width as usize);
-        let plane_mag = f32::tan(fov / 2.0);
+        let plane_mag = -f32::tan(fov / 2.0);
+        let aspect = width as f32 / height as f32;
 
         // Raycaster position and main direction (is always normalized)
         let pos = Vec2::new(pos_x, pos_y);
         let dir = Vec2::from_angle(angle);
         // Raycaster's (camera's) 2D plane
-        let dir_perpendicular = dir.perp();
-        let plane = dir_perpendicular * plane_mag;
+        let dir_perp = dir.perp();
+        let plane_h = dir_perp * plane_mag;
+        let plane_v = Vec3::new(0.0, 0.0, plane_mag / aspect);
         let f_width = width as f32;
+        let f_height = height as f32;
 
         Self {
             fov,
             plane_mag,
             pos,
             dir,
-            plane,
+            plane_h,
+            plane_v,
             angle,
             width,
             height,
+            aspect,
 
             four_width: 4 * width as usize,
             width_recip: f_width.recip(),
+            height_recip: f_height.recip(),
             int_half_height: height as i32 / 2,
             float_half_height: height as f32 * 0.5,
 
@@ -155,14 +167,14 @@ impl Raycaster {
 
     /// Casts rays from the current position and angle on the provided map.
     /// Stores all [`RayHit`]s in the internal array.
-    pub fn cast_rays(&mut self, tile_map: &Map) {
+    pub fn cast_rays(&mut self, tile_map: &Map, models: &ModelManager) {
         self.hits.clear();
         // For each pixel column on the screen
         for x in 0..self.width {
-            // X-coordinate on the camera plane (range [-1.0, 1.0])
+            // X-coordinate on the horizontal camera plane (range [-1.0, 1.0])
             let plane_x = 2.0 * (x as f32 * self.width_recip) - 1.0;
             // Ray direction for current pixel column
-            let ray_dir = self.dir + self.plane * plane_x;
+            let ray_dir = self.dir + self.plane_h * plane_x;
             // Length of ray from one x/y side to next x/y side on the tile_map
             let delta_dist = Vec2::new(1.0 / ray_dir.x, 1.0 / ray_dir.y).abs();
 
@@ -230,6 +242,7 @@ impl Raycaster {
                     };
                     // If the hit tile has transparency, also calculate the Hit to the next closest
                     // Vertical or Horizontal side on the ray path
+
                     if let Tile::Transparent(_) = tile {
                         let (perp_wall_dist, wall_x, side) = if side_dist_x
                             < side_dist_y
@@ -252,12 +265,83 @@ impl Raycaster {
                         through_hits.push(hit2);
                         continue;
                     }
+                    if let Tile::Object(obj) = tile {
+                        let object = obj.get_object(models);
+                        let origin = Vec3::new(self.pos.x, self.pos.y, 0.0);
+                        let ray_dir = Vec3::new(ray_dir.x, ray_dir.y, 0.0);
+                        let obj_x = ((map_x) * object.width() as i32) as f32;
+                        let obj_y = ((map_y) * object.depth() as i32) as f32;
+                        let obj_z = object.height() as f32;
+                        let (top_left_point, top_side) = match side {
+                            Side::Vertical => {
+                                // West side
+                                if ray_dir.x > 0.0 {
+                                    let top_left = Vec3::new(
+                                        obj_x,
+                                        obj_y + object.depth() as f32,
+                                        obj_z,
+                                    );
+                                    (top_left, Vec3::new(-(object.depth() as f32), 0.0, 0.0))
+                                }
+                                // East side
+                                else {
+                                    let top_left = Vec3::new(
+                                        obj_x + object.width() as f32,
+                                        obj_y,
+                                        obj_z,
+                                    );
+                                    (top_left, Vec3::new(object.depth() as f32, 0.0, 0.0))
+                                }
+                            }
+                            Side::Horizontal => {
+                                // South side
+                                if ray_dir.y > 0.0 {
+                                    let top_left = Vec3::new(obj_x, obj_y, obj_z);
+                                    (top_left, Vec3::new(object.width() as f32, 0.0, 0.0))
+                                }
+                                // North side
+                                else {
+                                    let top_left = Vec3::new(
+                                        obj_x + object.width() as f32,
+                                        obj_y + object.depth() as f32,
+                                        obj_z,
+                                    );
+                                    (top_left, Vec3::new(-(object.width() as f32), 0.0, 0.0))
+                                }
+                            }
+                        };
+                        let left_side = Vec3::new(0.0, 0.0, -(object.height() as f32));
+                        // TODO also check by the object highest extreme points
+                        for y in 0..self.height {
+                            // Y-coordinate on the vertical camera plane (range [-1.0, 1.0])
+                            let plane_y =
+                                2.0 * (y as f32 * self.height_recip) - 1.0;
+                            // Ray direction for current pixel column
+                            let ray_dir = ray_dir + self.plane_v * plane_y;
+                            let match rectangle_vector_intersection(top_left_point, top_side, left_side, ray_dir, self.pos)
+                            // Length of ray from one x/y/z side to next x/y/z side on the tile_map
+                            let delta_dist = Vec3::new(
+                                1.0 / ray_dir.x,
+                                1.0 / ray_dir.y,
+                                1.0 / ray_dir.z,
+                            )
+                            .abs();
+
+                            // Coordinates of the 3D model matrix the ray first interacts with
+                            let mut map_x = self.pos.x as i32;
+                            let mut map_y = self.pos.y as i32;
+                            let (step_x, step_y) = (
+                                ray_dir.x.signum() as i32,
+                                ray_dir.y.signum() as i32,
+                            );
+                        }
+                    }
+
                     self.hits.push(RayCast {
                         screen_x: x,
                         dir: ray_dir,
                         hit,
                         through_hits,
-                        draw_x_offset: 4 * (self.width - x - 1) as usize,
                     });
                     break;
                 }
@@ -270,9 +354,10 @@ impl Raycaster {
         self.angle =
             norm_rad(self.angle + (self.turn_left - self.turn_right) * 0.035);
         self.dir = Vec2::from_angle(self.angle);
+        let dir_perp = self.dir.perp();
 
-        // Rotate raycaster (camera) 2D plane
-        self.plane = self.dir.perp() * self.plane_mag;
+        // Rotate raycaster (camera) 2D horizontal plane
+        self.plane_h = dir_perp * self.plane_mag;
 
         // Update position
         self.pos += self.dir * (self.forward - self.backward) * MOVEMENT_SPEED;
@@ -303,4 +388,29 @@ impl Raycaster {
 #[inline]
 fn norm_rad(angle: f32) -> f32 {
     angle - (angle / TAU).floor() * TAU
+}
+
+#[inline]
+fn rectangle_vector_intersection(corner: Vec3, top_side: Vec3, left_side: Vec3, ray_dir: Vec3, ray_origin: Vec3) -> Option<Vec3> {
+    // Calculate the normal vector (N) of the rectangle's surface.
+    let rectangle_normal = top_side.cross(left_side);
+
+        // Calculate the intersection parameter 'a'.
+        let a = rectangle_normal.dot(corner - ray_origin) / ray_dir.dot(rectangle_normal);
+
+        // Calculate the intersection point P on the ray.
+        let intersection_point = ray_origin + a * ray_dir;
+
+        // Calculate the vectors P0P, Q1, and Q2.
+        let p0p = intersection_point - corner;
+        let q1: f32 = p0p.dot(top_side) / top_side.length();
+        let q2: f32 = p0p.dot(left_side) / left_side.length();
+
+        // Check if the intersection point is inside the rectangle.
+        if 0.0 <= q1 && q1 <= top_side.length() &&
+           0.0 <= q2 && q2 <= left_side.length() {
+            Some(intersection_point)
+        } else {
+            None
+        }
 }

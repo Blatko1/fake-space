@@ -284,8 +284,7 @@ impl Canvas {
 
         let scale = (window_width / texture_width)
             .min(window_height / texture_height)
-            .max(1.0)
-            .floor();
+            .max(1.0);
         let scaled_width = texture_width * scale;
         let scaled_height = texture_height * scale;
 

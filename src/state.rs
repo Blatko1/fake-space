@@ -1,9 +1,10 @@
-use crate::{canvas::Canvas, draw::Raycaster, map::Map};
+use crate::{canvas::Canvas, draw::Raycaster, map::Map, object::ModelManager};
 use winit::{dpi::PhysicalSize, event::KeyboardInput};
 
 pub struct State {
     canvas: Canvas,
     raycaster: Raycaster,
+    models: ModelManager,
     map: Map,
 }
 
@@ -21,6 +22,7 @@ impl State {
         Self {
             canvas,
             raycaster,
+            models: ModelManager::init(),
             map: Map::new_test(),
         }
     }
@@ -28,7 +30,7 @@ impl State {
     pub fn update(&mut self) {
         self.canvas.clear_data();
         self.raycaster.update();
-        self.raycaster.cast_rays(&self.map);
+        self.raycaster.cast_rays(&self.map, &self.models);
         self.raycaster.render(self.canvas.data_mut());
     }
 
