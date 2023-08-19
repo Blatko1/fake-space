@@ -33,13 +33,16 @@ impl Map {
     }
 
     ///Returns the value at the provided map coordinates.
+    /// This game assumes that the y-axis points upwards, the z-axis forwards
+    /// and the x-axis to the right so `x` represents moving left or right 
+    /// and `z` represents moving forward or backward on the map.
     /// Returns [`Tile::Void`] if coordinates are out of bounds.
     #[inline]
-    pub fn get_value(&self, x: i32, y: i32) -> Tile {
-        if y < 0 || y >= self.height as i32 || x < 0 || x >= self.width as i32 {
+    pub fn get_value(&self, x: i32, z: i32) -> Tile {
+        if z < 0 || z >= self.height as i32 || x < 0 || x >= self.width as i32 {
             return Tile::Void;
         }
-        let index = (self.height as i32 - 1 - y) as usize * self.width as usize
+        let index = (self.height as i32 - 1 - z) as usize * self.width as usize
             + x as usize;
 
         self.data.get(index).unwrap_or(&Tile::Void).clone()

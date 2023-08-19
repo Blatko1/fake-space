@@ -39,7 +39,7 @@ impl Raycaster {
                 tex_width - (hit.wall_x * tex_width as f32) as u32 - 1
             }
 
-            Side::Horizontal if ray.dir.y < 0.0 => {
+            Side::Horizontal if ray.dir.z < 0.0 => {
                 tex_width - (hit.wall_x * tex_width as f32) as u32 - 1
             }
             _ => (hit.wall_x * tex_width as f32) as u32,
@@ -52,8 +52,8 @@ impl Raycaster {
         // TODO fix texture mapping.
         for y in begin..end {
             //assert!(tex_y <= 15.0, "Not less!: y0: {}, y1: {}, y: {}", y0, y1, y);
-            let y_pos = tex_y.min(tex_height_minus_one).round() as u32;
-            let i = ((tex_height - y_pos - 1) * tex_width * 4 + four_tex_x)
+            let tex_y_pos = tex_y.min(tex_height_minus_one).round() as u32;
+            let i = ((tex_height - tex_y_pos - 1) * tex_width * 4 + four_tex_x)
                 as usize;
             color.copy_from_slice(&texture[i..i + 4]);
             match hit.side {

@@ -12,6 +12,7 @@ impl State {
     pub fn new(canvas: Canvas) -> Self {
         let raycaster = Raycaster::new(
             2.0,
+            0.5,
             2.0,
             90f32.to_radians(),
             80f32.to_radians(),

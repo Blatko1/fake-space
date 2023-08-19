@@ -5,10 +5,10 @@ use super::Raycaster;
 impl Raycaster {
     pub fn draw_floor_and_ceiling(&self, data: &mut [u8]) {
         let ray_dir_x0 = self.dir.x - self.plane_h.x;
-        let ray_dir_y0 = self.dir.y - self.plane_h.y;
+        let ray_dir_z0 = self.dir.z - self.plane_h.z;
         let ray_dir_x1 = self.dir.x + self.plane_h.x;
-        let ray_dir_y1 = self.dir.y + self.plane_h.y;
-        let pos_z = 0.5 * self.height as f32;
+        let ray_dir_z1 = self.dir.z + self.plane_h.z;
+        let pos_z = self.pos.y * self.height as f32;
 
         let mut color = [0; 4];
 
@@ -19,31 +19,31 @@ impl Raycaster {
 
             let floor_step_x =
                 row_dist * (ray_dir_x1 - ray_dir_x0) / self.width as f32;
-            let floor_step_y =
-                row_dist * (ray_dir_y1 - ray_dir_y0) / self.width as f32;
+            let floor_step_z =
+                row_dist * (ray_dir_z1 - ray_dir_z0) / self.width as f32;
 
             let mut floor_x = self.pos.x + row_dist * ray_dir_x0;
-            let mut floor_y = self.pos.y + row_dist * ray_dir_y0;
+            let mut floor_z = self.pos.z + row_dist * ray_dir_z0;
 
             let draw_ceiling_y_offset = (self.height - y - 1) * 4 * self.width;
             let draw_floor_y_offset = y * 4 * self.width;
 
             for x in 0..self.width {
                 let cellx = floor_x as i32;
-                let celly = floor_y as i32;
+                let cellz = floor_z as i32;
 
                 let tx_ceiling =
                     (16.0 * (floor_x - cellx as f32)) as u32 & (16 - 1);
                 let ty_ceiling =
-                    (16.0 * (floor_y - celly as f32)) as u32 & (16 - 1);
+                    (16.0 * (floor_z - cellz as f32)) as u32 & (16 - 1);
 
                 let tx_floor =
                     (32.0 * (floor_x - cellx as f32)) as u32 & (32 - 1);
                 let ty_floor =
-                    (32.0 * (floor_y - celly as f32)) as u32 & (32 - 1);
+                    (32.0 * (floor_z - cellz as f32)) as u32 & (32 - 1);
 
                 floor_x += floor_step_x;
-                floor_y += floor_step_y;
+                floor_z += floor_step_z;
 
                 let i_ceiling = (16 * 4 * ty_ceiling + tx_ceiling * 4) as usize;
                 let i_floor = (32 * 4 * ty_floor + tx_floor * 4) as usize;

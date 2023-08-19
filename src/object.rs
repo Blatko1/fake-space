@@ -65,9 +65,9 @@ impl ModelManager {
         let height = 6;
         let mut cube_hole_data = vec![vec![vec![1; height]; depth]; width];
         for x in 1..width - 1 {
-            for y in 0..depth {
-                for z in 1..height - 1 {
-                    cube_hole_data[x][y][z] = 0u8;
+            for z in 0..depth {
+                for y in 1..height - 1 {
+                    cube_hole_data[x][z][y] = 0u8;
                 }
             }
         }

@@ -40,7 +40,7 @@ impl Raycaster {
                         - 1
                 }
 
-                Side::Horizontal if ray.dir.y < 0.0 => {
+                Side::Horizontal if ray.dir.z < 0.0 => {
                     tex_width
                         - (through_hit.wall_x * tex_width as f32) as u32
                         - 1
@@ -52,12 +52,11 @@ impl Raycaster {
             let mut tex_y = (begin as f32 + bottom_height as f32
                 - self.float_half_height)
                 * tex_y_step;
-            // TODO fix texture mapping.
 
             for y in begin..end {
-                let y_pos = tex_y.min(tex_height_minus_one).round() as u32;
+                let tex_y_pos = tex_y.min(tex_height_minus_one).round() as u32;
 
-                let i = ((tex_height - y_pos - 1) * tex_width * 4 + four_tex_x)
+                let i = ((tex_height - tex_y_pos - 1) * tex_width * 4 + four_tex_x)
                     as usize;
                 color.copy_from_slice(&texture[i..i + 4]);
                 match through_hit.side {
@@ -77,7 +76,6 @@ impl Raycaster {
                 }
                 let rgba = &mut data[index..index + 4];
                 rgba.copy_from_slice(&blend(rgba, color))
-                //assert!(tex_y <= 16.0);
             }
         }
     }
