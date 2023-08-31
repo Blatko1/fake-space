@@ -34,7 +34,7 @@ impl Map {
 
     ///Returns the value at the provided map coordinates.
     /// This game assumes that the y-axis points upwards, the z-axis forwards
-    /// and the x-axis to the right so `x` represents moving left or right 
+    /// and the x-axis to the right so `x` represents moving left or right
     /// and `z` represents moving forward or backward on the map.
     /// Returns [`Tile::Void`] if coordinates are out of bounds.
     #[inline]
@@ -94,6 +94,8 @@ impl From<u32> for Tile {
             3 => Tile::Transparent(TransparentTexture::Fence),
             4 => Tile::Transparent(TransparentTexture::BlueGlass),
             5 => Tile::Object(ObjectType::Cube),
+            6 => Tile::Object(ObjectType::Hole),
+            7 => Tile::Object(ObjectType::Voxel),
             _ => Tile::Void,
         }
     }
@@ -117,7 +119,7 @@ const TEST_MAP_DATA: &[u32; (TEST_MAP_WIDTH * TEST_MAP_HEIGHT) as usize] = &[
     1, 0, 0, 0, 0, 3, 0, 0, 4, 0, 0, 0, 1, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 4, 2, 0, 0, 1, 0, 0, 1,
-    1, 0, 0, 0, 0, 5, 0, 0, 2, 0, 0, 0, 1, 0, 0, 1,
+    1, 0, 0, 0, 0, 6, 0, 0, 2, 0, 0, 0, 1, 0, 0, 1,
     1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 ];

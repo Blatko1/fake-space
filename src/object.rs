@@ -15,22 +15,38 @@ impl Object {
         Self::new(models.get_model(ModelType::Cube))
     }
 
-    pub fn width(&self) -> usize {
-        self.model.width
+    pub fn hole(models: &ModelManager) -> Self {
+        Self::new(models.get_model(ModelType::CubeHole))
     }
 
-    pub fn depth(&self) -> usize {
-        self.model.depth
+    pub fn voxel(models: &ModelManager) -> Self {
+        Self::new(models.get_model(ModelType::Voxel))
     }
 
-    pub fn height(&self) -> usize {
-        self.model.height
+    pub fn get_voxel(&self, x: i32, y: i32, z: i32) -> Option<&u8> {
+        let dimension = self.dimension() as i32;
+        if z < 0
+            || z >= dimension
+            || x < 0
+            || x >= dimension
+            || y < 0
+            || y >= dimension
+        {
+            return None;
+        }
+        self.model.get_voxel(x as usize, y as usize, z as usize)
+    }
+
+    pub fn dimension(&self) -> usize {
+        self.model.dimension
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ObjectType {
     Cube,
+    Hole,
+    Voxel,
 }
 
 impl ObjectType {
@@ -38,6 +54,8 @@ impl ObjectType {
     pub fn get_object(self, models: &ModelManager) -> Object {
         match self {
             ObjectType::Cube => Object::cube(models),
+            ObjectType::Hole => Object::hole(models),
+            ObjectType::Voxel => Object::voxel(models),
         }
     }
 }
@@ -49,37 +67,45 @@ pub struct ModelManager {
 impl ModelManager {
     pub fn init() -> Self {
         // Cube model:
-        let width = 4;
-        let depth = 4;
-        let height = 4;
-        let cube_data = vec![vec![vec![1; height]; depth]; width]
+        let dimension = 4;
+        let cube_data = vec![vec![vec![1; dimension]; dimension]; dimension]
             .into_iter()
             .flatten()
             .flatten()
             .collect();
-        let cube = Model::new(cube_data, width, depth, height);
+        let cube = Model::new(cube_data, dimension);
 
         // Cube with a hole model:
-        let width = 6;
-        let depth = 6;
-        let height = 6;
-        let mut cube_hole_data = vec![vec![vec![1; height]; depth]; width];
-        for x in 1..width - 1 {
-            for z in 0..depth {
-                for y in 1..height - 1 {
+        let dimension = 6;
+        let mut cube_hole_data =
+            vec![vec![vec![1; dimension]; dimension]; dimension];
+        for x in 1..dimension - 1 {
+            for z in 0..dimension {
+                for y in 1..dimension - 1 {
                     cube_hole_data[x][z][y] = 0u8;
                 }
             }
         }
         let cube_hole_data =
             cube_hole_data.into_iter().flatten().flatten().collect();
-        let cube_hole = Model::new(cube_hole_data, width, depth, height);
+        let cube_hole = Model::new(cube_hole_data, dimension);
 
-        let models =
-            [(ModelType::Cube, cube), (ModelType::CubeHole, cube_hole)]
-                .iter()
-                .cloned()
-                .collect();
+        // Single voxel model:
+        let dimension = 10;
+        let mut voxel_data =
+            vec![vec![vec![0; dimension]; dimension]; dimension];
+        voxel_data[2][2][2] = 1;
+        let voxel_data = voxel_data.into_iter().flatten().flatten().collect();
+        let voxel = Model::new(voxel_data, dimension);
+
+        let models = [
+            (ModelType::Cube, cube),
+            (ModelType::CubeHole, cube_hole),
+            (ModelType::Voxel, voxel),
+        ]
+        .iter()
+        .cloned()
+        .collect();
 
         Self { models }
     }
@@ -91,30 +117,23 @@ impl ModelManager {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Model {
-    width: usize,
-    depth: usize,
-    height: usize,
+    dimension: usize,
     data: Arc<Vec<u8>>,
 }
 
 impl Model {
-    pub fn new(
-        data: Vec<u8>,
-        width: usize,
-        depth: usize,
-        height: usize,
-    ) -> Self {
+    pub fn new(data: Vec<u8>, dimension: usize) -> Self {
         Self {
-            width,
-            depth,
-            height,
+            dimension,
             data: Arc::new(data),
         }
     }
 
     #[inline]
-    fn index_3d(&self, x: usize, y: usize, z: usize) -> usize {
-        x + y * self.width + z * self.width * self.depth
+    fn get_voxel(&self, x: usize, y: usize, z: usize) -> Option<&u8> {
+        let index =
+            x + z * self.dimension + y * self.dimension * self.dimension;
+        self.data.get(index)
     }
 }
 
@@ -122,4 +141,5 @@ impl Model {
 pub enum ModelType {
     Cube,
     CubeHole,
+    Voxel,
 }
