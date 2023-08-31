@@ -12,10 +12,11 @@ Excellent explanations about the raycaster [here](https://lodev.org/cgtutor/rayc
 - [x] Add special textures with half transparency or full transparency
 - [x] Add textures to floor and ceiling
 - [x] Add voxel objects
+- [ ] Add colors to voxel objects
 - [ ] Add different height walls
 - [ ] Add different floor and ceiling textures for different map tiles
 - [ ] Add 2D sprites (i.e. pillars, barrels)
-- [ ] Add moving walls (to left or right)
+- [ ] Add removable object walls (cool opening or moving animation with voxels)
 - [ ] Add collision detection (circle-rectangle collision detection)
 - [ ] Draw a skybox when outside of the map (looking at out of bound parts or at transparent ceiling)
 - [ ] Add portals like in the Portal game
