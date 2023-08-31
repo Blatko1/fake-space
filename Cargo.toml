@@ -11,7 +11,7 @@ pollster = "0.3.0"
 bytemuck = { version = "1.13.1", features = [ "derive" ] }
 rand = "0.8.5"
 glam = "0.24.1"
-hashbrown = "0.14.0"    
+hashbrown = "0.14.0"
 
 log = "0.4.20"
 env_logger = "0.10.0"

@@ -49,8 +49,6 @@ pub struct RayHit {
 
 #[derive(Debug, Clone, Copy)]
 pub struct ObjectHit {
-    /// Which side of tile was hit.
-    side: Side,
     obj: ObjectType,
     obj_map_pos_x: i32,
     obj_map_pos_z: i32,
@@ -184,11 +182,11 @@ impl Raycaster {
 
             //Draw the hit tile with transparency (walls with holes, objects, transparent textures):
             for through in ray.through_hits.iter().rev() {
-                if let Some(_) = through.object {
+                if through.object.is_some() {
                     self.draw_object(ray, through, models, data);
-                    continue;
-                }
+                } else {
                 self.draw_transparent(ray, through, models, data);
+                }
             }
         }
     }
@@ -295,7 +293,6 @@ impl Raycaster {
                         through_hits.push(hit2);
                     } else if let Tile::Object(obj) = tile {
                         hit.object = Some(ObjectHit {
-                            side,
                             obj,
                             obj_map_pos_x: map_x,
                             obj_map_pos_z: map_z,

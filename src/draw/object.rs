@@ -1,4 +1,4 @@
-use std::f32::EPSILON;
+use std::{f32::EPSILON, sync::mpsc::{self, Sender, Receiver}};
 
 use glam::Vec3;
 
@@ -10,37 +10,37 @@ impl Raycaster {
     pub fn draw_object(
         &self,
         ray: &RayCast,
-        ray_hit: &RayHit,
+        obj_hit: &RayHit,
         models: &ModelManager,
         data: &mut [u8],
     ) {
-        let object_hit = ray_hit.object.unwrap();
+        let object_hit = obj_hit.object.unwrap();
         let object = object_hit.obj.get_object(models);
         let dimension = object.dimension() as f32;
-        let origin = self.pos * dimension;
+        let ray_origin = self.pos * dimension;
         let obj_x_pos = (object_hit.obj_map_pos_x as f32) * dimension;
         let obj_z_pos = (object_hit.obj_map_pos_z as f32) * dimension;
         // North is in front (positive Z)
-        let (top_left_point, top_side) = match ray_hit.side {
+        let (top_left_point, top_side, voxel_side) = match obj_hit.side {
             Side::Vertical => {
                 // is east side hit
                 if ray.dir.x > 0.0 {
                     let top_left =
                         Vec3::new(obj_x_pos, dimension, obj_z_pos + dimension);
-                    (top_left, Vec3::new(0.0, 0.0, -dimension))
+                    (top_left, Vec3::new(0.0, 0.0, -dimension), VoxelSide::Left)
                 }
                 // is west side hit
                 else {
                     let top_left =
                         Vec3::new(obj_x_pos + dimension, dimension, obj_z_pos);
-                    (top_left, Vec3::new(0.0, 0.0, dimension))
+                    (top_left, Vec3::new(0.0, 0.0, dimension), VoxelSide::Right)
                 }
             }
             Side::Horizontal => {
                 // is north side hit
                 if ray.dir.z > 0.0 {
                     let top_left = Vec3::new(obj_x_pos, dimension, obj_z_pos);
-                    (top_left, Vec3::new(dimension, 0.0, 0.0))
+                    (top_left, Vec3::new(dimension, 0.0, 0.0), VoxelSide::Front)
                 }
                 // is south side hit
                 else {
@@ -49,12 +49,13 @@ impl Raycaster {
                         dimension,
                         obj_z_pos + dimension,
                     );
-                    (top_left, Vec3::new(-dimension, 0.0, 0.0))
+                    (top_left, Vec3::new(-dimension, 0.0, 0.0), VoxelSide::Back)
                 }
             }
         };
         let left_side = Vec3::new(0.0, -dimension, 0.0);
-        // TODO also check by the object highest extreme points
+        // Calculate the normal vector (N) of the rectangle's surface.
+        let rectangle_normal = top_side.cross(left_side);
         for y in 0..self.height {
             let mut color: [u8; 4] = [123, 234, 100, 255];
             // Y-coordinate on the vertical camera plane (range [-1.0, 1.0])
@@ -71,18 +72,19 @@ impl Raycaster {
                 top_left_point,
                 top_side,
                 left_side,
-                ray_dir,
-                origin,
+                rectangle_normal,
+                ray_dir.normalize(),
+                ray_origin,
             ) {
                 Some(i) => i,
                 None => continue,
             };
-            let intersect_x = intersect.x.clamp(obj_x_pos, obj_x_pos+dimension-1.0);
-            let intersect_y = intersect.y.clamp(0.0, dimension-1.0);
-            let intersect_z = intersect.z.clamp(obj_z_pos, obj_z_pos+dimension-1.0);
-
+            let intersect_x = (intersect.x - obj_x_pos).max(0.0).min(dimension);
+            let intersect_y = intersect.y.max(0.0).min(dimension);
+            let intersect_z = (intersect.z - obj_z_pos).max(0.0).min(dimension);
+            
             let mut t_max_x = if ray_dir.x < 0.0 {
-                intersect_x.fract() * delta_dist.x
+                intersect.x.fract() * delta_dist.x
             } else {
                 (1.0 - intersect_x.fract()) * delta_dist.x
             };
@@ -96,29 +98,22 @@ impl Raycaster {
             } else {
                 (1.0 - intersect_z.fract()) * delta_dist.z
             };
-            //assert!(y != 1, "top_left: {}, top_side: {}, left_side: {}, ray_dir: {}, ray_origin: {}", top_left_point, top_side, left_side, ray_dir, origin);
-            //println!("top_left: {}, top_side: {}, left_side: {}, ray_dir: {}, ray_origin: {}", top_left_point, top_side, left_side, ray_dir, origin);
-            let mut grid_x = (intersect_x - obj_x_pos) as i32;
-            let mut grid_z = (intersect_z - obj_z_pos) as i32;
-            let mut grid_y = intersect_y as i32;
-            //println!("grid_x: {}, grid_y: {}, grid_z: {},", grid_x, grid_y, grid_z);
+            let mut grid_x = intersect_x.min(dimension-1.0) as i32;
+            let mut grid_z = intersect_z.min(dimension-1.0) as i32;
+            let mut grid_y = intersect_y.min(dimension-1.0) as i32;
             let (step_x, step_y, step_z) = (
                 ray_dir.x.signum() as i32,
                 ray_dir.y.signum() as i32,
                 ray_dir.z.signum() as i32,
             );
-            //assert!(intersect.z >= 30.0, "top_left: {}, top_side: {}, left_side: {}, ray_dir: {}, ray_origin: {}", top_left_point, top_side, left_side, ray_dir, origin);
-            /*if ray.screen_x == 0 && ray_dir.y >= 0.0 && ray_dir.y <= 0.2 {
-                println!("begin");
-            }*/
-            let mut side = VoxelSide::Top;
+
+            let mut side = voxel_side;
             loop {
                 let voxel = object.get_voxel(
                     grid_x,
                     grid_y,
                     grid_z,
                 );
-                //println!("grid_x: {}, grid_y: {}, grid_z: {},", grid_x, grid_y, grid_z);
                 if voxel.is_none() {
                     break;
                 }
@@ -126,9 +121,9 @@ impl Raycaster {
                     match side {
                         VoxelSide::Top => (),
                         VoxelSide::Bottom => {
-                            color[0] = color[0].saturating_sub(25);
-                            color[1] = color[1].saturating_sub(25);
-                            color[2] = color[2].saturating_sub(25);
+                            color[0] = color[0].saturating_sub(5);
+                            color[1] = color[1].saturating_sub(5);
+                            color[2] = color[2].saturating_sub(5);
                         },
                         VoxelSide::Left => {
                             color[0] = color[0].saturating_sub(15);
@@ -136,9 +131,9 @@ impl Raycaster {
                             color[2] = color[2].saturating_sub(15);
                         },
                         VoxelSide::Right => {
-                            color[0] = color[0].saturating_sub(5);
-                            color[1] = color[1].saturating_sub(5);
-                            color[2] = color[2].saturating_sub(5);
+                            color[0] = color[0].saturating_sub(25);
+                            color[1] = color[1].saturating_sub(25);
+                            color[2] = color[2].saturating_sub(25);
                         },
                         VoxelSide::Front => {
                             color[0] = color[0].saturating_sub(35);
@@ -146,16 +141,15 @@ impl Raycaster {
                             color[2] = color[2].saturating_sub(35);
                         },
                         VoxelSide::Back => {
-                            color[0] = color[0].saturating_sub(30);
-                            color[1] = color[1].saturating_sub(30);
-                            color[2] = color[2].saturating_sub(30);
+                            color[0] = color[0].saturating_sub(45);
+                            color[1] = color[1].saturating_sub(45);
+                            color[2] = color[2].saturating_sub(45);
                         },
                     }
                     let index = (self.height as usize - 1 - y as usize)
                         * self.four_width
                         + ray.screen_x as usize * 4;
-                    data[index..index + 4]
-                        .copy_from_slice(&color);
+                    data[index..index + 4].copy_from_slice(&color);
                     break;
                 }
                 if t_max_x < t_max_y {
@@ -176,13 +170,13 @@ impl Raycaster {
                         };
                         t_max_z += delta_dist.z;
                     }
-                } else {
+                } else 
                     if t_max_y < t_max_z {
                         grid_y += step_y;
                         side = if step_y.is_positive() {
-                            VoxelSide::Top
-                        } else {
                             VoxelSide::Bottom
+                        } else {
+                            VoxelSide::Top
                         };
                         t_max_y += delta_dist.y;
                     } else {
@@ -194,12 +188,18 @@ impl Raycaster {
                         };
                         t_max_z += delta_dist.z;
                     }
-                }
+                
             }
         }
+        //for _ in 0..self.height {
+        //    if let Ok((index, color)) = receiver.try_recv() {
+        //        data[index..index + 4].copy_from_slice(&color);
+        //    };
+        //}
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 enum VoxelSide {
     Top,
     Bottom,
@@ -214,12 +214,10 @@ fn rectangle_vector_intersection(
     corner: Vec3,
     top_side: Vec3,
     left_side: Vec3,
+    rectangle_normal: Vec3,
     ray_dir: Vec3,
     ray_origin: Vec3,
 ) -> Option<Vec3> {
-    // Calculate the normal vector (N) of the rectangle's surface.
-    let rectangle_normal = top_side.cross(left_side);
-
     // Calculate the intersection parameter 'a'.
     let a = rectangle_normal.dot(corner - ray_origin)
         / ray_dir.dot(rectangle_normal);
@@ -249,12 +247,13 @@ fn rect_vec_intersection_test() {
     let corner = Vec3::new(2.0, 3.0, 1.0);
     let top_side = Vec3::new(2.0, 0.0, 0.0);
     let left_side = Vec3::new(0.0, -2.0, 0.0);
+    let rectangle_normal = top_side.cross(left_side);
     let ray_origin = Vec3::new(3.0, 1.0, 2.0);
     let ray_dir = Vec3::new(0.0, 0.0, -1.0);
 
     assert_eq!(
         rectangle_vector_intersection(
-            corner, top_side, left_side, ray_dir, ray_origin
+            corner, top_side, left_side, rectangle_normal, ray_dir, ray_origin
         ),
         Some(Vec3::new(3.0, 1.0, 1.0))
     );
@@ -262,11 +261,12 @@ fn rect_vec_intersection_test() {
     let corner = Vec3::new(-1.0, 2.0, 6.0);
     let top_side = Vec3::new(2.0, 0.0, 0.0);
     let left_side = Vec3::new(0.0, -2.0, 0.0);
+    let rectangle_normal = top_side.cross(left_side);
     let ray_origin = Vec3::new(0.0, 0.0, 0.0);
     let ray_dir = Vec3::new(0.1, 0.0, 1.0).normalize();
     assert_eq!(
         rectangle_vector_intersection(
-            corner, top_side, left_side, ray_dir, ray_origin
+            corner, top_side, left_side, rectangle_normal, ray_dir, ray_origin
         ),
         Some(Vec3::new(0.6, 0.0, 6.0))
     );
@@ -274,12 +274,13 @@ fn rect_vec_intersection_test() {
     let corner = Vec3::new(0.0, 1.0, 0.0);
     let top_side = Vec3::new(1.0, 0.0, 0.0);
     let left_side = Vec3::new(0.0, -1.0, 0.0);
+    let rectangle_normal = top_side.cross(left_side);
     let ray_dir = Vec3::new(0.0, 0.0, 1.0);
     let ray_origin = Vec3::new(0.5, 0.5, -1.0);
 
     assert_eq!(
         rectangle_vector_intersection(
-            corner, top_side, left_side, ray_dir, ray_origin
+            corner, top_side, left_side, rectangle_normal, ray_dir, ray_origin
         ),
         Some(Vec3::new(0.5, 0.5, 0.0))
     );
@@ -287,12 +288,13 @@ fn rect_vec_intersection_test() {
     let corner = Vec3::new(1.0, 1.0, 0.0);
     let top_side = Vec3::new(-1.0, 0.0, 0.0);
     let left_side = Vec3::new(0.0, -1.0, 0.0);
+    let rectangle_normal = top_side.cross(left_side);
     let ray_dir = Vec3::new(0.1, 0.0, -1.0).normalize();
     let ray_origin = Vec3::new(0.5, 0.5, 1.0);
 
     assert_eq!(
         rectangle_vector_intersection(
-            corner, top_side, left_side, ray_dir, ray_origin
+            corner, top_side, left_side, rectangle_normal, ray_dir, ray_origin
         ),
         Some(Vec3::new(0.6, 0.5, 0.0))
     );

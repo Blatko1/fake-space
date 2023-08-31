@@ -23,6 +23,14 @@ impl Object {
         Self::new(models.get_model(ModelType::Voxel))
     }
 
+    pub fn pillars(models: &ModelManager) -> Self {
+        Self::new(models.get_model(ModelType::Pillars))
+    }
+
+    pub fn damaged(models: &ModelManager) -> Self {
+        Self::new(models.get_model(ModelType::Damaged))
+    }
+
     pub fn get_voxel(&self, x: i32, y: i32, z: i32) -> Option<&u8> {
         let dimension = self.dimension() as i32;
         if z < 0
@@ -47,15 +55,19 @@ pub enum ObjectType {
     Cube,
     Hole,
     Voxel,
+    Pillars,
+    Damaged
 }
 
 impl ObjectType {
     #[inline]
     pub fn get_object(self, models: &ModelManager) -> Object {
         match self {
-            ObjectType::Cube => Object::cube(models),
-            ObjectType::Hole => Object::hole(models),
-            ObjectType::Voxel => Object::voxel(models),
+            Self::Cube => Object::cube(models),
+            Self::Hole => Object::hole(models),
+            Self::Voxel => Object::voxel(models),
+            Self::Pillars => Object::pillars(models),
+            Self::Damaged => Object::damaged(models)
         }
     }
 }
@@ -82,7 +94,7 @@ impl ModelManager {
         for x in 1..dimension - 1 {
             for z in 0..dimension {
                 for y in 1..dimension - 1 {
-                    cube_hole_data[x][z][y] = 0u8;
+                    cube_hole_data[y][z][x] = 0u8;
                 }
             }
         }
@@ -98,10 +110,56 @@ impl ModelManager {
         let voxel_data = voxel_data.into_iter().flatten().flatten().collect();
         let voxel = Model::new(voxel_data, dimension);
 
+        // pillars model:
+        let dimension = 8;
+        let mut pillars_data =
+            vec![vec![vec![0; dimension]; dimension]; dimension];
+            for x in 0..dimension /2 {
+                for z in 1..dimension /2 {
+                    for y in 0..dimension {
+                        pillars_data[y][z*2][x*2] = 1u8;
+                    }
+                }
+            }
+            for x in 0..dimension {
+                    for y in 0..dimension {
+                        pillars_data[y][dimension-1][x] = 1u8;
+                    }
+            }
+        let pillars_data = pillars_data.into_iter().flatten().flatten().collect();
+        let pillars = Model::new(pillars_data, dimension);
+
+        // letter B model:
+        let dimension = 8;
+        let mut damaged_data =
+            vec![vec![vec![1; dimension]; dimension]; dimension];
+            for x in 0..4 {
+                for z in 0..3 {
+                    for y in 5..8 {
+                        damaged_data[y][z][x] = 0u8;
+                    }
+                }
+            }
+            for y in 0..dimension {
+                damaged_data[y][0][0] = 0u8;
+                damaged_data[y][5][3] = 0u8;
+            }
+            for z in 0..dimension {
+                damaged_data[4][z][3] = 0u8;
+                damaged_data[4][z][4] = 0u8;
+                damaged_data[4][z][5] = 0u8;
+            }
+            damaged_data[5][1][3] = 1u8;
+            damaged_data[5][2][3] = 1u8;
+        let damaged_data = damaged_data.into_iter().flatten().flatten().collect();
+        let damaged = Model::new(damaged_data, dimension);
+
         let models = [
             (ModelType::Cube, cube),
             (ModelType::CubeHole, cube_hole),
             (ModelType::Voxel, voxel),
+            (ModelType::Pillars, pillars),
+            (ModelType::Damaged, damaged)
         ]
         .iter()
         .cloned()
@@ -142,4 +200,6 @@ pub enum ModelType {
     Cube,
     CubeHole,
     Voxel,
+    Pillars,
+    Damaged
 }

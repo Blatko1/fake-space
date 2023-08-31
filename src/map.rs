@@ -45,7 +45,7 @@ impl Map {
         let index = (self.height as i32 - 1 - z) as usize * self.width as usize
             + x as usize;
 
-        self.data.get(index).unwrap_or(&Tile::Void).clone()
+        *self.data.get(index).unwrap_or(&Tile::Void)
     }
 
     #[inline]
@@ -96,6 +96,8 @@ impl From<u32> for Tile {
             5 => Tile::Object(ObjectType::Cube),
             6 => Tile::Object(ObjectType::Hole),
             7 => Tile::Object(ObjectType::Voxel),
+            8 => Tile::Object(ObjectType::Pillars),
+            9 => Tile::Object(ObjectType::Damaged),
             _ => Tile::Void,
         }
     }
@@ -119,7 +121,7 @@ const TEST_MAP_DATA: &[u32; (TEST_MAP_WIDTH * TEST_MAP_HEIGHT) as usize] = &[
     1, 0, 0, 0, 0, 3, 0, 0, 4, 0, 0, 0, 1, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 1,
     1, 0, 0, 0, 0, 0, 0, 0, 4, 2, 0, 0, 1, 0, 0, 1,
-    1, 0, 0, 0, 0, 6, 0, 0, 2, 0, 0, 0, 1, 0, 0, 1,
+    1, 0, 0, 0, 0, 8, 0, 0, 2, 0, 0, 0, 1, 0, 0, 1,
     1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 ];
