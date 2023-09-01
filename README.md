@@ -12,8 +12,8 @@ Excellent explanations about the raycaster [here](https://lodev.org/cgtutor/rayc
 - [x] Add special textures with half transparency or full transparency
 - [x] Add textures to floor and ceiling
 - [x] Add voxel objects
+- [x] Add different height walls
 - [ ] Add colors to voxel objects
-- [ ] Add different height walls
 - [ ] Add different floor and ceiling textures for different map tiles
 - [ ] Add 2D sprites (i.e. pillars, barrels)
 - [ ] Add removable object walls (cool opening or moving animation with voxels)

@@ -79,7 +79,7 @@ pub struct ModelManager {
 impl ModelManager {
     pub fn init() -> Self {
         // Cube model:
-        let dimension = 4;
+        let dimension = 2;
         let cube_data = vec![vec![vec![1; dimension]; dimension]; dimension]
             .into_iter()
             .flatten()
@@ -115,16 +115,11 @@ impl ModelManager {
         let mut pillars_data =
             vec![vec![vec![0; dimension]; dimension]; dimension];
             for x in 0..dimension /2 {
-                for z in 1..dimension /2 {
+                for z in 0..dimension /2 {
                     for y in 0..dimension {
                         pillars_data[y][z*2][x*2] = 1u8;
                     }
                 }
-            }
-            for x in 0..dimension {
-                    for y in 0..dimension {
-                        pillars_data[y][dimension-1][x] = 1u8;
-                    }
             }
         let pillars_data = pillars_data.into_iter().flatten().flatten().collect();
         let pillars = Model::new(pillars_data, dimension);
