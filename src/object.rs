@@ -31,7 +31,7 @@ impl Object {
         Self::new(models.get_model(ModelType::Damaged))
     }
 
-    pub fn get_voxel(&self, x: i32, y: i32, z: i32) -> Option<&u8> {
+    pub fn get_voxel(&self, mut x: i32, mut y: i32, mut z: i32) -> Option<&u8> {
         let dimension = self.dimension() as i32;
         if z < 0
             || z >= dimension
@@ -80,11 +80,12 @@ impl ModelManager {
     pub fn init() -> Self {
         // Cube model:
         let dimension = 2;
-        let cube_data = vec![vec![vec![1; dimension]; dimension]; dimension]
-            .into_iter()
-            .flatten()
-            .flatten()
-            .collect();
+        let mut cube_data = vec![vec![vec![1; dimension]; dimension]; dimension];
+        cube_data[0][0][0] = 0u8;
+        let cube_data = cube_data.into_iter()
+        .flatten()
+        .flatten()
+        .collect();
         let cube = Model::new(cube_data, dimension);
 
         // Cube with a hole model:

@@ -23,6 +23,8 @@ pub struct RayCast {
     dir: Vec3,
     /// Data about the ray's final hit point, ray doesn't continue after the hit.
     hit: RayHit,
+    delta_dist_x:  f32,
+    delta_dist_z: f32,
     /// Data about the ray's hit point through which the ray passes if
     /// the hit tile is transparent (i.e. window, glass, different shapes).
     /// Since the object has transparency, all four sides should be rendered,
@@ -303,6 +305,8 @@ impl Raycaster {
                             screen_x: x,
                             dir: ray_dir,
                             hit,
+                            delta_dist_x,
+                            delta_dist_z,
                             through_hits,
                         });
                         break;
