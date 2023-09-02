@@ -41,9 +41,19 @@ impl Gfx {
             .await?;
 
         let size = winit_window.inner_size();
-        let config = surface
-            .get_default_config(&adapter, size.width, size.height)
-            .expect("Surface isn't supported by the adapter.");
+        //let config = surface
+        //    .get_default_config(&adapter, size.width, size.height)
+        //    .expect("Surface isn't supported by the adapter.");
+        let caps = surface.get_capabilities(&adapter);
+        let config = wgpu::SurfaceConfiguration {
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            format: *caps.formats.get(0).unwrap(),
+            width: size.width,
+            height: size.height,
+            present_mode: wgpu::PresentMode::Fifo,
+            alpha_mode: wgpu::CompositeAlphaMode::Auto,
+            view_formats: vec![],
+        };
         surface.configure(&device, &config);
         Ok(Self {
             surface,

@@ -15,6 +15,7 @@ impl Raycaster {
         let object_hit = obj_hit.object.unwrap();
         let object = object_hit.obj.get_object(models);
         let dimension = object.dimension() as f32;
+        let dimension_i = dimension as i32;
         let ray_origin = self.pos * dimension;
         let obj_x_pos = (object_hit.obj_map_pos_x as f32) * dimension;
         let obj_z_pos = (object_hit.obj_map_pos_z as f32) * dimension;
@@ -61,8 +62,11 @@ impl Raycaster {
             // Ray direction for current pixel column
             let ray_dir = ray.dir + self.plane_v * plane_y;
             // Length of ray from one x/y/z side to next x/y/z side on the tile_map
-            let delta_dist =
-                Vec3::new(ray.delta_dist_x, 1.0 / ray_dir.y.abs(), ray.delta_dist_z);
+            let delta_dist = Vec3::new(
+                ray.delta_dist_x,
+                1.0 / ray_dir.y.abs(),
+                ray.delta_dist_z,
+            );
 
             // Coordinates of the 3D model matrix the ray first interacts with
             let intersect = match rectangle_vector_intersection(
@@ -72,40 +76,32 @@ impl Raycaster {
                 rectangle_normal,
                 ray_dir.normalize(),
                 ray_origin,
-                voxel_side
+                voxel_side,
             ) {
                 Some(i) => i,
                 None => continue,
             };
-            //println!("intersect: {}", intersect);
-            //assert!(intersect.z == 6.0);
-            let mut side_dist_x = if ray_dir.x < 0.0 {
-                intersect.x.fract() * delta_dist.x
-            } else {
-                (1.0 - intersect.x.fract()) * delta_dist.x
-            };
-            let mut side_dist_y = if ray_dir.y < 0.0 {
-                intersect.y.fract() * delta_dist.y
-            } else {
-                (1.0 - intersect.y.fract()) * delta_dist.y
-            };
-            let mut side_dist_z = if ray_dir.z < 0.0 {
-                intersect.z.fract() * delta_dist.z
-            } else {
-                (1.0 - intersect.z.fract()) * delta_dist.z
-            };
-            //let mut side_dist_x = (ray_dir.x.signum() * (intersect.x.floor() - intersect.x) + (ray_dir.x.signum() * 0.5) + 0.5) * delta_dist.x;
-            //let mut side_dist_y = (ray_dir.y.signum() * (intersect.y.floor() - intersect.y) + (ray_dir.y.signum() * 0.5) + 0.5) * delta_dist.y;
-            //let mut side_dist_z = (ray_dir.z.signum() * (intersect.z.floor() - intersect.z) + (ray_dir.z.signum() * 0.5) + 0.5) * delta_dist.z;
-            let mut grid_x = (intersect.x - obj_x_pos).min(dimension) as i32;
-            let mut grid_z = (intersect.z - obj_z_pos).min(dimension) as i32;
-            let mut grid_y = intersect.y.min(dimension) as i32;
-            /*if grid_x == 0 && grid_z == 0 && grid_y == 0 {
-                let index = (self.height as usize - 1 - y as usize)
-                        * self.four_width
-                        + ray.screen_x as usize * 4;
-                    data[index..index + 4].copy_from_slice(&[200, 200, 0, 255]);
-            }*/
+            let mut side_dist_x = delta_dist.x
+                * if ray_dir.x < 0.0 {
+                    intersect.x.fract()
+                } else {
+                    1.0 - intersect.x.fract()
+                };
+            let mut side_dist_y = delta_dist.y
+                * if ray_dir.y < 0.0 {
+                    intersect.y.fract()
+                } else {
+                    1.0 - intersect.y.fract()
+                };
+            let mut side_dist_z = delta_dist.z
+                * if ray_dir.z < 0.0 {
+                    intersect.z.fract()
+                } else {
+                    1.0 - intersect.z.fract()
+                };
+            let mut grid_x = (intersect.x - obj_x_pos) as i32;
+            let mut grid_z = (intersect.z - obj_z_pos) as i32;
+            let mut grid_y = intersect.y as i32;
             let (step_x, step_y, step_z) = (
                 ray_dir.x.signum() as i32,
                 ray_dir.y.signum() as i32,
@@ -113,49 +109,88 @@ impl Raycaster {
             );
 
             let mut side = voxel_side;
-            if let Some(1) = object.get_voxel(
-                grid_x,
-                grid_y,
-                grid_z,
-            ) {
-                match side {
-                    VoxelSide::Top => (),
-                    VoxelSide::Bottom => {
-                        color[0] = color[0].saturating_sub(55);
-                        color[1] = color[1].saturating_sub(55);
-                        color[2] = color[2].saturating_sub(55);
-                    },
-                    VoxelSide::Left => {
-                        color[0] = color[0].saturating_sub(15);
-                        color[1] = color[1].saturating_sub(15);
-                        color[2] = color[2].saturating_sub(15);
-                    },
-                    VoxelSide::Right => {
-                        color[0] = color[0].saturating_sub(25);
-                        color[1] = color[1].saturating_sub(25);
-                        color[2] = color[2].saturating_sub(25);
-                    },
-                    VoxelSide::Front => {
-                        color[0] = color[0].saturating_sub(35);
-                        color[1] = color[1].saturating_sub(35);
-                        color[2] = color[2].saturating_sub(35);
-                    },
-                    VoxelSide::Back => {
-                        color[0] = color[0].saturating_sub(45);
-                        color[1] = color[1].saturating_sub(45);
-                        color[2] = color[2].saturating_sub(45);
-                    },
+            match side {
+                VoxelSide::Top | VoxelSide::Right | VoxelSide::Back => {
+                    if side_dist_x < side_dist_y {
+                        if side_dist_x < side_dist_z {
+                            grid_x += step_x;
+                            if grid_x < 0 {
+                                continue;
+                            }
+                            side_dist_x += delta_dist.x;
+                        } else {
+                            grid_z += step_z;
+                            if grid_z < 0 {
+                                continue;
+                            }
+                            side_dist_z += delta_dist.z;
+                        }
+                    } else if side_dist_y < side_dist_z {
+                        grid_y += step_y;
+                        if grid_y < 0 {
+                            continue;
+                        }
+                        side_dist_y += delta_dist.y;
+                    } else {
+                        grid_z += step_z;
+                        if grid_z < 0 {
+                            continue;
+                        }
+                        side_dist_z += delta_dist.z;
+                    }
                 }
-                let index = (self.height as usize - 1 - y as usize)
-                    * self.four_width
-                    + ray.screen_x as usize * 4;
-                data[index..index + 4].copy_from_slice(&color);
-                continue;
+                _ => (),
             }
             loop {
+                let voxel = object.get_voxel(
+                    grid_x as usize,
+                    grid_y as usize,
+                    grid_z as usize,
+                );
+                if voxel.is_none() {
+                    break;
+                }
+                if let Some(1) = voxel {
+                    match side {
+                        VoxelSide::Top => (),
+                        VoxelSide::Bottom => {
+                            color[0] = color[0].saturating_sub(75);
+                            color[1] = color[1].saturating_sub(75);
+                            color[2] = color[2].saturating_sub(75);
+                        }
+                        VoxelSide::Left => {
+                            color[0] = color[0].saturating_sub(25);
+                            color[1] = color[1].saturating_sub(25);
+                            color[2] = color[2].saturating_sub(25);
+                        }
+                        VoxelSide::Right => {
+                            color[0] = color[0].saturating_sub(55);
+                            color[1] = color[1].saturating_sub(55);
+                            color[2] = color[2].saturating_sub(55);
+                        }
+                        VoxelSide::Front => {
+                            color[0] = color[0].saturating_sub(15);
+                            color[1] = color[1].saturating_sub(15);
+                            color[2] = color[2].saturating_sub(15);
+                        }
+                        VoxelSide::Back => {
+                            color[0] = color[0].saturating_sub(65);
+                            color[1] = color[1].saturating_sub(65);
+                            color[2] = color[2].saturating_sub(65);
+                        }
+                    }
+                    let index = (self.height as usize - 1 - y as usize)
+                        * self.four_width
+                        + ray.screen_x as usize * 4;
+                    data[index..index + 4].copy_from_slice(&color);
+                    break;
+                }
                 if side_dist_x < side_dist_y {
                     if side_dist_x < side_dist_z {
                         grid_x += step_x;
+                        if grid_x < 0 || grid_x >= dimension_i {
+                            break;
+                        }
                         side = if step_x.is_positive() {
                             VoxelSide::Left
                         } else {
@@ -164,92 +199,52 @@ impl Raycaster {
                         side_dist_x += delta_dist.x;
                     } else {
                         grid_z += step_z;
-                        side = if step_z.is_positive() {
-                            VoxelSide::Front
-                        } else {
-                            VoxelSide::Back
-                        };
-                        side_dist_z += delta_dist.z;
-                    }
-                } else 
-                    if side_dist_y < side_dist_z {
-                        grid_y += step_y;
-                        side = if step_y.is_positive() {
-                            VoxelSide::Bottom
-                        } else {
-                            VoxelSide::Top
-                        };
-                        side_dist_y += delta_dist.y;
-                    } else {
-                        grid_z += step_z;
-                        side = if step_z.is_positive() {
-                            VoxelSide::Front
-                        } else {
-                            VoxelSide::Back
-                        };
-                        side_dist_z += delta_dist.z;
-                    }
-                    let voxel = object.get_voxel(
-                        grid_x,
-                        grid_y,
-                        grid_z,
-                    );
-                    if voxel.is_none() {
-                        break;
-                    }
-                    if let Some(1) = voxel {
-                        match side {
-                            VoxelSide::Top => (),
-                            VoxelSide::Bottom => {
-                                color[0] = color[0].saturating_sub(55);
-                                color[1] = color[1].saturating_sub(55);
-                                color[2] = color[2].saturating_sub(55);
-                            },
-                            VoxelSide::Left => {
-                                color[0] = color[0].saturating_sub(15);
-                                color[1] = color[1].saturating_sub(15);
-                                color[2] = color[2].saturating_sub(15);
-                            },
-                            VoxelSide::Right => {
-                                color[0] = color[0].saturating_sub(25);
-                                color[1] = color[1].saturating_sub(25);
-                                color[2] = color[2].saturating_sub(25);
-                            },
-                            VoxelSide::Front => {
-                                color[0] = color[0].saturating_sub(35);
-                                color[1] = color[1].saturating_sub(35);
-                                color[2] = color[2].saturating_sub(35);
-                            },
-                            VoxelSide::Back => {
-                                color[0] = color[0].saturating_sub(45);
-                                color[1] = color[1].saturating_sub(45);
-                                color[2] = color[2].saturating_sub(45);
-                            },
+                        if grid_z < 0 || grid_z >= dimension_i {
+                            break;
                         }
-                        let index = (self.height as usize - 1 - y as usize)
-                            * self.four_width
-                            + ray.screen_x as usize * 4;
-                        data[index..index + 4].copy_from_slice(&color);
+                        side = if step_z.is_positive() {
+                            VoxelSide::Front
+                        } else {
+                            VoxelSide::Back
+                        };
+                        side_dist_z += delta_dist.z;
+                    }
+                } else if side_dist_y < side_dist_z {
+                    grid_y += step_y;
+                    if grid_y < 0 || grid_y >= dimension_i {
                         break;
                     }
+                    side = if step_y.is_positive() {
+                        VoxelSide::Bottom
+                    } else {
+                        VoxelSide::Top
+                    };
+                    side_dist_y += delta_dist.y;
+                } else {
+                    grid_z += step_z;
+                    if grid_z < 0 || grid_z >= dimension_i {
+                        break;
+                    }
+                    side = if step_z.is_positive() {
+                        VoxelSide::Front
+                    } else {
+                        VoxelSide::Back
+                    };
+                    side_dist_z += delta_dist.z;
+                }
             }
         }
-        //for _ in 0..self.height {
-        //    if let Ok((index, color)) = receiver.try_recv() {
-        //        data[index..index + 4].copy_from_slice(&color);
-        //    };
-        //}
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-enum VoxelSide {
+pub enum VoxelSide {
     Top,
     Bottom,
     Left,
     Right,
     Front,
-    Back
+    Back,
 }
 
 #[inline]
@@ -260,7 +255,7 @@ fn rectangle_vector_intersection(
     rectangle_normal: Vec3,
     ray_dir: Vec3,
     ray_origin: Vec3,
-    side: VoxelSide
+    side: VoxelSide,
 ) -> Option<Vec3> {
     // Calculate the intersection parameter 'a'.
     let a = rectangle_normal.dot(corner - ray_origin)
@@ -270,22 +265,20 @@ fn rectangle_vector_intersection(
     let mut intersection_point = ray_origin + a * ray_dir;
 
     match side {
-        VoxelSide::Top | VoxelSide::Bottom => intersection_point.y = intersection_point.y.round(),
-        VoxelSide::Left | VoxelSide::Right => intersection_point.x = intersection_point.x.round(),
-        VoxelSide::Front | VoxelSide::Back => intersection_point.z = intersection_point.z.round(),
+        VoxelSide::Top | VoxelSide::Bottom => intersection_point.y = corner.y,
+        VoxelSide::Left | VoxelSide::Right => intersection_point.x = corner.x,
+        VoxelSide::Front | VoxelSide::Back => intersection_point.z = corner.z,
     }
 
+    let top_side_len = top_side.length();
+    let left_side_len = left_side.length();
     // Calculate the vectors P0P, Q1, and Q2.
     let p0p = intersection_point - corner;
-    let q1: f32 = p0p.dot(top_side) / top_side.length();
-    let q2: f32 = p0p.dot(left_side) / left_side.length();
+    let q1: f32 = p0p.dot(top_side) / top_side_len;
+    let q2: f32 = p0p.dot(left_side) / left_side_len;
 
     // Check if the intersection point is inside the rectangle.
-    if 0.0 <= q1
-        && q1 <= top_side.length()
-        && 0.0 <= q2
-        && q2 <= left_side.length()
-    {
+    if 0.0 <= q1 && q1 <= top_side_len && 0.0 <= q2 && q2 <= left_side_len {
         Some(intersection_point)
     } else {
         None

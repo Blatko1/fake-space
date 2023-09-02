@@ -1,7 +1,7 @@
 use super::{RayCast, Raycaster, Side};
 
 use crate::{
-    map::{Tile, WallTexture},
+    map::{Tile, WallTile},
     textures::{BLUE_BRICK_TEXTURE, LIGHT_PLANK_TEXTURE},
 };
 // TODO write tests for each draw call function to check for overflows
@@ -16,8 +16,8 @@ impl Raycaster {
         };
         let (texture, tex_width, tex_height, bottom_height, top_height) =
             match tex {
-                WallTexture::BlueBrick => BLUE_BRICK_TEXTURE,
-                WallTexture::LightPlank => LIGHT_PLANK_TEXTURE,
+                WallTile::BlueBrick => BLUE_BRICK_TEXTURE,
+                WallTile::LightPlank => LIGHT_PLANK_TEXTURE,
             };
 
         // TODO better names

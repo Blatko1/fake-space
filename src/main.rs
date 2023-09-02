@@ -39,6 +39,7 @@ fn main() {
 
     let framerate_delta = Duration::from_secs_f64(1.0 / FPS as f64);
     let mut time_delta = Instant::now();
+    let mut fps_update_delta = Instant::now();
     let mut framerate = 0;
     let mut fps_avg = 0;
 
@@ -88,9 +89,13 @@ fn main() {
                     time_delta = Instant::now();
                     framerate += 1;
                     fps_avg += elapsed.as_micros();
-                    // TODO println!() every second instead.
-                    if framerate >= FPS {
-                        println!("avg frame time: {}", fps_avg / FPS as u128);
+                    if fps_update_delta.elapsed().as_millis() >= 1000 {
+                        println!(
+                            "avg frame time: {}, FPS: {}",
+                            fps_avg / framerate as u128,
+                            framerate
+                        );
+                        fps_update_delta = Instant::now();
                         framerate = 0;
                         fps_avg = 0;
                     }
@@ -99,6 +104,15 @@ fn main() {
                         Instant::now() + framerate_delta - elapsed,
                     );
                 }
+                //if fps_update_delta.elapsed().as_millis() >= 1000 {
+                //    println!("avg frame time: {}, FPS: {}", fps_avg as f64 / framerate as f64, framerate);
+                //    fps_update_delta = Instant::now();
+                //    framerate = 0;
+                //    fps_avg = 0;
+                //}
+                //framerate += 1;
+                //fps_avg += time_delta.elapsed().as_micros();
+                //time_delta = Instant::now();
             }
             Event::LoopDestroyed => println!("Exited!"),
             _ => (),

@@ -31,18 +31,9 @@ impl Object {
         Self::new(models.get_model(ModelType::Damaged))
     }
 
-    pub fn get_voxel(&self, mut x: i32, mut y: i32, mut z: i32) -> Option<&u8> {
-        let dimension = self.dimension() as i32;
-        if z < 0
-            || z >= dimension
-            || x < 0
-            || x >= dimension
-            || y < 0
-            || y >= dimension
-        {
-            return None;
-        }
-        self.model.get_voxel(x as usize, y as usize, z as usize)
+    #[inline]
+    pub fn get_voxel(&self, x: usize, y: usize, z: usize) -> Option<&u8> {
+        self.model.get_voxel(x, y, z)
     }
 
     pub fn dimension(&self) -> usize {
@@ -56,7 +47,7 @@ pub enum ObjectType {
     Hole,
     Voxel,
     Pillars,
-    Damaged
+    Damaged,
 }
 
 impl ObjectType {
@@ -67,7 +58,7 @@ impl ObjectType {
             Self::Hole => Object::hole(models),
             Self::Voxel => Object::voxel(models),
             Self::Pillars => Object::pillars(models),
-            Self::Damaged => Object::damaged(models)
+            Self::Damaged => Object::damaged(models),
         }
     }
 }
@@ -80,12 +71,10 @@ impl ModelManager {
     pub fn init() -> Self {
         // Cube model:
         let dimension = 2;
-        let mut cube_data = vec![vec![vec![1; dimension]; dimension]; dimension];
+        let mut cube_data =
+            vec![vec![vec![1; dimension]; dimension]; dimension];
         cube_data[0][0][0] = 0u8;
-        let cube_data = cube_data.into_iter()
-        .flatten()
-        .flatten()
-        .collect();
+        let cube_data = cube_data.into_iter().flatten().flatten().collect();
         let cube = Model::new(cube_data, dimension);
 
         // Cube with a hole model:
@@ -115,39 +104,41 @@ impl ModelManager {
         let dimension = 8;
         let mut pillars_data =
             vec![vec![vec![0; dimension]; dimension]; dimension];
-            for x in 0..dimension /2 {
-                for z in 0..dimension /2 {
-                    for y in 0..dimension {
-                        pillars_data[y][z*2][x*2] = 1u8;
-                    }
+        for x in 0..dimension / 2 {
+            for z in 0..dimension / 2 {
+                for y in 0..dimension {
+                    pillars_data[y][z * 2][x * 2] = 1u8;
                 }
             }
-        let pillars_data = pillars_data.into_iter().flatten().flatten().collect();
+        }
+        let pillars_data =
+            pillars_data.into_iter().flatten().flatten().collect();
         let pillars = Model::new(pillars_data, dimension);
 
         // letter B model:
         let dimension = 8;
         let mut damaged_data =
             vec![vec![vec![1; dimension]; dimension]; dimension];
-            for x in 0..4 {
-                for z in 0..3 {
-                    for y in 5..8 {
-                        damaged_data[y][z][x] = 0u8;
-                    }
+        for x in 0..4 {
+            for z in 0..3 {
+                for y in 5..8 {
+                    damaged_data[y][z][x] = 0u8;
                 }
             }
-            for y in 0..dimension {
-                damaged_data[y][0][0] = 0u8;
-                damaged_data[y][5][3] = 0u8;
-            }
-            for z in 0..dimension {
-                damaged_data[4][z][3] = 0u8;
-                damaged_data[4][z][4] = 0u8;
-                damaged_data[4][z][5] = 0u8;
-            }
-            damaged_data[5][1][3] = 1u8;
-            damaged_data[5][2][3] = 1u8;
-        let damaged_data = damaged_data.into_iter().flatten().flatten().collect();
+        }
+        for y in 0..dimension {
+            damaged_data[y][0][0] = 0u8;
+            damaged_data[y][5][3] = 0u8;
+        }
+        for z in 0..dimension {
+            damaged_data[4][z][3] = 0u8;
+            damaged_data[4][z][4] = 0u8;
+            damaged_data[4][z][5] = 0u8;
+        }
+        damaged_data[5][1][3] = 1u8;
+        damaged_data[5][2][3] = 1u8;
+        let damaged_data =
+            damaged_data.into_iter().flatten().flatten().collect();
         let damaged = Model::new(damaged_data, dimension);
 
         let models = [
@@ -155,7 +146,7 @@ impl ModelManager {
             (ModelType::CubeHole, cube_hole),
             (ModelType::Voxel, voxel),
             (ModelType::Pillars, pillars),
-            (ModelType::Damaged, damaged)
+            (ModelType::Damaged, damaged),
         ]
         .iter()
         .cloned()
@@ -197,5 +188,5 @@ pub enum ModelType {
     CubeHole,
     Voxel,
     Pillars,
-    Damaged
+    Damaged,
 }

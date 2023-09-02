@@ -64,40 +64,44 @@ pub enum Tile {
     /// Empty walkable tile.
     Empty,
     /// Non-walkable, non-transparent wall tile.
-    Wall(WallTexture),
-    /// Represents all tiles which have transparent parts.
-    Transparent(TransparentTexture),
-    /// Represents a tile which contains a voxel model and possible a Wall or a Transparent tile.
-    Object(ObjectType),
+    Wall(WallTile),
+    /// Represents all tiles which can have transparent parts.
+    Transparent(TransparentTile),
     /// Represents space out of map (non-tile).
     Void,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum WallTexture {
+pub enum WallTile {
     BlueBrick,
     LightPlank,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TransparentTexture {
+pub enum TransparentTile {
     Fence,
     BlueGlass,
+    /// Represents a tile which contains a voxel model.
+    Object(ObjectType),
 }
 
 impl From<u32> for Tile {
     fn from(value: u32) -> Self {
         match value {
             0 => Tile::Empty,
-            1 => Tile::Wall(WallTexture::BlueBrick),
-            2 => Tile::Wall(WallTexture::LightPlank),
-            3 => Tile::Transparent(TransparentTexture::Fence),
-            4 => Tile::Transparent(TransparentTexture::BlueGlass),
-            5 => Tile::Object(ObjectType::Cube),
-            6 => Tile::Object(ObjectType::Hole),
-            7 => Tile::Object(ObjectType::Voxel),
-            8 => Tile::Object(ObjectType::Pillars),
-            9 => Tile::Object(ObjectType::Damaged),
+            1 => Tile::Wall(WallTile::BlueBrick),
+            2 => Tile::Wall(WallTile::LightPlank),
+            3 => Tile::Transparent(TransparentTile::Fence),
+            4 => Tile::Transparent(TransparentTile::BlueGlass),
+            5 => Tile::Transparent(TransparentTile::Object(ObjectType::Cube)),
+            6 => Tile::Transparent(TransparentTile::Object(ObjectType::Hole)),
+            7 => Tile::Transparent(TransparentTile::Object(ObjectType::Voxel)),
+            8 => {
+                Tile::Transparent(TransparentTile::Object(ObjectType::Pillars))
+            }
+            9 => {
+                Tile::Transparent(TransparentTile::Object(ObjectType::Damaged))
+            }
             _ => Tile::Void,
         }
     }
@@ -118,10 +122,10 @@ const TEST_MAP_DATA: &[u32; (TEST_MAP_WIDTH * TEST_MAP_HEIGHT) as usize] = &[
     1, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1,
     1, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1,
     1, 0, 0, 0, 0, 3, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1,
-    1, 0, 0, 0, 0, 3, 0, 0, 4, 0, 0, 0, 1, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 1,
-    1, 0, 0, 0, 0, 0, 0, 0, 4, 2, 0, 0, 1, 0, 0, 1,
+    1, 0, 0, 0, 0, 6, 0, 0, 4, 0, 0, 0, 1, 0, 0, 1,
     1, 0, 0, 0, 0, 7, 0, 0, 2, 0, 0, 0, 1, 0, 0, 1,
+    1, 0, 0, 0, 0, 8, 0, 0, 4, 2, 0, 0, 1, 0, 0, 1,
+    1, 0, 0, 0, 0, 9, 0, 0, 2, 0, 0, 0, 1, 0, 0, 1,
     1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 ];

@@ -23,4 +23,5 @@ Excellent explanations about the raycaster [here](https://lodev.org/cgtutor/rayc
 - [ ] Add a portal gun
 - [ ] Add special tiles through which the player would fall to their demise
 - [ ] Add a UI
-- [ ] Switch rendering to CPU only or utilize compute shaders
+- [ ] Improve the raycasting algorithm by avoiding drawing background unseen objects
+- [ ] Switch rendering to CPU only or utilize compute/fragment shaders

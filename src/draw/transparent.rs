@@ -1,6 +1,6 @@
 use super::{RayCast, RayHit, Raycaster, Side};
 use crate::{
-    map::{Tile, TransparentTexture},
+    map::{Tile, TransparentTile},
     object::ModelManager,
     textures::{BLUE_GLASS_TEXTURE, FENCE_TEXTURE},
 };
@@ -18,8 +18,9 @@ impl Raycaster {
         let (texture, tex_width, tex_height, bottom_height, top_height) =
             match through_hit.tile {
                 Tile::Transparent(tex) => match tex {
-                    TransparentTexture::Fence => FENCE_TEXTURE,
-                    TransparentTexture::BlueGlass => BLUE_GLASS_TEXTURE,
+                    TransparentTile::Fence => FENCE_TEXTURE,
+                    TransparentTile::BlueGlass => BLUE_GLASS_TEXTURE,
+                    _ => unreachable!(),
                 },
                 _ => unreachable!(),
             };
