@@ -31,9 +31,8 @@ impl State {
     pub fn update(&mut self) {
         self.canvas.clear_data();
         self.raycaster.update();
-        //self.raycaster.cast_rays(&self.map);
-        //self.raycaster.render(&self.models, self.canvas.data_mut());
-        self.raycaster.fast_cast_rays(&self.map, self.canvas.data_mut(), &self.models);
+        self.raycaster.cast_rays(&self.map);
+        self.raycaster.render(&self.models, self.canvas.data_mut());
     }
 
     pub fn render(&self) -> Result<(), wgpu::SurfaceError> {
