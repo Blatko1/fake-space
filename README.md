@@ -13,7 +13,7 @@ Excellent explanations about the raycaster [here](https://lodev.org/cgtutor/rayc
 - [x] Add textures to floor and ceiling
 - [x] Add voxel objects
 - [x] Add different height walls
-- [ ] Add colors to voxel objects
+- [x] Add colors to voxel objects
 - [ ] Add different floor and ceiling textures for different map tiles
 - [ ] Add 2D sprites (i.e. pillars, barrels)
 - [ ] Add removable object walls (cool opening or moving animation with voxels)

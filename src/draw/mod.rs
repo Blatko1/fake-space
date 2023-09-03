@@ -13,7 +13,6 @@ use crate::{
     object::{ModelManager, ObjectType},
 };
 
-use self::object::VoxelSide;
 // TODO rotation control with mouse and/or keyboard
 const MOVEMENT_SPEED: f32 = 0.1;
 
@@ -35,16 +34,6 @@ pub struct RayCast {
     through_hits: Vec<RayHit>,
 }
 
-#[derive(Debug)]
-pub struct FastRayCast {
-    screen_x: u32,
-    dir: Vec3,
-    hit: FastRayHit,
-    delta_dist_x: f32,
-    delta_dist_z: f32,
-    through_hits: Vec<FastRayHit>,
-}
-
 #[derive(Debug, Clone, Copy)]
 pub struct RayHit {
     /// Perpetual distance from the raycaster to the hit point on tile (wall).
@@ -59,16 +48,6 @@ pub struct RayHit {
     /// x-coordinate would be somewhere in range [0.0, 0.5].
     wall_x: f32,
     object: Option<ObjectHit>,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct FastRayHit {
-    wall_dist: f32,
-    tile: Tile,
-    side: Side,
-    wall_x: f32,
-    map_pos_x: i32,
-    map_pos_z: i32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -210,7 +189,7 @@ impl Raycaster {
                     Tile::Transparent(TransparentTile::Object(_)) => {
                         self.draw_object(ray, through, models, data)
                     }
-                    _ => self.draw_transparent(ray, through, models, data),
+                    _ => self.draw_transparent(ray, through, data),
                 }
             }
         }
@@ -296,10 +275,7 @@ impl Raycaster {
                     // If the hit tile has transparency, also calculate the Hit to the next closest
                     // Vertical or Horizontal side on the ray path and `continue`
                     if let Tile::Transparent(transparent_tile) = tile {
-                        if let TransparentTile::Object(
-                            obj,
-                        ) = transparent_tile
-                        {
+                        if let TransparentTile::Object(obj) = transparent_tile {
                             hit.object = Some(ObjectHit {
                                 obj,
                                 obj_map_pos_x: map_x,

@@ -3,6 +3,7 @@
 /// output, have tried MSAA but it doesn't work on textures, have tried applying
 /// bilinear texture filtering but unnoticeable.
 mod canvas;
+mod colors;
 mod draw;
 mod map;
 mod object;

@@ -72,7 +72,7 @@ impl ModelManager {
         // Cube model:
         let dimension = 2;
         let mut cube_data =
-            vec![vec![vec![1; dimension]; dimension]; dimension];
+            vec![vec![vec![9; dimension]; dimension]; dimension];
         cube_data[0][0][0] = 0u8;
         let cube_data = cube_data.into_iter().flatten().flatten().collect();
         let cube = Model::new(cube_data, dimension);
@@ -80,7 +80,7 @@ impl ModelManager {
         // Cube with a hole model:
         let dimension = 6;
         let mut cube_hole_data =
-            vec![vec![vec![1; dimension]; dimension]; dimension];
+            vec![vec![vec![30; dimension]; dimension]; dimension];
         for x in 1..dimension - 1 {
             for z in 0..dimension {
                 for y in 1..dimension - 1 {
@@ -96,7 +96,7 @@ impl ModelManager {
         let dimension = 10;
         let mut voxel_data =
             vec![vec![vec![0; dimension]; dimension]; dimension];
-        voxel_data[2][2][2] = 1;
+        voxel_data[2][2][2] = 100;
         let voxel_data = voxel_data.into_iter().flatten().flatten().collect();
         let voxel = Model::new(voxel_data, dimension);
 
@@ -107,7 +107,7 @@ impl ModelManager {
         for x in 0..dimension / 2 {
             for z in 0..dimension / 2 {
                 for y in 0..dimension {
-                    pillars_data[y][z * 2][x * 2] = 1u8;
+                    pillars_data[y][z * 2][x * 2] = (x + z + y) as u8;
                 }
             }
         }
@@ -128,15 +128,15 @@ impl ModelManager {
         }
         for y in 0..dimension {
             damaged_data[y][0][0] = 0u8;
-            damaged_data[y][5][3] = 0u8;
+            damaged_data[y][5][3] = y as u8;
         }
         for z in 0..dimension {
             damaged_data[4][z][3] = 0u8;
             damaged_data[4][z][4] = 0u8;
             damaged_data[4][z][5] = 0u8;
         }
-        damaged_data[5][1][3] = 1u8;
-        damaged_data[5][2][3] = 1u8;
+        damaged_data[5][1][3] = 10u8;
+        damaged_data[5][2][3] = 20u8;
         let damaged_data =
             damaged_data.into_iter().flatten().flatten().collect();
         let damaged = Model::new(damaged_data, dimension);

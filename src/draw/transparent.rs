@@ -1,7 +1,6 @@
 use super::{RayCast, RayHit, Raycaster, Side};
 use crate::{
     map::{Tile, TransparentTile},
-    object::ModelManager,
     textures::{BLUE_GLASS_TEXTURE, FENCE_TEXTURE},
 };
 
@@ -10,7 +9,6 @@ impl Raycaster {
         &self,
         ray: &RayCast,
         through_hit: &RayHit,
-        models: &ModelManager,
         data: &mut [u8],
     ) {
         let mut color = [0, 0, 0, 0];
