@@ -51,6 +51,15 @@ impl Raycaster {
             * tex_y_step;
         // TODO fix texture mapping.
         for y in begin..end {
+            let index = (self.height as usize - 1 - y as usize)
+                * self.four_width
+                + ray.screen_x as usize * 4;
+            let rgba = &mut data[index..index + 4];
+            let alpha = rgba[3];
+            if alpha == 255 {
+                tex_y += tex_y_step;
+                continue;
+            }
             //assert!(tex_y <= 15.0, "Not less!: y0: {}, y1: {}, y: {}", y0, y1, y);
             let tex_y_pos = tex_y.min(tex_height_minus_one).round() as u32;
             let i = ((tex_height - tex_y_pos - 1) * tex_width * 4 + four_tex_x)
@@ -64,11 +73,29 @@ impl Raycaster {
                     color[2] = color[2].saturating_sub(15);
                 }
             };
-            let index = (self.height as usize - 1 - y as usize)
-                * self.four_width
-                + ray.screen_x as usize * 4;
-            data[index..index + 4].copy_from_slice(&color);
+            if alpha == 0 {
+                rgba.copy_from_slice(&color);
+            } else {
+                rgba.copy_from_slice(&blend(&color, rgba));
+            }
             tex_y += tex_y_step;
         }
     }
+}
+
+// TODO maybe have only one blend function
+#[inline(always)]
+fn blend(background: &[u8], foreground: &[u8]) -> [u8; 4] {
+    let alpha = foreground[3] as f32 / 255.0;
+    let inv_alpha = 1.0 - alpha;
+
+    let blended_r =
+        (foreground[0] as f32 * alpha + background[0] as f32 * inv_alpha) as u8;
+    let blended_g =
+        (foreground[1] as f32 * alpha + background[1] as f32 * inv_alpha) as u8;
+    let blended_b =
+        (foreground[2] as f32 * alpha + background[2] as f32 * inv_alpha) as u8;
+    let blended_a = (255.0 * alpha + background[3] as f32 * inv_alpha) as u8;
+
+    [blended_r, blended_g, blended_b, blended_a]
 }

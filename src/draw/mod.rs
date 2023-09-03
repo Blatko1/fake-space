@@ -93,6 +93,7 @@ pub struct Raycaster {
     height: u32,
     /// Output screen dimension aspect (width/height)
     aspect: f32,
+    z_buffer: Vec<f32>,
 
     // Specific use variables with goal to improve performance.
     four_width: usize,
@@ -149,6 +150,7 @@ impl Raycaster {
             width,
             height,
             aspect,
+            z_buffer: vec![f32::INFINITY; width as usize],
 
             four_width: 4 * width as usize,
             width_recip: f_width.recip(),
@@ -168,10 +170,18 @@ impl Raycaster {
     }
 
     pub fn render(&self, models: &ModelManager, data: &mut [u8]) {
-        self.draw_floor_and_ceiling(data);
-
         for ray in self.hits.iter() {
             let hit = ray.hit;
+
+            //Draw the hit tile with transparency (walls with holes, objects, transparent textures):
+            for through in ray.through_hits.iter() {
+                match through.tile {
+                    Tile::Transparent(TransparentTile::Object(_)) => {
+                        self.draw_object(ray, through, models, data)
+                    }
+                    _ => self.draw_transparent(ray, through, data),
+                }
+            }
 
             // Draw the void (non-tile; out of map bounds):
             if let Tile::Void = hit.tile {
@@ -182,17 +192,8 @@ impl Raycaster {
             if let Tile::Wall(_) = hit.tile {
                 self.draw_wall(ray, data);
             }
-
-            //Draw the hit tile with transparency (walls with holes, objects, transparent textures):
-            for through in ray.through_hits.iter().rev() {
-                match through.tile {
-                    Tile::Transparent(TransparentTile::Object(_)) => {
-                        self.draw_object(ray, through, models, data)
-                    }
-                    _ => self.draw_transparent(ray, through, data),
-                }
-            }
         }
+        self.draw_floor_and_ceiling(data);
     }
 
     /// Casts rays from the current position and angle on the provided map.
@@ -305,6 +306,12 @@ impl Raycaster {
                         through_hits.push(hit);
                         through_hits.push(hit2);
                         continue;
+                    }
+                    if let Some(last) = through_hits.last() {
+                        self.z_buffer[x as usize] = last.wall_dist;
+                    } else {
+
+                    self.z_buffer[x as usize] = perp_wall_dist;
                     }
                     self.hits.push(RayCast {
                         screen_x: x,

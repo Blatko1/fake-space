@@ -54,8 +54,17 @@ impl Raycaster {
             * tex_y_step;
 
         for y in begin..end {
-            let tex_y_pos = tex_y.min(tex_height_minus_one).round() as u32;
+            let index = (self.height as usize - 1 - y as usize)
+                * self.four_width
+                + ray.screen_x as usize * 4;
+            let rgba = &mut data[index..index + 4];
+            let alpha = rgba[3];
+            if alpha == 255 {
+                tex_y += tex_y_step;
+                continue;
+            }
 
+            let tex_y_pos = tex_y.min(tex_height_minus_one).round() as u32;
             let i = ((tex_height - tex_y_pos - 1) * tex_width * 4 + four_tex_x)
                 as usize;
             color.copy_from_slice(&texture[i..i + 4]);
@@ -67,24 +76,25 @@ impl Raycaster {
                     color[2] = color[2].saturating_sub(15);
                 }
             };
-            let index = (self.height as usize - 1 - y as usize)
-                * self.four_width
-                + ray.screen_x as usize * 4;
             tex_y += tex_y_step;
-            if color[3] == 0 {
+            let a = color[3];
+            if a == 0 {
                 continue;
+            } else if a == 255 {
+                if alpha == 0 {
+                    rgba.copy_from_slice(&color);
+                } else {
+                    rgba.copy_from_slice(&blend(&color, rgba));
+                }
+            } else {
+                rgba.copy_from_slice(&blend(&color, rgba));
             }
-            let rgba = &mut data[index..index + 4];
-            rgba.copy_from_slice(&blend(rgba, color))
         }
     }
 }
 
 #[inline(always)]
-fn blend(background: &[u8], foreground: [u8; 4]) -> [u8; 4] {
-    if foreground[3] == 255 {
-        return foreground;
-    }
+fn blend(background: &[u8], foreground: &[u8]) -> [u8; 4] {
     let alpha = foreground[3] as f32 / 255.0;
     let inv_alpha = 1.0 - alpha;
 

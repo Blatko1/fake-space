@@ -35,39 +35,74 @@ impl Raycaster {
             let draw_floor_y_offset = y * 4 * self.width;
 
             for x in 0..self.width {
-                let floor_cellx = floor_x as i32;
-                let floor_cellz = floor_z as i32;
-                let ceil_cellx = ceil_x as i32;
-                let ceil_cellz = ceil_z as i32;
-
-                let tx_ceiling =
-                    (16.0 * (ceil_x - ceil_cellx as f32)) as u32 & (16 - 1);
-                let ty_ceiling =
-                    (16.0 * (ceil_z - ceil_cellz as f32)) as u32 & (16 - 1);
-
-                let tx_floor =
-                    (32.0 * (floor_x - floor_cellx as f32)) as u32 & (32 - 1);
-                let ty_floor =
-                    (32.0 * (floor_z - floor_cellz as f32)) as u32 & (32 - 1);
-
+                //FLOOR
+                let index = (draw_floor_y_offset + x * 4) as usize;
+                let rgba = &mut data[index..index + 4];
+                let alpha = rgba[3];
+                if alpha != 255 {
+                    let floor_cellx = floor_x as i32;
+                    let floor_cellz = floor_z as i32;
+                    let tx_floor = (32.0 * (floor_x - floor_cellx as f32))
+                        as u32
+                        & (32 - 1);
+                    let ty_floor = (32.0 * (floor_z - floor_cellz as f32))
+                        as u32
+                        & (32 - 1);
+                    let i_floor = (32 * 4 * ty_floor + tx_floor * 4) as usize;
+                    color.copy_from_slice(&MOSSY_STONE[i_floor..i_floor + 4]);
+                    if alpha == 0 {
+                        rgba.copy_from_slice(&color);
+                    } else {
+                        rgba.copy_from_slice(&blend(&color, rgba));
+                    }
+                }
                 floor_x += floor_step_x;
                 floor_z += floor_step_z;
-                ceil_x += ceil_step_x;
-                ceil_z += ceil_step_z;
-
-                let i_ceiling = (16 * 4 * ty_ceiling + tx_ceiling * 4) as usize;
-                let i_floor = (32 * 4 * ty_floor + tx_floor * 4) as usize;
-
-                // FLOOR
-                color.copy_from_slice(&MOSSY_STONE[i_floor..i_floor + 4]);
-                let index = (draw_floor_y_offset + x * 4) as usize;
-                data[index..index + 4].copy_from_slice(&color);
 
                 // CEILING
-                color.copy_from_slice(&LIGHT_PLANK[i_ceiling..i_ceiling + 4]);
                 let index = (draw_ceiling_y_offset + x * 4) as usize;
-                data[index..index + 4].copy_from_slice(&color);
+                let rgba = &mut data[index..index + 4];
+                let alpha = rgba[3];
+                if alpha != 255 {
+                    let ceil_cellx = ceil_x as i32;
+                    let ceil_cellz = ceil_z as i32;
+                    let tx_ceiling =
+                        (16.0 * (ceil_x - ceil_cellx as f32)) as u32 & (16 - 1);
+                    let ty_ceiling =
+                        (16.0 * (ceil_z - ceil_cellz as f32)) as u32 & (16 - 1);
+
+                    let i_ceiling =
+                        (16 * 4 * ty_ceiling + tx_ceiling * 4) as usize;
+
+                    // CEILING
+                    color.copy_from_slice(
+                        &LIGHT_PLANK[i_ceiling..i_ceiling + 4],
+                    );
+                    if alpha == 0 {
+                        rgba.copy_from_slice(&color);
+                    } else {
+                        rgba.copy_from_slice(&blend(&color, rgba));
+                    }
+                }
+                ceil_x += ceil_step_x;
+                ceil_z += ceil_step_z;
             }
         }
     }
+}
+
+#[inline(always)]
+fn blend(background: &[u8], foreground: &[u8]) -> [u8; 4] {
+    let alpha = foreground[3] as f32 / 255.0;
+    let inv_alpha = 1.0 - alpha;
+
+    let blended_r =
+        (foreground[0] as f32 * alpha + background[0] as f32 * inv_alpha) as u8;
+    let blended_g =
+        (foreground[1] as f32 * alpha + background[1] as f32 * inv_alpha) as u8;
+    let blended_b =
+        (foreground[2] as f32 * alpha + background[2] as f32 * inv_alpha) as u8;
+    let blended_a = (255.0 * alpha + background[3] as f32 * inv_alpha) as u8;
+
+    [blended_r, blended_g, blended_b, blended_a]
 }

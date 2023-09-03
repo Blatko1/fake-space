@@ -9,6 +9,7 @@ mod map;
 mod object;
 mod state;
 mod textures;
+mod world;
 
 use std::time::{Duration, Instant};
 

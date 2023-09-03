@@ -55,7 +55,16 @@ impl Raycaster {
         let left_side = Vec3::new(0.0, -dimension, 0.0);
         // Calculate the normal vector (N) of the rectangle's surface.
         let rectangle_normal = top_side.cross(left_side);
+        let mut color = [0, 0, 0, 255];
         for y in 0..self.height {
+            let index = (self.height as usize - 1 - y as usize)
+                * self.four_width
+                + ray.screen_x as usize * 4;
+            let rgba = &mut data[index..index + 4];
+            let alpha = rgba[3];
+            if alpha == 255 {
+                continue;
+            }
             // Y-coordinate on the vertical camera plane (range [-1.0, 1.0])
             let plane_y = 2.0 * (y as f32 * self.height_recip) - 1.0;
             // Ray direction for current pixel column
@@ -148,12 +157,15 @@ impl Raycaster {
                 match voxel {
                     Some(0) => (),
                     Some(v) => {
-                        let index = (self.height as usize - 1 - y as usize)
-                            * self.four_width
-                            + ray.screen_x as usize * 4;
-                        let rgba = &mut data[index..index + 4];
-                        rgba.copy_from_slice(&COLOR_LUT[*v as usize]);
-                        darken_side(side, rgba);
+                        if alpha == 0 {
+                            color.copy_from_slice(&COLOR_LUT[*v as usize]);
+                            darken_side(side, &mut color);
+                            rgba.copy_from_slice(&color);
+                        } else {
+                            color.copy_from_slice(&COLOR_LUT[*v as usize]);
+                            darken_side(side, &mut color);
+                            rgba.copy_from_slice(&blend(&color, rgba));
+                        }
                         break;
                     }
 
@@ -288,6 +300,22 @@ fn darken_side(side: VoxelSide, color: &mut [u8]) {
             color[2] = color[2].saturating_sub(45);
         }
     }
+}
+
+#[inline(always)]
+fn blend(background: &[u8], foreground: &[u8]) -> [u8; 4] {
+    let alpha = foreground[3] as f32 / 255.0;
+    let inv_alpha = 1.0 - alpha;
+
+    let blended_r =
+        (foreground[0] as f32 * alpha + background[0] as f32 * inv_alpha) as u8;
+    let blended_g =
+        (foreground[1] as f32 * alpha + background[1] as f32 * inv_alpha) as u8;
+    let blended_b =
+        (foreground[2] as f32 * alpha + background[2] as f32 * inv_alpha) as u8;
+    let blended_a = (255.0 * alpha + background[3] as f32 * inv_alpha) as u8;
+
+    [blended_r, blended_g, blended_b, blended_a]
 }
 
 /*#[test]

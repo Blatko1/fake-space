@@ -47,16 +47,6 @@ impl Map {
 
         *self.data.get(index).unwrap_or(&Tile::Void)
     }
-
-    #[inline]
-    pub fn width(&self) -> u32 {
-        self.width
-    }
-
-    #[inline]
-    pub fn height(&self) -> u32 {
-        self.height
-    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]

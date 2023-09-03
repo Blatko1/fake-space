@@ -1,4 +1,11 @@
-use crate::{canvas::Canvas, draw::Raycaster, map::Map, object::ModelManager};
+use crate::{
+    canvas::Canvas,
+    draw::Raycaster,
+    map::Map,
+    object::ModelManager,
+    textures::BLUE_GLASS,
+    world::{Entity, World},
+};
 use winit::{dpi::PhysicalSize, event::KeyboardInput};
 
 pub struct State {
@@ -6,6 +13,7 @@ pub struct State {
     raycaster: Raycaster,
     models: ModelManager,
     map: Map,
+    world: World,
 }
 
 impl State {
@@ -19,12 +27,15 @@ impl State {
             canvas.width(),
             canvas.height(),
         );
+        let mut world = World::new();
+        world.new_entity(Entity::new(5.0, 5.0, BLUE_GLASS));
 
         Self {
             canvas,
             raycaster,
             models: ModelManager::init(),
             map: Map::new_test(),
+            world,
         }
     }
 
