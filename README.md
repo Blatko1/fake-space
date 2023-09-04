@@ -14,16 +14,14 @@ Excellent explanations about the raycaster [here](https://lodev.org/cgtutor/rayc
 - [x] Add voxel objects
 - [x] Add different height walls
 - [x] Add colors to voxel objects
-- [x] Render objects from closest to furthest while skipping drawing over already drawn full opacity pixels
+- [x] Render objects from closest to furthest while skipping drawing over already drawn full opacity pixels in order to increase performance
 - [ ] Add different floor and ceiling textures for different map tiles
 - [ ] Add 2D sprites (i.e. pillars, barrels)
 - [ ] Add removable object walls (cool opening or moving animation with voxels)
 - [ ] Add collision detection (circle-rectangle collision detection)
 - [ ] Draw a skybox when outside of the map (looking at out of bound parts or at transparent ceiling)
-- [ ] Add portals like in the Portal game
-- [ ] Add a portal gun
+- [ ] Add portals and a portal gun like in the Portal game
 - [ ] Add special tiles through which the player would fall to their demise
-- [ ] Add a UI
+- [ ] Add an UI
 - [ ] Rename `hits` to `casts` and store transparent wall hits, object hits and normal wall hits in a single Vec
 - [ ] Add an option to switch between CPU only graphics with lower quality (no 3D objects) and GPU accelerated graphics with higher quality (3D objects)
-- [ ] Switch rendering to CPU only or utilize compute/fragment shaders

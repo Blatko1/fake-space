@@ -68,6 +68,7 @@ pub struct ModelManager {
 }
 
 impl ModelManager {
+    #[allow(clippy::needless_range_loop)]
     pub fn init() -> Self {
         // Cube model:
         let dimension = 2;
