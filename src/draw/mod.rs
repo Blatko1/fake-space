@@ -431,6 +431,20 @@ impl Raycaster {
     }
 }
 
+#[inline(always)]
+fn blend(background: &[u8], foreground: &[u8]) -> [u8; 4] {
+    let alpha = foreground[3] as f32 / 255.0;
+    let inv_alpha = 1.0 - alpha;
+
+    [
+        ((foreground[0] as f32 * alpha + background[0] as f32 * inv_alpha) as u8),
+        ((foreground[1] as f32 * alpha + background[1] as f32 * inv_alpha) as u8),
+        ((foreground[2] as f32 * alpha + background[2] as f32 * inv_alpha) as u8),
+        (255.0 * alpha + background[3] as f32 * inv_alpha) as u8,
+    ]
+}
+
+
 #[inline]
 fn norm_rad(angle: f32) -> f32 {
     angle - (angle / TAU).floor() * TAU

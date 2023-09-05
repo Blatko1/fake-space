@@ -3,7 +3,7 @@ use glam::Vec3;
 use crate::
     colors::COLOR_LUT;
 
-use super::{RayHit, Raycaster, Side, ObjectHit};
+use super::{RayHit, Raycaster, Side, ObjectHit, blend};
 
 impl Raycaster {
     pub fn draw_object(
@@ -155,13 +155,11 @@ impl Raycaster {
                 match voxel {
                     Some(0) => (),
                     Some(v) => {
+                        color.copy_from_slice(&COLOR_LUT[*v as usize]);
+                        darken_side(side, &mut color);
                         if alpha == 0 {
-                            color.copy_from_slice(&COLOR_LUT[*v as usize]);
-                            darken_side(side, &mut color);
                             rgba.copy_from_slice(&color);
                         } else {
-                            color.copy_from_slice(&COLOR_LUT[*v as usize]);
-                            darken_side(side, &mut color);
                             rgba.copy_from_slice(&blend(&color, rgba));
                         }
                         break;
@@ -298,22 +296,6 @@ fn darken_side(side: VoxelSide, color: &mut [u8]) {
             color[2] = color[2].saturating_sub(45);
         }
     }
-}
-
-#[inline(always)]
-fn blend(background: &[u8], foreground: &[u8]) -> [u8; 4] {
-    let alpha = foreground[3] as f32 / 255.0;
-    let inv_alpha = 1.0 - alpha;
-
-    let blended_r =
-        (foreground[0] as f32 * alpha + background[0] as f32 * inv_alpha) as u8;
-    let blended_g =
-        (foreground[1] as f32 * alpha + background[1] as f32 * inv_alpha) as u8;
-    let blended_b =
-        (foreground[2] as f32 * alpha + background[2] as f32 * inv_alpha) as u8;
-    let blended_a = (255.0 * alpha + background[3] as f32 * inv_alpha) as u8;
-
-    [blended_r, blended_g, blended_b, blended_a]
 }
 
 /*#[test]

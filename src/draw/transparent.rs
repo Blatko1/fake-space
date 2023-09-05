@@ -1,6 +1,6 @@
-use super::{RayHit, Raycaster, Side};
+use super::{RayHit, Raycaster, Side, blend};
 use crate::{
-    map::{Tile, TransparentTile, TransparentWall},
+    map::TransparentWall,
     textures::{BLUE_GLASS_TEXTURE, FENCE_TEXTURE},
 };
 
@@ -64,20 +64,17 @@ impl Raycaster {
             let i = ((tex_height - tex_y_pos - 1) * tex_width * 4 + four_tex_x)
                 as usize;
             color.copy_from_slice(&texture[i..i + 4]);
-            // TODO maybe optimize this match???
-            match hit.side {
-                Side::Vertical => (),
-                Side::Horizontal => {
-                    color[0] = color[0].saturating_sub(15);
-                    color[1] = color[1].saturating_sub(15);
-                    color[2] = color[2].saturating_sub(15);
-                }
-            };
             tex_y += tex_y_step;
             let a = color[3];
             if a == 0 {
                 continue;
-            } else if a == 255 {
+            }
+            if let Side::Horizontal = hit.side {
+                color[0] = color[0].saturating_sub(15);
+                    color[1] = color[1].saturating_sub(15);
+                    color[2] = color[2].saturating_sub(15);
+            }
+            if a == 255 {
                 if alpha == 0 {
                     rgba.copy_from_slice(&color);
                 } else {
@@ -88,20 +85,4 @@ impl Raycaster {
             }
         }
     }
-}
-
-#[inline(always)]
-fn blend(background: &[u8], foreground: &[u8]) -> [u8; 4] {
-    let alpha = foreground[3] as f32 / 255.0;
-    let inv_alpha = 1.0 - alpha;
-
-    let blended_r =
-        (foreground[0] as f32 * alpha + background[0] as f32 * inv_alpha) as u8;
-    let blended_g =
-        (foreground[1] as f32 * alpha + background[1] as f32 * inv_alpha) as u8;
-    let blended_b =
-        (foreground[2] as f32 * alpha + background[2] as f32 * inv_alpha) as u8;
-    let blended_a = (255.0 * alpha + background[3] as f32 * inv_alpha) as u8;
-
-    [blended_r, blended_g, blended_b, blended_a]
 }

@@ -1,6 +1,6 @@
 use crate::textures::{LIGHT_PLANK, MOSSY_STONE};
 
-use super::Raycaster;
+use super::{Raycaster, blend};
 
 impl Raycaster {
     pub fn draw_floor_and_ceiling(&self, data: &mut [u8]) {
@@ -9,25 +9,30 @@ impl Raycaster {
         let ray_dir_x1 = self.dir.x + self.plane_h.x;
         let ray_dir_z1 = self.dir.z + self.plane_h.z;
         let pos_y = self.pos.y * self.height as f32;
+        
+        // For better performance
+        let pos_y_div_aspect = pos_y / self.aspect;
+        let ray_dir_x1_minus_x0 = ray_dir_x1 - ray_dir_x0;
+        let ray_dir_z1_minus_z0 = ray_dir_z1 - ray_dir_z0;
 
         let mut color = [0; 4];
 
         for y in self.height / 2..self.height {
             let p = y as f32 - self.height as f32 / 2.0;
 
-            let floor_row_dist = pos_y / p / self.aspect;
+            let floor_row_dist = pos_y_div_aspect / p;
             let floor_step_x =
-                floor_row_dist * (ray_dir_x1 - ray_dir_x0) / self.width as f32;
+                floor_row_dist * ray_dir_x1_minus_x0 * self.height_recip;
             let floor_step_z =
-                floor_row_dist * (ray_dir_z1 - ray_dir_z0) / self.width as f32;
+                floor_row_dist * ray_dir_z1_minus_z0 * self.height_recip;
             let mut floor_x = self.pos.x + floor_row_dist * ray_dir_x0;
             let mut floor_z = self.pos.z + floor_row_dist * ray_dir_z0;
 
             let ceil_row_dist = floor_row_dist * 2.0;
             let ceil_step_x =
-                ceil_row_dist * (ray_dir_x1 - ray_dir_x0) / self.width as f32;
+                ceil_row_dist * ray_dir_x1_minus_x0 * self.height_recip;
             let ceil_step_z =
-                ceil_row_dist * (ray_dir_z1 - ray_dir_z0) / self.width as f32;
+                ceil_row_dist * ray_dir_z1_minus_z0 * self.height_recip;
             let mut ceil_x = self.pos.x + ceil_row_dist * ray_dir_x0;
             let mut ceil_z = self.pos.z + ceil_row_dist * ray_dir_z0;
 
@@ -89,20 +94,4 @@ impl Raycaster {
             }
         }
     }
-}
-
-#[inline(always)]
-fn blend(background: &[u8], foreground: &[u8]) -> [u8; 4] {
-    let alpha = foreground[3] as f32 / 255.0;
-    let inv_alpha = 1.0 - alpha;
-
-    let blended_r =
-        (foreground[0] as f32 * alpha + background[0] as f32 * inv_alpha) as u8;
-    let blended_g =
-        (foreground[1] as f32 * alpha + background[1] as f32 * inv_alpha) as u8;
-    let blended_b =
-        (foreground[2] as f32 * alpha + background[2] as f32 * inv_alpha) as u8;
-    let blended_a = (255.0 * alpha + background[3] as f32 * inv_alpha) as u8;
-
-    [blended_r, blended_g, blended_b, blended_a]
 }
