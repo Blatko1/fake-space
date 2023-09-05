@@ -10,7 +10,8 @@ use winit::event::{ElementState, KeyboardInput, VirtualKeyCode};
 
 use crate::{
     map::{Map, Tile, TransparentTile},
-    object::{ModelManager, ObjectType}, world::World,
+    object::{ModelManager, ObjectType},
+    world::World,
 };
 
 // TODO rotation control with mouse and/or keyboard
@@ -48,6 +49,17 @@ pub struct RayHit {
     /// x-coordinate would be somewhere in range [0.0, 0.5].
     wall_x: f32,
     object: Option<ObjectHit>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct RayHitFast {
+    screen_x: u32,
+    dir: Vec3,
+    wall_dist: f32,
+    side: Side,
+    wall_x: f32,
+    delta_dist_x: f32,
+    delta_dist_z: f32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -169,7 +181,12 @@ impl Raycaster {
         }
     }
 
-    pub fn render(&self, models: &ModelManager, world: &World, data: &mut [u8]) {
+    pub fn render(
+        &self,
+        models: &ModelManager,
+        world: &World,
+        data: &mut [u8],
+    ) {
         for ray in self.hits.iter() {
             let hit = ray.hit;
 
@@ -206,37 +223,59 @@ impl Raycaster {
             let texture = entity.texture();
             let sprite_pos = entity.pos() - self.pos;
 
-            let inv_det = 1.0 / (self.plane_h.x * self.dir.z - self.dir.x * self.plane_h.z);
+            let inv_det = 1.0
+                / (self.plane_h.x * self.dir.z - self.dir.x * self.plane_h.z);
 
-            let transform_x = inv_det * (self.dir.z * sprite_pos.x - self.dir.x * sprite_pos.z);
-            let transform_z = inv_det * (self.plane_h.x * sprite_pos.z - self.plane_h.z * sprite_pos.x);
-        
-            let sprite_screen_x = ((self.width as f32 / 2.0) * (1.0 + transform_x / transform_z)) as i32;
-            let sprite_dimension = (self.height as f32 / transform_z).abs() as i32;
+            let transform_x = inv_det
+                * (self.dir.z * sprite_pos.x - self.dir.x * sprite_pos.z);
+            let transform_z = inv_det
+                * (self.plane_h.x * sprite_pos.z
+                    - self.plane_h.z * sprite_pos.x);
+
+            let sprite_screen_x = ((self.width as f32 / 2.0)
+                * (1.0 + transform_x / transform_z))
+                as i32;
+            let sprite_dimension =
+                (self.height as f32 / transform_z).abs() as i32;
 
             let half_sprite_dimension = sprite_dimension / 2;
-            let begin_y = (self.int_half_height - half_sprite_dimension).max(0) as u32;
-            let end_y = ((self.int_half_height + half_sprite_dimension).max(0) as u32)
+            let begin_y =
+                (self.int_half_height - half_sprite_dimension).max(0) as u32;
+            let end_y = ((self.int_half_height + half_sprite_dimension).max(0)
+                as u32)
                 .min(self.height - 1);
 
-            let begin_x = (sprite_screen_x - half_sprite_dimension).max(0) as u32;
-            let end_x = ((sprite_screen_x + half_sprite_dimension).max(0) as u32)
+            let begin_x =
+                (sprite_screen_x - half_sprite_dimension).max(0) as u32;
+            let end_x = ((sprite_screen_x + half_sprite_dimension).max(0)
+                as u32)
                 .min(self.width - 1);
 
             for x in begin_x..end_x {
                 // TODO test for behind objects with opacity
-                let tex_x = ((x as f32 - (sprite_screen_x as f32 - half_sprite_dimension as f32)) * 256.0 * 16.0 / sprite_dimension as f32) as i32 / 256;
-                if transform_z > 0.0 && x > 0 && x < self.width && transform_z < self.z_buffer[x as usize] {
+                let tex_x = ((x as f32
+                    - (sprite_screen_x as f32 - half_sprite_dimension as f32))
+                    * 256.0
+                    * 16.0
+                    / sprite_dimension as f32)
+                    as i32
+                    / 256;
+                if transform_z > 0.0
+                    && x > 0
+                    && x < self.width
+                    && transform_z < self.z_buffer[x as usize]
+                {
                     for y in begin_y..end_y {
                         let index = (self.height as usize - 1 - y as usize)
                             * self.four_width
                             + x as usize * 4;
                         let rgba = &mut data[index..index + 4];
 
-                        let d = 256.0 * y as f32 - self.height as f32 * 128.0 + sprite_dimension as f32 * 128.0;
+                        let d = 256.0 * y as f32 - self.height as f32 * 128.0
+                            + sprite_dimension as f32 * 128.0;
                         let tex_y = (d * 16.0) as i32 / sprite_dimension / 256;
-                        let i = (16*tex_y * 4+tex_x * 4) as usize;
-                        let color = &texture[i..i+4];
+                        let i = (16 * tex_y * 4 + tex_x * 4) as usize;
+                        let color = &texture[i..i + 4];
                         rgba.copy_from_slice(color);
                     }
                 }
@@ -358,7 +397,7 @@ impl Raycaster {
                         continue;
                     }
                     self.z_buffer[x as usize] = perp_wall_dist;
-                    
+
                     self.hits.push(RayCast {
                         screen_x: x,
                         dir: ray_dir,
@@ -371,6 +410,142 @@ impl Raycaster {
                 }
             }
         }
+    }
+
+    pub fn cast_rays_fast(
+        &mut self,
+        tile_map: &Map,
+        models: &ModelManager,
+        world: &World,
+        data: &mut [u8],
+    ) {
+        for x in 0..self.width {
+            let plane_x = 2.0 * (x as f32 * self.width_recip) - 1.0;
+            let ray_dir = self.dir + self.plane_h * plane_x;
+            let delta_dist_x = 1.0 / ray_dir.x.abs();
+            let delta_dist_z = 1.0 / ray_dir.z.abs();
+
+            let mut side_dist_x = delta_dist_x
+                * if ray_dir.x < 0.0 {
+                    self.pos.x.fract()
+                } else {
+                    1.0 - self.pos.x.fract()
+                };
+            let mut side_dist_z = delta_dist_z
+                * if ray_dir.z < 0.0 {
+                    self.pos.z.fract()
+                } else {
+                    1.0 - self.pos.z.fract()
+                };
+
+            let mut map_x = self.pos.x as i32;
+            let mut map_z = self.pos.z as i32;
+            let (step_x, step_z) =
+                (ray_dir.x.signum() as i32, ray_dir.z.signum() as i32);
+
+            loop {
+                let side = if side_dist_x < side_dist_z {
+                    map_x += step_x;
+                    side_dist_x += delta_dist_x;
+                    Side::Vertical
+                } else {
+                    map_z += step_z;
+                    side_dist_z += delta_dist_z;
+                    Side::Horizontal
+                };
+                let tile = tile_map.get_value(map_x, map_z);
+                if tile != Tile::Empty {
+                    let (perp_wall_dist, wall_x) = match side {
+                        Side::Vertical => {
+                            let dist = side_dist_x - delta_dist_x;
+                            let wall_x = self.pos.z + dist * ray_dir.z;
+                            (dist.max(0.0), wall_x - wall_x.floor())
+                        }
+                        Side::Horizontal => {
+                            let dist = side_dist_z - delta_dist_z;
+                            let wall_x = self.pos.x + dist * ray_dir.x;
+                            (dist.max(0.0), wall_x - wall_x.floor())
+                        }
+                    };
+                    let hit = RayHitFast {
+                        screen_x: x,
+                        dir: ray_dir,
+                        wall_dist: perp_wall_dist,
+                        side,
+                        wall_x,
+                        delta_dist_x,
+                        delta_dist_z,
+                    };
+                    match tile {
+                        Tile::Transparent(transparent_tile) => {
+                            match transparent_tile {
+                                TransparentTile::Object(obj) => self
+                                    .draw_object_fast(
+                                        hit,
+                                        obj.get_object(models),
+                                        map_x as f32,
+                                        map_z as f32,
+                                        data,
+                                    ),
+                                TransparentTile::TransparentWall(
+                                    transparent_wall,
+                                ) => {
+                                    let (perp_wall_dist, wall_x, side) =
+                                        if side_dist_x < side_dist_z {
+                                            let dist = side_dist_x.max(0.0);
+                                            let wall_x =
+                                                self.pos.z + dist * ray_dir.z;
+                                            (
+                                                dist,
+                                                wall_x - wall_x.floor(),
+                                                Side::Vertical,
+                                            )
+                                        } else {
+                                            let dist = side_dist_z.max(0.0);
+                                            let wall_x =
+                                                self.pos.x + dist * ray_dir.x;
+                                            (
+                                                dist,
+                                                wall_x - wall_x.floor(),
+                                                Side::Horizontal,
+                                            )
+                                        };
+                                    let hit_2 = RayHitFast {
+                                        screen_x: x,
+                                        dir: ray_dir,
+                                        wall_dist: perp_wall_dist,
+                                        side,
+                                        wall_x,
+                                        delta_dist_x,
+                                        delta_dist_z,
+                                    };
+                                    self.draw_transparent_fast(
+                                        hit,
+                                        transparent_wall,
+                                        data,
+                                    );
+                                    self.draw_transparent_fast(
+                                        hit_2,
+                                        transparent_wall,
+                                        data,
+                                    )
+                                }
+                            }
+                        }
+                        Tile::Void => {
+                            self.draw_void_fast(hit, data);
+                            break;
+                        }
+                        Tile::Wall(wall_tile) => {
+                            self.draw_wall_fast(hit, wall_tile, data);
+                            break;
+                        }
+                        _ => (),
+                    }
+                }
+            }
+        }
+        self.draw_floor_and_ceiling(data);
     }
 
     pub fn update(&mut self) {

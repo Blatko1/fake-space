@@ -15,6 +15,7 @@ Excellent explanations about the raycaster [here](https://lodev.org/cgtutor/rayc
 - [x] Add different height walls
 - [x] Add colors to voxel objects
 - [x] Render objects from closest to furthest while skipping drawing over already drawn full opacity pixels in order to increase performance
+- [ ] Implement drawing directly in the ray casting function to avoid mem allocations, to work easier with entities and increase performance
 - [ ] Add different floor and ceiling textures for different map tiles
 - [ ] Add 2D sprites (i.e. pillars, barrels)
 - [ ] Add removable object walls (cool opening or moving animation with voxels)

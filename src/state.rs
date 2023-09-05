@@ -28,7 +28,7 @@ impl State {
             canvas.height(),
         );
         let mut world = World::new();
-        world.new_entity(Entity::new(3.0,  0.5, 7.0, BLUE_GLASS));
+        world.new_entity(Entity::new(3.0, 0.5, 7.0, BLUE_GLASS));
 
         Self {
             canvas,
@@ -42,8 +42,13 @@ impl State {
     pub fn update(&mut self) {
         self.canvas.clear_data();
         self.raycaster.update();
-        self.raycaster.cast_rays(&self.map);
-        self.raycaster.render(&self.models, &self.world, self.canvas.data_mut());
+        //self.raycaster.cast_rays(&self.map);
+        //self.raycaster.render(
+        //    &self.models,
+        //    &self.world,
+        //    self.canvas.data_mut(),
+        //);
+        self.raycaster.cast_rays_fast(&self.map, &self.models, &self.world, self.canvas.data_mut());
     }
 
     pub fn render(&self) -> Result<(), wgpu::SurfaceError> {

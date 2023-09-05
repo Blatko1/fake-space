@@ -1,8 +1,11 @@
 use glam::Vec3;
 
-use crate::{colors::COLOR_LUT, object::ModelManager};
+use crate::{
+    colors::COLOR_LUT,
+    object::{ModelManager, Object},
+};
 
-use super::{RayCast, RayHit, Raycaster, Side};
+use super::{RayCast, RayHit, RayHitFast, Raycaster, Side};
 
 impl Raycaster {
     pub fn draw_object(
@@ -74,6 +77,222 @@ impl Raycaster {
                 ray.delta_dist_x,
                 1.0 / ray_dir.y.abs(),
                 ray.delta_dist_z,
+            );
+
+            // Coordinates of the 3D model matrix the ray first interacts with
+            let intersect = match rectangle_vector_intersection(
+                top_left_point,
+                left_side,
+                rectangle_normal,
+                ray_dir.normalize(),
+                ray_origin,
+                voxel_side,
+            ) {
+                Some(i) => i,
+                None => continue,
+            };
+            let mut side_dist_x = delta_dist.x
+                * if ray_dir.x < 0.0 {
+                    intersect.x.fract()
+                } else {
+                    1.0 - intersect.x.fract()
+                };
+            let mut side_dist_y = delta_dist.y
+                * if ray_dir.y < 0.0 {
+                    intersect.y.fract()
+                } else {
+                    1.0 - intersect.y.fract()
+                };
+            let mut side_dist_z = delta_dist.z
+                * if ray_dir.z < 0.0 {
+                    intersect.z.fract()
+                } else {
+                    1.0 - intersect.z.fract()
+                };
+            let mut grid_x = (intersect.x - obj_x_pos) as i32;
+            let mut grid_z = (intersect.z - obj_z_pos) as i32;
+            let mut grid_y = intersect.y as i32;
+            let (step_x, step_y, step_z) = (
+                ray_dir.x.signum() as i32,
+                ray_dir.y.signum() as i32,
+                ray_dir.z.signum() as i32,
+            );
+
+            let mut side = voxel_side;
+            match side {
+                VoxelSide::Top | VoxelSide::Right | VoxelSide::Back => {
+                    if side_dist_x < side_dist_y {
+                        if side_dist_x < side_dist_z {
+                            grid_x += step_x;
+                            if grid_x < 0 {
+                                continue;
+                            }
+                            side_dist_x += delta_dist.x;
+                        } else {
+                            grid_z += step_z;
+                            if grid_z < 0 {
+                                continue;
+                            }
+                            side_dist_z += delta_dist.z;
+                        }
+                    } else if side_dist_y < side_dist_z {
+                        grid_y += step_y;
+                        if grid_y < 0 {
+                            continue;
+                        }
+                        side_dist_y += delta_dist.y;
+                    } else {
+                        grid_z += step_z;
+                        if grid_z < 0 {
+                            continue;
+                        }
+                        side_dist_z += delta_dist.z;
+                    }
+                }
+                _ => (),
+            }
+            loop {
+                let voxel = object.get_voxel(
+                    grid_x as usize,
+                    grid_y as usize,
+                    grid_z as usize,
+                );
+                match voxel {
+                    Some(0) => (),
+                    Some(v) => {
+                        if alpha == 0 {
+                            color.copy_from_slice(&COLOR_LUT[*v as usize]);
+                            darken_side(side, &mut color);
+                            rgba.copy_from_slice(&color);
+                        } else {
+                            color.copy_from_slice(&COLOR_LUT[*v as usize]);
+                            darken_side(side, &mut color);
+                            rgba.copy_from_slice(&blend(&color, rgba));
+                        }
+                        break;
+                    }
+
+                    None => break,
+                }
+                if side_dist_x < side_dist_y {
+                    if side_dist_x < side_dist_z {
+                        grid_x += step_x;
+                        if grid_x < 0 || grid_x >= dimension_i {
+                            break;
+                        }
+                        side = if step_x.is_positive() {
+                            VoxelSide::Left
+                        } else {
+                            VoxelSide::Right
+                        };
+                        side_dist_x += delta_dist.x;
+                    } else {
+                        grid_z += step_z;
+                        if grid_z < 0 || grid_z >= dimension_i {
+                            break;
+                        }
+                        side = if step_z.is_positive() {
+                            VoxelSide::Front
+                        } else {
+                            VoxelSide::Back
+                        };
+                        side_dist_z += delta_dist.z;
+                    }
+                } else if side_dist_y < side_dist_z {
+                    grid_y += step_y;
+                    if grid_y < 0 || grid_y >= dimension_i {
+                        break;
+                    }
+                    side = if step_y.is_positive() {
+                        VoxelSide::Bottom
+                    } else {
+                        VoxelSide::Top
+                    };
+                    side_dist_y += delta_dist.y;
+                } else {
+                    grid_z += step_z;
+                    if grid_z < 0 || grid_z >= dimension_i {
+                        break;
+                    }
+                    side = if step_z.is_positive() {
+                        VoxelSide::Front
+                    } else {
+                        VoxelSide::Back
+                    };
+                    side_dist_z += delta_dist.z;
+                }
+            }
+        }
+    }
+
+    pub fn draw_object_fast(
+        &self,
+        hit: RayHitFast,
+        object: Object,
+        obj_map_pos_x: f32,
+        obj_map_pos_z: f32,
+        data: &mut [u8],
+    ) {
+        let dimension = object.dimension() as f32;
+        let dimension_i = dimension as i32;
+        let ray_origin = self.pos * dimension;
+        let obj_x_pos = obj_map_pos_x * dimension;
+        let obj_z_pos = obj_map_pos_z * dimension;
+        // North is in front (positive Z)
+        let (top_left_point, top_side, voxel_side) = match hit.side {
+            Side::Vertical => {
+                // is east side hit
+                if hit.dir.x > 0.0 {
+                    let top_left =
+                        Vec3::new(obj_x_pos, dimension, obj_z_pos + dimension);
+                    (top_left, Vec3::new(0.0, 0.0, -dimension), VoxelSide::Left)
+                }
+                // is west side hit
+                else {
+                    let top_left =
+                        Vec3::new(obj_x_pos + dimension, dimension, obj_z_pos);
+                    (top_left, Vec3::new(0.0, 0.0, dimension), VoxelSide::Right)
+                }
+            }
+            Side::Horizontal => {
+                // is north side hit
+                if hit.dir.z > 0.0 {
+                    let top_left = Vec3::new(obj_x_pos, dimension, obj_z_pos);
+                    (top_left, Vec3::new(dimension, 0.0, 0.0), VoxelSide::Front)
+                }
+                // is south side hit
+                else {
+                    let top_left = Vec3::new(
+                        obj_x_pos + dimension,
+                        dimension,
+                        obj_z_pos + dimension,
+                    );
+                    (top_left, Vec3::new(-dimension, 0.0, 0.0), VoxelSide::Back)
+                }
+            }
+        };
+        let left_side = Vec3::new(0.0, -dimension, 0.0);
+        // Calculate the normal vector (N) of the rectangle's surface.
+        let rectangle_normal = top_side.cross(left_side);
+        let mut color = [0, 0, 0, 255];
+        for y in 0..self.height {
+            let index = (self.height as usize - 1 - y as usize)
+                * self.four_width
+                + hit.screen_x as usize * 4;
+            let rgba = &mut data[index..index + 4];
+            let alpha = rgba[3];
+            if alpha == 255 {
+                continue;
+            }
+            // Y-coordinate on the vertical camera plane (range [-1.0, 1.0])
+            let plane_y = 2.0 * (y as f32 * self.height_recip) - 1.0;
+            // Ray direction for current pixel column
+            let ray_dir = hit.dir + self.plane_v * plane_y;
+            // Length of ray from one x/y/z side to next x/y/z side on the tile_map
+            let delta_dist = Vec3::new(
+                hit.delta_dist_x,
+                1.0 / ray_dir.y.abs(),
+                hit.delta_dist_z,
             );
 
             // Coordinates of the 3D model matrix the ray first interacts with

@@ -93,8 +93,8 @@ fn main() {
                     fps_avg += elapsed.as_micros();
                     if fps_update_delta.elapsed().as_millis() >= 1000 {
                         println!(
-                            "avg frame time: {}, FPS: {}",
-                            fps_avg / framerate as u128,
+                            "avg frame time: {} ms, FPS: {}",
+                            (fps_avg / framerate as u128) as f32 / 1000.0,
                             framerate
                         );
                         fps_update_delta = Instant::now();

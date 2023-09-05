@@ -69,10 +69,15 @@ pub enum WallTile {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TransparentTile {
-    Fence,
-    BlueGlass,
+    TransparentWall(TransparentWall),
     /// Represents a tile which contains a voxel model.
     Object(ObjectType),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TransparentWall {
+    Fence,
+    BlueGlass,
 }
 
 impl From<u32> for Tile {
@@ -81,8 +86,8 @@ impl From<u32> for Tile {
             0 => Tile::Empty,
             1 => Tile::Wall(WallTile::BlueBrick),
             2 => Tile::Wall(WallTile::LightPlank),
-            3 => Tile::Transparent(TransparentTile::Fence),
-            4 => Tile::Transparent(TransparentTile::BlueGlass),
+            3 => Tile::Transparent(TransparentTile::TransparentWall(TransparentWall::Fence)),
+            4 => Tile::Transparent(TransparentTile::TransparentWall(TransparentWall::BlueGlass)),
             5 => Tile::Transparent(TransparentTile::Object(ObjectType::Cube)),
             6 => Tile::Transparent(TransparentTile::Object(ObjectType::Hole)),
             7 => Tile::Transparent(TransparentTile::Object(ObjectType::Voxel)),
