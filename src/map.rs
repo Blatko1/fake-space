@@ -51,13 +51,13 @@ impl Map {
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Tile {
-    /// Empty walkable tile.
+    /// Empty walkable tile in map bounds.
     Empty,
     /// Non-walkable, non-transparent wall tile.
     Wall(WallTile),
     /// Represents all tiles which can have transparent parts.
     Transparent(TransparentTile),
-    /// Represents space out of map (non-tile).
+    /// Represents the space out of the map (non-tile).
     Void,
 }
 
@@ -69,6 +69,7 @@ pub enum WallTile {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TransparentTile {
+    /// Represents a wall tile with a partly transparent texture.
     TransparentWall(TransparentWall),
     /// Represents a tile which contains a voxel model.
     Object(ObjectType),

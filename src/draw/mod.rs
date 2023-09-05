@@ -10,7 +10,7 @@ use winit::event::{ElementState, KeyboardInput, VirtualKeyCode};
 
 use crate::{
     map::{Map, Tile, TransparentTile},
-    object::{ModelManager, ObjectType},
+    object::{ModelManager, Object},
     world::World,
 };
 
@@ -18,29 +18,13 @@ use crate::{
 const MOVEMENT_SPEED: f32 = 0.1;
 
 #[derive(Debug)]
-pub struct RayCast {
+pub struct RayHit {
     /// X-coordinate of a pixel column out of which the ray was casted.
     screen_x: u32,
     /// Direction of the ray which hit the tile (wall).
     dir: Vec3,
-    /// Data about the ray's final hit point, ray doesn't continue after the hit.
-    hit: RayHit,
-    delta_dist_x: f32,
-    delta_dist_z: f32,
-    /// Data about the ray's hit point through which the ray passes if
-    /// the hit tile is transparent (i.e. window, glass, different shapes).
-    /// Since the object has transparency, all four sides should be rendered,
-    /// meaning that each ray passes through two sides (adjacent or opposite).
-    /// First in array is the first hit tile side and second is the other.
-    through_hits: Vec<RayHit>,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct RayHit {
     /// Perpetual distance from the raycaster to the hit point on tile (wall).
     wall_dist: f32,
-    /// Data of the hit tile.
-    tile: Tile,
     /// Which side of tile was hit.
     side: Side,
     /// Number in range [0.0, 1.0) which represents the x-coordinate of
@@ -48,23 +32,13 @@ pub struct RayHit {
     /// If the ray hit the left portion of the tile side (wall), the
     /// x-coordinate would be somewhere in range [0.0, 0.5].
     wall_x: f32,
-    object: Option<ObjectHit>,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct RayHitFast {
-    screen_x: u32,
-    dir: Vec3,
-    wall_dist: f32,
-    side: Side,
-    wall_x: f32,
     delta_dist_x: f32,
     delta_dist_z: f32,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub struct ObjectHit {
-    obj: ObjectType,
+    obj: Object,
     obj_map_pos_x: i32,
     obj_map_pos_z: i32,
 }
@@ -105,7 +79,6 @@ pub struct Raycaster {
     height: u32,
     /// Output screen dimension aspect (width/height)
     aspect: f32,
-    z_buffer: Vec<f32>,
 
     // Specific use variables with goal to improve performance.
     four_width: usize,
@@ -113,8 +86,6 @@ pub struct Raycaster {
     height_recip: f32,
     int_half_height: i32,
     float_half_height: f32,
-
-    hits: Vec<RayCast>,
 
     // Variables for controlling and moving the scene.
     turn_left: f32,
@@ -136,7 +107,6 @@ impl Raycaster {
         width: u32,
         height: u32,
     ) -> Self {
-        let hits = Vec::with_capacity(width as usize);
         let plane_mag = f32::tan(fov / 2.0);
         let aspect = width as f32 / height as f32;
 
@@ -162,15 +132,12 @@ impl Raycaster {
             width,
             height,
             aspect,
-            z_buffer: vec![f32::INFINITY; width as usize],
 
             four_width: 4 * width as usize,
             width_recip: f_width.recip(),
             height_recip: f_height.recip(),
             int_half_height: height as i32 / 2,
             float_half_height: height as f32 * 0.5,
-
-            hits,
 
             turn_left: 0.0,
             turn_right: 0.0,
@@ -181,35 +148,12 @@ impl Raycaster {
         }
     }
 
-    pub fn render(
+    /*pub fn render(
         &self,
         models: &ModelManager,
         world: &World,
         data: &mut [u8],
     ) {
-        for ray in self.hits.iter() {
-            let hit = ray.hit;
-
-            //Draw the hit tile with transparency (walls with holes, objects, transparent textures):
-            for through in ray.through_hits.iter() {
-                match through.tile {
-                    Tile::Transparent(TransparentTile::Object(_)) => {
-                        self.draw_object(ray, through, models, data)
-                    }
-                    _ => self.draw_transparent(ray, through, data),
-                }
-            }
-
-            // Draw the void (non-tile; out of map bounds):
-            if let Tile::Void = hit.tile {
-                self.draw_void(ray, data);
-            }
-
-            // Draw the hit impassable wall tile:
-            if let Tile::Wall(_) = hit.tile {
-                self.draw_wall(ray, data);
-            }
-        }
         let entity_count = world.entity_iter().count();
         let mut distance = Vec::with_capacity(entity_count);
         for (i, entity) in world.entity_iter().enumerate() {
@@ -283,12 +227,17 @@ impl Raycaster {
         }
 
         self.draw_floor_and_ceiling(data);
-    }
+    }*/
 
     /// Casts rays from the current position and angle on the provided map.
     /// Stores all [`RayHit`]s in the internal array.
-    pub fn cast_rays(&mut self, tile_map: &Map) {
-        self.hits.clear();
+    pub fn cast_rays_fast(
+        &mut self,
+        tile_map: &Map,
+        models: &ModelManager,
+        world: &World,
+        data: &mut [u8],
+    ) {
         // For each pixel column on the screen
         for x in 0..self.width {
             // X-coordinate on the horizontal camera plane (range [-1.0, 1.0])
@@ -320,13 +269,12 @@ impl Raycaster {
             let (step_x, step_z) =
                 (ray_dir.x.signum() as i32, ray_dir.z.signum() as i32);
 
-            let mut through_hits = Vec::new();
             // DDA loop
             // Iterates over all hit sides until it hits a non empty tile.
             // If a transparent tile is hit, continue iterating.
             // If another transparent tile was hit, store it as a final hit.
             loop {
-                // Distance to the first hit wall's x/z side if exists
+                // Distance to the first hit wall's x/z side if the wall isn't empty
                 let side = if side_dist_x < side_dist_z {
                     map_x += step_x;
                     side_dist_x += delta_dist_x;
@@ -336,7 +284,6 @@ impl Raycaster {
                     side_dist_z += delta_dist_z;
                     Side::Horizontal
                 };
-                // Get value of the hit tile
                 let tile = tile_map.get_value(map_x, map_z);
                 // If the hit tile is not Tile::Empty (out of bounds != Tile::Empty) store data
                 if tile != Tile::Empty {
@@ -355,119 +302,7 @@ impl Raycaster {
                             (dist.max(0.0), wall_x - wall_x.floor())
                         }
                     };
-                    let mut hit = RayHit {
-                        wall_dist: perp_wall_dist,
-                        tile,
-                        side,
-                        wall_x,
-                        object: None,
-                    };
-                    // If the hit tile has transparency, also calculate the Hit to the next closest
-                    // Vertical or Horizontal side on the ray path and `continue`
-                    if let Tile::Transparent(transparent_tile) = tile {
-                        if let TransparentTile::Object(obj) = transparent_tile {
-                            hit.object = Some(ObjectHit {
-                                obj,
-                                obj_map_pos_x: map_x,
-                                obj_map_pos_z: map_z,
-                            });
-                            through_hits.push(hit);
-                            continue;
-                        }
-                        let (perp_wall_dist, wall_x, side) = if side_dist_x
-                            < side_dist_z
-                        {
-                            let dist = side_dist_x.max(0.0);
-                            let wall_x = self.pos.z + dist * ray_dir.z;
-                            (dist, wall_x - wall_x.floor(), Side::Vertical)
-                        } else {
-                            let dist = side_dist_z.max(0.0);
-                            let wall_x = self.pos.x + dist * ray_dir.x;
-                            (dist, wall_x - wall_x.floor(), Side::Horizontal)
-                        };
-                        let hit2 = RayHit {
-                            wall_dist: perp_wall_dist,
-                            tile,
-                            side,
-                            wall_x,
-                            object: None,
-                        };
-                        through_hits.push(hit);
-                        through_hits.push(hit2);
-                        continue;
-                    }
-                    self.z_buffer[x as usize] = perp_wall_dist;
-
-                    self.hits.push(RayCast {
-                        screen_x: x,
-                        dir: ray_dir,
-                        hit,
-                        delta_dist_x,
-                        delta_dist_z,
-                        through_hits,
-                    });
-                    break;
-                }
-            }
-        }
-    }
-
-    pub fn cast_rays_fast(
-        &mut self,
-        tile_map: &Map,
-        models: &ModelManager,
-        world: &World,
-        data: &mut [u8],
-    ) {
-        for x in 0..self.width {
-            let plane_x = 2.0 * (x as f32 * self.width_recip) - 1.0;
-            let ray_dir = self.dir + self.plane_h * plane_x;
-            let delta_dist_x = 1.0 / ray_dir.x.abs();
-            let delta_dist_z = 1.0 / ray_dir.z.abs();
-
-            let mut side_dist_x = delta_dist_x
-                * if ray_dir.x < 0.0 {
-                    self.pos.x.fract()
-                } else {
-                    1.0 - self.pos.x.fract()
-                };
-            let mut side_dist_z = delta_dist_z
-                * if ray_dir.z < 0.0 {
-                    self.pos.z.fract()
-                } else {
-                    1.0 - self.pos.z.fract()
-                };
-
-            let mut map_x = self.pos.x as i32;
-            let mut map_z = self.pos.z as i32;
-            let (step_x, step_z) =
-                (ray_dir.x.signum() as i32, ray_dir.z.signum() as i32);
-
-            loop {
-                let side = if side_dist_x < side_dist_z {
-                    map_x += step_x;
-                    side_dist_x += delta_dist_x;
-                    Side::Vertical
-                } else {
-                    map_z += step_z;
-                    side_dist_z += delta_dist_z;
-                    Side::Horizontal
-                };
-                let tile = tile_map.get_value(map_x, map_z);
-                if tile != Tile::Empty {
-                    let (perp_wall_dist, wall_x) = match side {
-                        Side::Vertical => {
-                            let dist = side_dist_x - delta_dist_x;
-                            let wall_x = self.pos.z + dist * ray_dir.z;
-                            (dist.max(0.0), wall_x - wall_x.floor())
-                        }
-                        Side::Horizontal => {
-                            let dist = side_dist_z - delta_dist_z;
-                            let wall_x = self.pos.x + dist * ray_dir.x;
-                            (dist.max(0.0), wall_x - wall_x.floor())
-                        }
-                    };
-                    let hit = RayHitFast {
+                    let hit = RayHit {
                         screen_x: x,
                         dir: ray_dir,
                         wall_dist: perp_wall_dist,
@@ -477,14 +312,18 @@ impl Raycaster {
                         delta_dist_z,
                     };
                     match tile {
+                        // If the hit tile has transparency, also calculate the Hit to the next closest
+                        // Vertical or Horizontal side on the ray path and `continue`
                         Tile::Transparent(transparent_tile) => {
                             match transparent_tile {
                                 TransparentTile::Object(obj) => self
-                                    .draw_object_fast(
+                                    .draw_object(
                                         hit,
-                                        obj.get_object(models),
-                                        map_x as f32,
-                                        map_z as f32,
+                                        ObjectHit {
+                                            obj: obj.get_object(models),
+                                            obj_map_pos_x: map_x,
+                                            obj_map_pos_z: map_z,
+                                        },
                                         data,
                                     ),
                                 TransparentTile::TransparentWall(
@@ -510,7 +349,7 @@ impl Raycaster {
                                                 Side::Horizontal,
                                             )
                                         };
-                                    let hit_2 = RayHitFast {
+                                    let hit_2 = RayHit {
                                         screen_x: x,
                                         dir: ray_dir,
                                         wall_dist: perp_wall_dist,
@@ -519,12 +358,12 @@ impl Raycaster {
                                         delta_dist_x,
                                         delta_dist_z,
                                     };
-                                    self.draw_transparent_fast(
+                                    self.draw_transparent(
                                         hit,
                                         transparent_wall,
                                         data,
                                     );
-                                    self.draw_transparent_fast(
+                                    self.draw_transparent(
                                         hit_2,
                                         transparent_wall,
                                         data,
@@ -533,11 +372,11 @@ impl Raycaster {
                             }
                         }
                         Tile::Void => {
-                            self.draw_void_fast(hit, data);
+                            self.draw_void(hit, data);
                             break;
                         }
                         Tile::Wall(wall_tile) => {
-                            self.draw_wall_fast(hit, wall_tile, data);
+                            self.draw_wall(hit, wall_tile, data);
                             break;
                         }
                         _ => (),

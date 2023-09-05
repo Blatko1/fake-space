@@ -1,18 +1,9 @@
-use super::{RayCast, RayHitFast, Raycaster};
+use super::{RayHit, Raycaster};
 
 const PURPLE: [u8; 4] = [200, 0, 220, 255];
 
 impl Raycaster {
-    pub fn draw_void(&self, ray: &RayCast, data: &mut [u8]) {
-        for y in 0..self.height - 1 {
-            let index = (self.height as usize - 1 - y as usize)
-                * self.four_width
-                + ray.screen_x as usize * 4;
-            data[index..index + 4].copy_from_slice(&PURPLE);
-        }
-    }
-
-    pub fn draw_void_fast(&self, hit: RayHitFast, data: &mut [u8]) {
+    pub fn draw_void(&self, hit: RayHit, data: &mut [u8]) {
         for y in 0..self.height - 1 {
             let index = (self.height as usize - 1 - y as usize)
                 * self.four_width
