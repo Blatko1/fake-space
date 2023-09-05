@@ -22,17 +22,17 @@ impl Raycaster {
 
             let floor_row_dist = pos_y_div_aspect / p;
             let floor_step_x =
-                floor_row_dist * ray_dir_x1_minus_x0 * self.height_recip;
+                floor_row_dist * ray_dir_x1_minus_x0 * self.width_recip;
             let floor_step_z =
-                floor_row_dist * ray_dir_z1_minus_z0 * self.height_recip;
+                floor_row_dist * ray_dir_z1_minus_z0 * self.width_recip;
             let mut floor_x = self.pos.x + floor_row_dist * ray_dir_x0;
             let mut floor_z = self.pos.z + floor_row_dist * ray_dir_z0;
 
             let ceil_row_dist = floor_row_dist * 2.0;
             let ceil_step_x =
-                ceil_row_dist * ray_dir_x1_minus_x0 * self.height_recip;
+                ceil_row_dist * ray_dir_x1_minus_x0 * self.width_recip;
             let ceil_step_z =
-                ceil_row_dist * ray_dir_z1_minus_z0 * self.height_recip;
+                ceil_row_dist * ray_dir_z1_minus_z0 * self.width_recip;
             let mut ceil_x = self.pos.x + ceil_row_dist * ray_dir_x0;
             let mut ceil_z = self.pos.z + ceil_row_dist * ray_dir_z0;
 

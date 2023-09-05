@@ -42,12 +42,6 @@ impl State {
     pub fn update(&mut self) {
         self.canvas.clear_data();
         self.raycaster.update();
-        //self.raycaster.cast_rays(&self.map);
-        //self.raycaster.render(
-        //    &self.models,
-        //    &self.world,
-        //    self.canvas.data_mut(),
-        //);
         self.raycaster.cast_rays_fast(&self.map, &self.models, &self.world, self.canvas.data_mut());
     }
 
