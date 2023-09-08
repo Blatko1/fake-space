@@ -1,17 +1,11 @@
 use glam::Vec3;
 
-use crate::
-    colors::COLOR_LUT;
+use crate::colors::COLOR_LUT;
 
-use super::{RayHit, Raycaster, Side, ObjectHit, blend};
+use super::{blend, ObjectHit, RayHit, Raycaster, Side};
 
 impl Raycaster {
-    pub fn draw_object(
-        &self,
-        hit: RayHit,
-        object: ObjectHit,
-        data: &mut [u8],
-    ) {
+    pub fn draw_object(&self, hit: RayHit, object: ObjectHit, data: &mut [u8]) {
         let dimension = object.obj.dimension() as f32;
         let dimension_i = dimension as i32;
         let ray_origin = self.pos * dimension;

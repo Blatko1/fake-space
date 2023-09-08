@@ -3,7 +3,7 @@ use crate::{
     draw::Raycaster,
     map::Map,
     object::ModelManager,
-    textures::BLUE_GLASS,
+    textures::TextureManager,
     world::{Entity, World},
 };
 use winit::{dpi::PhysicalSize, event::KeyboardInput};
@@ -14,6 +14,7 @@ pub struct State {
     models: ModelManager,
     map: Map,
     world: World,
+    textures: TextureManager,
 }
 
 impl State {
@@ -28,7 +29,7 @@ impl State {
             canvas.height(),
         );
         let mut world = World::new();
-        world.new_entity(Entity::new(3.0, 0.5, 7.0, BLUE_GLASS));
+        world.new_entity(Entity::new(3.0, 0.5, 7.0, &[1]));
 
         Self {
             canvas,
@@ -36,13 +37,20 @@ impl State {
             models: ModelManager::init(),
             map: Map::new_test(),
             world,
+            textures: TextureManager::init(),
         }
     }
 
     pub fn update(&mut self) {
         self.canvas.clear_data();
         self.raycaster.update();
-        self.raycaster.cast_rays_fast(&self.map, &self.models, &self.world, self.canvas.data_mut());
+        self.raycaster.cast_rays_fast(
+            &self.map,
+            &self.models,
+            &self.world,
+            &self.textures,
+            self.canvas.data_mut(),
+        );
     }
 
     pub fn render(&self) -> Result<(), wgpu::SurfaceError> {

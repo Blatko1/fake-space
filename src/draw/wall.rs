@@ -1,24 +1,18 @@
-use super::{RayHit, Raycaster, Side, blend};
+use super::{blend, RayHit, Raycaster, Side};
 
-use crate::{
-    map::WallTile,
-    textures::{BLUE_BRICK_TEXTURE, LIGHT_PLANK_TEXTURE},
-};
 // TODO write tests for each draw call function to check for overflows
 impl Raycaster {
-    pub fn draw_wall(
-        &self,
-        hit: RayHit,
-        wall_tile: WallTile,
-        data: &mut [u8],
-    ) {
+    pub fn draw_wall(&self, hit: RayHit, data: &mut [u8]) {
         let mut color = [0, 0, 0, 0];
-
-        let (texture, tex_width, tex_height, bottom_height, top_height) =
-            match wall_tile {
-                WallTile::BlueBrick => BLUE_BRICK_TEXTURE,
-                WallTile::LightPlank => LIGHT_PLANK_TEXTURE,
-            };
+        
+        let tex = hit.texture.unwrap();
+        let (texture, tex_width, tex_height, bottom_height, top_height) = (
+            tex.texture,
+            tex.width,
+            tex.height,
+            tex.bottom_height,
+            tex.top_height,
+        );
 
         // TODO better names
         let full_line_pixel_height =
@@ -67,8 +61,8 @@ impl Raycaster {
             color.copy_from_slice(&texture[i..i + 4]);
             if let Side::Horizontal = hit.side {
                 color[0] = color[0].saturating_sub(15);
-                    color[1] = color[1].saturating_sub(15);
-                    color[2] = color[2].saturating_sub(15);
+                color[1] = color[1].saturating_sub(15);
+                color[2] = color[2].saturating_sub(15);
             }
             if alpha == 0 {
                 rgba.copy_from_slice(&color);

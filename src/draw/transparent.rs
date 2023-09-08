@@ -1,23 +1,21 @@
-use super::{RayHit, Raycaster, Side, blend};
-use crate::{
-    map::TransparentWall,
-    textures::{BLUE_GLASS_TEXTURE, FENCE_TEXTURE},
-};
+use super::{blend, RayHit, Raycaster, Side};
 
 impl Raycaster {
     pub fn draw_transparent(
         &self,
         hit: RayHit,
-        transparent_wall: TransparentWall,
         data: &mut [u8],
     ) {
         let mut color = [0, 0, 0, 0];
 
-        let (texture, tex_width, tex_height, bottom_height, top_height) =
-            match transparent_wall {
-                TransparentWall::Fence => FENCE_TEXTURE,
-                TransparentWall::BlueGlass => BLUE_GLASS_TEXTURE,
-            };
+        let tex = hit.texture.unwrap();
+        let (texture, tex_width, tex_height, bottom_height, top_height) = (
+            tex.texture,
+            tex.width,
+            tex.height,
+            tex.bottom_height,
+            tex.top_height,
+        );
 
         // TODO better names
         let full_line_pixel_height =
@@ -37,7 +35,6 @@ impl Raycaster {
             Side::Vertical if hit.dir.x > 0.0 => {
                 tex_width - (hit.wall_x * tex_width as f32) as u32 - 1
             }
-
             Side::Horizontal if hit.dir.z < 0.0 => {
                 tex_width - (hit.wall_x * tex_width as f32) as u32 - 1
             }
@@ -71,8 +68,8 @@ impl Raycaster {
             }
             if let Side::Horizontal = hit.side {
                 color[0] = color[0].saturating_sub(15);
-                    color[1] = color[1].saturating_sub(15);
-                    color[2] = color[2].saturating_sub(15);
+                color[1] = color[1].saturating_sub(15);
+                color[2] = color[2].saturating_sub(15);
             }
             if a == 255 {
                 if alpha == 0 {

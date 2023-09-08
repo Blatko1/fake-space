@@ -11,6 +11,7 @@ use winit::event::{ElementState, KeyboardInput, VirtualKeyCode};
 use crate::{
     map::{Map, Tile, TransparentTile},
     object::{ModelManager, Object},
+    textures::{TextureManager, TextureDataRef},
     world::World,
 };
 
@@ -18,7 +19,7 @@ use crate::{
 const MOVEMENT_SPEED: f32 = 0.1;
 
 #[derive(Debug)]
-pub struct RayHit {
+pub struct RayHit<'a> {
     /// X-coordinate of a pixel column out of which the ray was casted.
     screen_x: u32,
     /// Direction of the ray which hit the tile (wall).
@@ -32,6 +33,7 @@ pub struct RayHit {
     /// If the ray hit the left portion of the tile side (wall), the
     /// x-coordinate would be somewhere in range [0.0, 0.5].
     wall_x: f32,
+    texture: Option<TextureDataRef<'a>>,
     delta_dist_x: f32,
     delta_dist_z: f32,
 }
@@ -236,6 +238,7 @@ impl Raycaster {
         tile_map: &Map,
         models: &ModelManager,
         world: &World,
+        textures: &TextureManager,
         data: &mut [u8],
     ) {
         // For each pixel column on the screen
@@ -302,12 +305,13 @@ impl Raycaster {
                             (dist.max(0.0), wall_x - wall_x.floor())
                         }
                     };
-                    let hit = RayHit {
+                    let mut hit = RayHit {
                         screen_x: x,
                         dir: ray_dir,
                         wall_dist: perp_wall_dist,
                         side,
                         wall_x,
+                        texture: None,
                         delta_dist_x,
                         delta_dist_z,
                     };
@@ -349,34 +353,41 @@ impl Raycaster {
                                                 Side::Horizontal,
                                             )
                                         };
+                                    let transparent_tex = textures
+                                        .get_transparent_tex(transparent_wall);
                                     let hit_2 = RayHit {
                                         screen_x: x,
                                         dir: ray_dir,
                                         wall_dist: perp_wall_dist,
                                         side,
                                         wall_x,
+                                        texture: Some(transparent_tex),
                                         delta_dist_x,
                                         delta_dist_z,
                                     };
+                                    hit.texture = Some(transparent_tex);
+                                    
                                     self.draw_transparent(
                                         hit,
-                                        transparent_wall,
                                         data,
                                     );
                                     self.draw_transparent(
                                         hit_2,
-                                        transparent_wall,
                                         data,
                                     )
                                 }
                             }
                         }
-                        Tile::Void => {
-                            self.draw_void(hit, data);
+                        Tile::Wall(wall_tile) => {
+                            hit.texture = Some(textures.get_wall_tex(wall_tile));
+                            self.draw_wall(
+                                hit,
+                                data,
+                            );
                             break;
                         }
-                        Tile::Wall(wall_tile) => {
-                            self.draw_wall(hit, wall_tile, data);
+                        Tile::Void => {
+                            self.draw_void(hit, data);
                             break;
                         }
                         _ => (),
@@ -384,7 +395,7 @@ impl Raycaster {
                 }
             }
         }
-        self.draw_floor_and_ceiling(data);
+        self.draw_floor_and_ceiling(tile_map, textures, data);
     }
 
     pub fn update(&mut self) {
@@ -437,13 +448,15 @@ fn blend(background: &[u8], foreground: &[u8]) -> [u8; 4] {
     let inv_alpha = 1.0 - alpha;
 
     [
-        ((foreground[0] as f32 * alpha + background[0] as f32 * inv_alpha) as u8),
-        ((foreground[1] as f32 * alpha + background[1] as f32 * inv_alpha) as u8),
-        ((foreground[2] as f32 * alpha + background[2] as f32 * inv_alpha) as u8),
+        ((foreground[0] as f32 * alpha + background[0] as f32 * inv_alpha)
+            as u8),
+        ((foreground[1] as f32 * alpha + background[1] as f32 * inv_alpha)
+            as u8),
+        ((foreground[2] as f32 * alpha + background[2] as f32 * inv_alpha)
+            as u8),
         (255.0 * alpha + background[3] as f32 * inv_alpha) as u8,
     ]
 }
-
 
 #[inline]
 fn norm_rad(angle: f32) -> f32 {
