@@ -11,7 +11,7 @@ use winit::event::{ElementState, KeyboardInput, VirtualKeyCode};
 use crate::{
     map::{Map, Tile, TransparentTile},
     object::{ModelManager, Object},
-    textures::{TextureManager, TextureDataRef},
+    textures::{TextureDataRef, TextureManager},
     world::World,
 };
 
@@ -227,13 +227,11 @@ impl Raycaster {
                 }
             }
         }
-
-        self.draw_floor_and_ceiling(data);
     }*/
 
     /// Casts rays from the current position and angle on the provided map.
     /// Stores all [`RayHit`]s in the internal array.
-    pub fn cast_rays_fast(
+    pub fn cast_rays(
         &mut self,
         tile_map: &Map,
         models: &ModelManager,
@@ -366,24 +364,16 @@ impl Raycaster {
                                         delta_dist_z,
                                     };
                                     hit.texture = Some(transparent_tex);
-                                    
-                                    self.draw_transparent(
-                                        hit,
-                                        data,
-                                    );
-                                    self.draw_transparent(
-                                        hit_2,
-                                        data,
-                                    )
+
+                                    self.draw_transparent(hit, data);
+                                    self.draw_transparent(hit_2, data)
                                 }
                             }
                         }
                         Tile::Wall(wall_tile) => {
-                            hit.texture = Some(textures.get_wall_tex(wall_tile));
-                            self.draw_wall(
-                                hit,
-                                data,
-                            );
+                            hit.texture =
+                                Some(textures.get_wall_tex(wall_tile));
+                            self.draw_wall(hit, data);
                             break;
                         }
                         Tile::Void => {

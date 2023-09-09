@@ -3,16 +3,13 @@ use super::{blend, RayHit, Raycaster, Side};
 // TODO write tests for each draw call function to check for overflows
 impl Raycaster {
     pub fn draw_wall(&self, hit: RayHit, data: &mut [u8]) {
-        let mut color = [0, 0, 0, 0];
-        
         let tex = hit.texture.unwrap();
-        let (texture, tex_width, tex_height, bottom_height, top_height) = (
-            tex.texture,
-            tex.width,
-            tex.height,
-            tex.bottom_height,
-            tex.top_height,
-        );
+        let (tex_width, tex_height, bottom_height, top_height) =
+            (tex.width, tex.height, tex.bottom_height, tex.top_height);
+        let texture = match hit.side {
+            Side::Vertical => tex.texture,
+            Side::Horizontal => tex.texture_darkened,
+        };
 
         // TODO better names
         let full_line_pixel_height =
@@ -27,7 +24,7 @@ impl Raycaster {
         let end = ((self.int_half_height + top_height).max(0) as u32)
             .min(self.height - 1);
 
-        let tex_height_minus_one = tex_height as f32 - 1.0;
+        let tex_height_minus_one = tex_height - 1;
         let tex_x = match hit.side {
             Side::Vertical if hit.dir.x > 0.0 => {
                 tex_width - (hit.wall_x * tex_width as f32) as u32 - 1
@@ -55,15 +52,10 @@ impl Raycaster {
                 continue;
             }
             //assert!(tex_y <= 15.0, "Not less!: y0: {}, y1: {}, y: {}", y0, y1, y);
-            let tex_y_pos = tex_y.min(tex_height_minus_one).round() as u32;
+            let tex_y_pos = (tex_y.round() as u32).min(tex_height_minus_one);
             let i = ((tex_height - tex_y_pos - 1) * tex_width * 4 + four_tex_x)
                 as usize;
-            color.copy_from_slice(&texture[i..i + 4]);
-            if let Side::Horizontal = hit.side {
-                color[0] = color[0].saturating_sub(15);
-                color[1] = color[1].saturating_sub(15);
-                color[2] = color[2].saturating_sub(15);
-            }
+            let color = &texture[i..i + 4];
             if alpha == 0 {
                 rgba.copy_from_slice(&color);
             } else {

@@ -1,21 +1,14 @@
 use super::{blend, RayHit, Raycaster, Side};
 
 impl Raycaster {
-    pub fn draw_transparent(
-        &self,
-        hit: RayHit,
-        data: &mut [u8],
-    ) {
-        let mut color = [0, 0, 0, 0];
-
+    pub fn draw_transparent(&self, hit: RayHit, data: &mut [u8]) {
         let tex = hit.texture.unwrap();
-        let (texture, tex_width, tex_height, bottom_height, top_height) = (
-            tex.texture,
-            tex.width,
-            tex.height,
-            tex.bottom_height,
-            tex.top_height,
-        );
+        let (tex_width, tex_height, bottom_height, top_height) =
+            (tex.width, tex.height, tex.bottom_height, tex.top_height);
+        let texture = match hit.side {
+            Side::Vertical => tex.texture,
+            Side::Horizontal => tex.texture_darkened,
+        };
 
         // TODO better names
         let full_line_pixel_height =
@@ -60,16 +53,11 @@ impl Raycaster {
             let tex_y_pos = tex_y.min(tex_height_minus_one).round() as u32;
             let i = ((tex_height - tex_y_pos - 1) * tex_width * 4 + four_tex_x)
                 as usize;
-            color.copy_from_slice(&texture[i..i + 4]);
+            let color = &texture[i..i + 4];
             tex_y += tex_y_step;
             let a = color[3];
             if a == 0 {
                 continue;
-            }
-            if let Side::Horizontal = hit.side {
-                color[0] = color[0].saturating_sub(15);
-                color[1] = color[1].saturating_sub(15);
-                color[2] = color[2].saturating_sub(15);
             }
             if a == 255 {
                 if alpha == 0 {

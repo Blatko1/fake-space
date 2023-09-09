@@ -44,7 +44,7 @@ impl State {
     pub fn update(&mut self) {
         self.canvas.clear_data();
         self.raycaster.update();
-        self.raycaster.cast_rays_fast(
+        self.raycaster.cast_rays(
             &self.map,
             &self.models,
             &self.world,

@@ -82,6 +82,7 @@ pub struct TextureData {
     pub top_height: f32,
     pub bottom_height: f32,
     pub texture: Vec<u8>,
+    pub texture_darkened: Vec<u8>,
 }
 
 impl TextureData {
@@ -91,15 +92,24 @@ impl TextureData {
         bottom_height: f32,
     ) -> Option<Self> {
         let blue_brick_img = image::load_from_memory(data).unwrap();
+        let texture = blue_brick_img.to_rgba8().to_vec();
+        let mut texture_darkened = texture.clone();
+        texture_darkened.chunks_mut(4).for_each(|rgba| {
+            rgba[0] = rgba[0].saturating_sub(15);
+            rgba[1] = rgba[1].saturating_sub(15);
+            rgba[2] = rgba[2].saturating_sub(15);
+        });
         Some(Self {
             width: blue_brick_img.width(),
             height: blue_brick_img.height(),
             top_height,
             bottom_height,
-            texture: blue_brick_img.to_rgba8().to_vec(),
+            texture,
+            texture_darkened,
         })
     }
 
+    #[inline]
     fn as_ref(&self) -> TextureDataRef {
         TextureDataRef {
             width: self.width,
@@ -107,6 +117,7 @@ impl TextureData {
             top_height: self.top_height,
             bottom_height: self.bottom_height,
             texture: self.texture.as_slice(),
+            texture_darkened: self.texture_darkened.as_slice(),
         }
     }
 }
@@ -118,4 +129,5 @@ pub struct TextureDataRef<'a> {
     pub top_height: f32,
     pub bottom_height: f32,
     pub texture: &'a [u8],
+    pub texture_darkened: &'a [u8],
 }

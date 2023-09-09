@@ -1,7 +1,4 @@
-use crate::{
-    map::Map,
-    textures::TextureManager,
-};
+use crate::{map::Map, textures::TextureManager};
 
 use super::{blend, Raycaster};
 
@@ -22,30 +19,27 @@ impl Raycaster {
         let pos_y_div_aspect = pos_y / self.aspect;
         let ray_dir_x1_minus_x0 = ray_dir_x1 - ray_dir_x0;
         let ray_dir_z1_minus_z0 = ray_dir_z1 - ray_dir_z0;
-
-        let mut color = [0; 4];
+        let floor_step_x_factor = ray_dir_x1_minus_x0 * self.width_recip;
+        let floor_step_z_factor = ray_dir_z1_minus_z0 * self.width_recip;
+        let half_height = self.height as f32 / 2.0;
 
         for y in self.height / 2..self.height {
-            let p = y as f32 - self.height as f32 / 2.0;
+            let p = y as f32 - half_height;
 
             let floor_row_dist = pos_y_div_aspect / p;
-            let floor_step_x =
-                floor_row_dist * ray_dir_x1_minus_x0 * self.width_recip;
-            let floor_step_z =
-                floor_row_dist * ray_dir_z1_minus_z0 * self.width_recip;
+            let floor_step_x = floor_row_dist * floor_step_x_factor;
+            let floor_step_z = floor_row_dist * floor_step_z_factor;
             let mut floor_x = self.pos.x + floor_row_dist * ray_dir_x0;
             let mut floor_z = self.pos.z + floor_row_dist * ray_dir_z0;
 
             let ceil_row_dist = floor_row_dist * 2.0;
-            let ceil_step_x =
-                ceil_row_dist * ray_dir_x1_minus_x0 * self.width_recip;
-            let ceil_step_z =
-                ceil_row_dist * ray_dir_z1_minus_z0 * self.width_recip;
+            let ceil_step_x = floor_step_x * 2.0;
+            let ceil_step_z = floor_step_z * 2.0;
             let mut ceil_x = self.pos.x + ceil_row_dist * ray_dir_x0;
             let mut ceil_z = self.pos.z + ceil_row_dist * ray_dir_z0;
 
-            let draw_ceiling_y_offset = (self.height - y - 1) * 4 * self.width;
-            let draw_floor_y_offset = y * 4 * self.width;
+            let draw_ceiling_y_offset = (self.height - y - 1) * self.four_width as u32;
+            let draw_floor_y_offset = y * self.four_width as u32;
 
             for x in 0..self.width {
                 //FLOOR
@@ -68,7 +62,7 @@ impl Raycaster {
                             & (tex_height - 1);
                         let i_floor =
                             (tex_width * 4 * ty_floor + tx_floor * 4) as usize;
-                        color.copy_from_slice(&texture[i_floor..i_floor + 4]);
+                        let color = &texture[i_floor..i_floor + 4];
                         if alpha == 0 {
                             rgba.copy_from_slice(&color);
                         } else {
@@ -103,9 +97,7 @@ impl Raycaster {
                             as usize;
 
                         // CEILING
-                        color.copy_from_slice(
-                            &texture[i_ceiling..i_ceiling + 4],
-                        );
+                        let color = &texture[i_ceiling..i_ceiling + 4];
                         if alpha == 0 {
                             rgba.copy_from_slice(&color);
                         } else {

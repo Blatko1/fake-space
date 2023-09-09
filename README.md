@@ -26,3 +26,4 @@ Excellent explanations about the raycaster [here](https://lodev.org/cgtutor/rayc
 - [ ] Add an UI
 - [ ] Rename `hits` to `casts` and store transparent wall hits, object hits and normal wall hits in a single Vec
 - [ ] Add an option to switch between CPU only graphics with lower quality (no 3D objects) and GPU accelerated graphics with higher quality (3D objects)
+- [ ] Obsolete the need for the `image` crate for minimal size and faster compile times
