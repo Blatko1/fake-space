@@ -39,6 +39,8 @@ impl Raycaster {
             - self.float_half_height)
             * tex_y_step;
 
+            // TODO fix blue_glass walls so they don't blend pixels multiple times, but only
+            // once, when the first wal is hit.
         for y in begin..end {
             let index = (self.height as usize - 1 - y as usize)
                 * self.four_width

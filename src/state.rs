@@ -1,7 +1,7 @@
 use crate::{
     canvas::Canvas,
     draw::Raycaster,
-    map::Map,
+    map::TestMap,
     object::ModelManager,
     textures::TextureManager,
     world::{Entity, World},
@@ -12,7 +12,7 @@ pub struct State {
     canvas: Canvas,
     raycaster: Raycaster,
     models: ModelManager,
-    map: Map,
+    map: TestMap,
     world: World,
     textures: TextureManager,
 }
@@ -35,7 +35,7 @@ impl State {
             canvas,
             raycaster,
             models: ModelManager::init(),
-            map: Map::new_test(),
+            map: TestMap::new(),
             world,
             textures: TextureManager::init(),
         }

@@ -1,11 +1,11 @@
-use crate::{map::Map, textures::TextureManager};
+use crate::{map::TestMap, textures::TextureManager};
 
 use super::{blend, Raycaster};
 
 impl Raycaster {
     pub fn draw_floor_and_ceiling(
         &self,
-        map: &Map,
+        map: &TestMap,
         textures: &TextureManager,
         data: &mut [u8],
     ) {
@@ -46,7 +46,7 @@ impl Raycaster {
                 {
                     let floor_tile_x = floor_x as i32;
                     let floor_tile_z = floor_z as i32;
-                    let tile = map.get_value(floor_tile_x, floor_tile_z);
+                    let tile = map.get_tile(floor_tile_x as usize, floor_tile_z as usize);
                     let tex = textures.get_floor_tex(tile);
                     let (texture, tex_width, tex_height) =
                         (tex.texture, tex.width, tex.height);
@@ -77,7 +77,7 @@ impl Raycaster {
                 {
                     let ceil_tile_x = ceil_x as i32;
                     let ceil_tile_z = ceil_z as i32;
-                    let tile = map.get_value(ceil_tile_x, ceil_tile_z);
+                    let tile = map.get_tile(ceil_tile_x as usize, ceil_tile_z as usize);
                     let tex = textures.get_ceiling_tex(tile);
                     let (texture, tex_width, tex_height) =
                         (tex.texture, tex.width, tex.height);

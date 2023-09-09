@@ -9,7 +9,7 @@ use std::f32::consts::TAU;
 use winit::event::{ElementState, KeyboardInput, VirtualKeyCode};
 
 use crate::{
-    map::{Map, Tile, TransparentTile},
+    map::{Tile, TransparentTile, TestMap},
     object::{ModelManager, Object},
     textures::{TextureDataRef, TextureManager},
     world::World,
@@ -233,7 +233,7 @@ impl Raycaster {
     /// Stores all [`RayHit`]s in the internal array.
     pub fn cast_rays(
         &mut self,
-        tile_map: &Map,
+        tile_map: &TestMap,
         models: &ModelManager,
         world: &World,
         textures: &TextureManager,
@@ -285,7 +285,7 @@ impl Raycaster {
                     side_dist_z += delta_dist_z;
                     Side::Horizontal
                 };
-                let tile = tile_map.get_value(map_x, map_z);
+                let tile = tile_map.get_tile(map_x as usize, map_z as usize);
                 // If the hit tile is not Tile::Empty (out of bounds != Tile::Empty) store data
                 if tile != Tile::Empty {
                     // Calculate perpetual wall distance from the camera and wall_x.
