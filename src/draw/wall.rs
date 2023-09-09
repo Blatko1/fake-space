@@ -40,7 +40,6 @@ impl Raycaster {
         let mut tex_y = (begin as f32 + bottom_height as f32
             - self.float_half_height)
             * tex_y_step;
-        // TODO fix texture mapping.
         for y in begin..end {
             let index = (self.height as usize - 1 - y as usize)
                 * self.four_width
@@ -51,8 +50,8 @@ impl Raycaster {
                 tex_y += tex_y_step;
                 continue;
             }
-            //assert!(tex_y <= 15.0, "Not less!: y0: {}, y1: {}, y: {}", y0, y1, y);
-            let tex_y_pos = (tex_y.round() as u32).min(tex_height_minus_one);
+            
+            let tex_y_pos = (tex_y as u32).min(tex_height_minus_one);
             let i = ((tex_height - tex_y_pos - 1) * tex_width * 4 + four_tex_x)
                 as usize;
             let color = &texture[i..i + 4];
