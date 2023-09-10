@@ -39,8 +39,8 @@ impl Raycaster {
             - self.float_half_height)
             * tex_y_step;
 
-            // TODO fix blue_glass walls so they don't blend pixels multiple times, but only
-            // once, when the first wal is hit.
+        // TODO fix blue_glass walls so they don't blend pixels multiple times, but only
+        // once, when the first wal is hit.
         for y in begin..end {
             let index = (self.height as usize - 1 - y as usize)
                 * self.four_width
@@ -63,12 +63,12 @@ impl Raycaster {
             }
             if a == 255 {
                 if alpha == 0 {
-                    rgba.copy_from_slice(&color);
+                    rgba.copy_from_slice(color);
                 } else {
-                    rgba.copy_from_slice(&blend(&color, rgba));
+                    rgba.copy_from_slice(&blend(color, rgba));
                 }
             } else {
-                rgba.copy_from_slice(&blend(&color, rgba));
+                rgba.copy_from_slice(&blend(color, rgba));
             }
         }
     }

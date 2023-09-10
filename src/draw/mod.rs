@@ -1,4 +1,4 @@
-mod floor_ceiling;
+mod top_bottom;
 mod object;
 mod transparent;
 mod void;
@@ -9,7 +9,7 @@ use std::f32::consts::TAU;
 use winit::event::{ElementState, KeyboardInput, VirtualKeyCode};
 
 use crate::{
-    map::{Tile, TransparentTile, TestMap},
+    map::{TestMap, Tile, TransparentTile},
     object::{ModelManager, Object},
     textures::{TextureDataRef, TextureManager},
     world::World,
@@ -385,7 +385,7 @@ impl Raycaster {
                 }
             }
         }
-        self.draw_floor_and_ceiling(tile_map, textures, data);
+        self.draw_top_bottom(tile_map, textures, data);
     }
 
     pub fn update(&mut self) {

@@ -1,7 +1,7 @@
 use crate::object::ObjectType;
 
 pub struct TestMap {
-    map: Map<{Self::WIDTH as usize}, {Self::DEPTH as usize}>
+    map: Map<{ Self::WIDTH as usize }, { Self::DEPTH as usize }>,
 }
 
 impl TestMap {
@@ -9,13 +9,22 @@ impl TestMap {
     const DEPTH: u32 = TEST_MAP_DEPTH;
     pub fn new() -> Self {
         Self {
-            map: Map::new(TEST_MAP_DATA)
+            map: Map::new(TEST_MAP_DATA),
         }
     }
 
     #[inline]
     pub fn get_tile(&self, x: usize, z: usize) -> Tile {
         self.map.get_tile(x, z)
+    }
+
+    #[inline]
+    pub fn get_top_bottom_tile(&self, x: usize, z: usize) -> Tile {
+        let tile = self.map.get_tile(x, z);
+        if let Tile::TopBottom(_) = tile {
+            return tile;
+        }
+        Tile::Empty
     }
 }
 
@@ -30,12 +39,12 @@ impl<const W: usize, const D: usize> Map<W, D> {
     pub fn new(raw_data: [[u32; W]; D]) -> Self {
         let mut data = [[Tile::Empty; W]; D];
         data.iter_mut().zip(raw_data).for_each(|(row, raw_row)| {
-            row.iter_mut().zip(raw_row).for_each(|(tile, raw_tile)| *tile = Tile::from(raw_tile))
+            row.iter_mut()
+                .zip(raw_row)
+                .for_each(|(tile, raw_tile)| *tile = Tile::from(raw_tile))
         });
         data.reverse();
-        Self {
-            data,
-        }
+        Self { data }
     }
 
     ///Returns the value at the provided map coordinates.
@@ -56,9 +65,9 @@ impl<const W: usize, const D: usize> Map<W, D> {
     #[inline]
     pub fn get_tile(&self, x: usize, z: usize) -> Tile {
         if let Some(row) = self.data.get(z) {
-            return *row.get(x).unwrap_or(&Tile::Void)
+            return *row.get(x).unwrap_or(&Tile::Void);
         }
-        return Tile::Void
+        Tile::Void
     }
 }
 
@@ -98,7 +107,7 @@ pub enum TransparentWall {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TopBottom {
-    Brick,
+    TopAndBottomBrick,
 }
 
 impl From<u32> for Tile {
@@ -122,7 +131,7 @@ impl From<u32> for Tile {
             9 => {
                 Tile::Transparent(TransparentTile::Object(ObjectType::Damaged))
             }
-            10 => Tile::TopBottom(TopBottom::Brick),
+            10 => Tile::TopBottom(TopBottom::TopAndBottomBrick),
             _ => Tile::Void,
         }
     }

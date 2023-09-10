@@ -58,7 +58,7 @@ impl TextureManager {
     pub fn get_floor_tex(&self, tile: Tile) -> TextureDataRef {
         match tile {
             Tile::TopBottom(top_bottom_tile) => match top_bottom_tile {
-                TopBottom::Brick => self.blue_brick.as_ref(),
+                TopBottom::TopAndBottomBrick => self.blue_brick.as_ref(),
             },
             _ => self.mossy_stone.as_ref(),
         }
@@ -68,7 +68,7 @@ impl TextureManager {
     pub fn get_ceiling_tex(&self, tile: Tile) -> TextureDataRef {
         match tile {
             Tile::TopBottom(top_bottom_tile) => match top_bottom_tile {
-                TopBottom::Brick => self.blue_brick.as_ref(),
+                TopBottom::TopAndBottomBrick => self.blue_brick.as_ref(),
             },
             _ => self.light_plank.as_ref(),
         }

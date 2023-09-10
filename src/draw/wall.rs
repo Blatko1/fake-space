@@ -50,15 +50,15 @@ impl Raycaster {
                 tex_y += tex_y_step;
                 continue;
             }
-            
+
             let tex_y_pos = (tex_y as u32).min(tex_height_minus_one);
             let i = ((tex_height - tex_y_pos - 1) * tex_width * 4 + four_tex_x)
                 as usize;
             let color = &texture[i..i + 4];
             if alpha == 0 {
-                rgba.copy_from_slice(&color);
+                rgba.copy_from_slice(color);
             } else {
-                rgba.copy_from_slice(&blend(&color, rgba));
+                rgba.copy_from_slice(&blend(color, rgba));
             }
             tex_y += tex_y_step;
         }
