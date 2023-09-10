@@ -1,6 +1,7 @@
 mod gfx;
 
 use gfx::Gfx;
+use rand::Fill;
 use wgpu::util::DeviceExt;
 use winit::dpi::PhysicalSize;
 
@@ -201,6 +202,7 @@ impl Canvas {
     pub fn clear_data(&mut self) {
         self.data.fill(0);
     }
+    // TODO check out try_fill(rand) for cool effects!
 
     pub fn data_mut(&mut self) -> &mut [u8] {
         &mut self.data

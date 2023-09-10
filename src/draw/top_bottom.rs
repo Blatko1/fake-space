@@ -59,8 +59,13 @@ impl Raycaster {
             for x in 0..self.width {
                 //FLOOR
                 let index = (draw_floor_y_offset + x * 4) as usize;
-                let rgba = &mut data[index..index + 4];
-                let alpha = rgba[3];
+                //let rgba = &mut data[index..index + 4];
+                //let alpha = rgba[3];
+                // It's guaranteed that the `index` isn't higher than `data.len() - 4`.
+                // Proof: the variable `y` can have the highest value of self.height,
+                // the variable `x` can have the highest value of self.width.
+                let rgba = unsafe {data.get_unchecked_mut(index..index + 4)};
+                let alpha = unsafe {*rgba.get_unchecked(3)};
                 if alpha != 255 {
                     let current_floor_tile_x = floor_x as i32;
                     let current_floor_tile_z = floor_z as i32;
@@ -89,11 +94,32 @@ impl Raycaster {
                         .min(tex_height - 1);
                     let i_floor =
                         (tex_width * 4 * ty_floor + tx_floor * 4) as usize;
-                    let color = &texture[i_floor..i_floor + 4];
+                    // It's guaranteed that `i_floor` is not higher than `texture.len() - 4`.
+                    // `tx_floor` and `ty_floor` are being
+                    let color =
+                        unsafe { texture.get_unchecked(i_floor..i_floor + 4) };
+                    //let color = &texture[i_floor..i_floor + 4];
                     if alpha == 0 {
-                        rgba.copy_from_slice(color);
+                        //rgba.copy_from_slice(color);
+                        // It's guaranteed that lengths of `color` and `rgba` are the same.
+                        unsafe {
+                            std::ptr::copy_nonoverlapping(
+                                color.as_ptr(),
+                                rgba.as_mut_ptr(),
+                                rgba.len(),
+                            );
+                        }
                     } else {
-                        rgba.copy_from_slice(&blend(color, rgba));
+                        //rgba.copy_from_slice(&blend(color, rgba));
+                        // It's guaranteed that lengths of the `blend()` function output
+                        // and `rgba` are the same.
+                        unsafe {
+                            std::ptr::copy_nonoverlapping(
+                                blend(color, rgba).as_ptr(),
+                                rgba.as_mut_ptr(),
+                                rgba.len(),
+                            );
+                        }
                     }
                 }
                 floor_x += floor_step_x;
@@ -101,8 +127,13 @@ impl Raycaster {
 
                 // CEILING
                 let index = (draw_ceiling_y_offset + x * 4) as usize;
-                let rgba = &mut data[index..index + 4];
-                let alpha = rgba[3];
+                //let rgba = &mut data[index..index + 4];
+                //let alpha = rgba[3];
+                // It's guaranteed that the `index` isn't higher than `data.len() - 4`.
+                // Proof: the variable `y` can have the highest value of self.height,
+                // the variable `x` can have the highest value of self.width.
+                let rgba = unsafe {data.get_unchecked_mut(index..index + 4)};
+                let alpha = unsafe {*rgba.get_unchecked(3)};
                 if alpha != 255 {
                     let current_ceiling_tile_x = ceiling_x as i32;
                     let current_ceiling_tile_z = ceiling_z as i32;
@@ -120,25 +151,47 @@ impl Raycaster {
                     }
                     ceiling_tile_x = current_ceiling_tile_x;
                     ceiling_tile_z = current_ceiling_tile_z;
+                    let (texture, tex_width, tex_height) = (
+                        ceiling_tex.texture,
+                        ceiling_tex.width,
+                        ceiling_tex.height,
+                    );
 
-                    let (texture, tex_width, tex_height) =
-                        (ceiling_tex.texture, ceiling_tex.width, ceiling_tex.height);
                     let tx_ceiling = ((tex_width as f32 * ceiling_x.fract())
                         as u32)
                         .min(tex_width - 1);
                     let ty_ceiling = ((tex_height as f32 * ceiling_z.fract())
                         as u32)
                         .min(tex_height - 1);
-
                     let i_ceiling =
                         (tex_width * 4 * ty_ceiling + tx_ceiling * 4) as usize;
-
-                    // CEILING
-                    let color = &texture[i_ceiling..i_ceiling + 4];
+                    // It's guaranteed that `i_ceiling` is not higher than `texture.len() - 4`.
+                    // `tx_ceiling` and `ty_ceiling` are being
+                    let color = unsafe {
+                        texture.get_unchecked(i_ceiling..i_ceiling + 4)
+                    };
+                    //let color = &texture[i_ceiling..i_ceiling + 4];
                     if alpha == 0 {
-                        rgba.copy_from_slice(color);
+                        //rgba.copy_from_slice(color);
+                        // It's guaranteed that lengths of `color` and `rgba` are the same.
+                        unsafe {
+                            std::ptr::copy_nonoverlapping(
+                                color.as_ptr(),
+                                rgba.as_mut_ptr(),
+                                rgba.len(),
+                            );
+                        }
                     } else {
-                        rgba.copy_from_slice(&blend(color, rgba));
+                        //rgba.copy_from_slice(&blend(color, rgba));
+                        // It's guaranteed that lengths of the `blend()` function output
+                        // and `rgba` are the same.
+                        unsafe {
+                            std::ptr::copy_nonoverlapping(
+                                blend(color, rgba).as_ptr(),
+                                rgba.as_mut_ptr(),
+                                rgba.len(),
+                            );
+                        }
                     }
                 }
                 ceiling_x += ceiling_step_x;

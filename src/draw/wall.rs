@@ -24,7 +24,6 @@ impl Raycaster {
         let end = ((self.int_half_height + top_height).max(0) as u32)
             .min(self.height - 1);
 
-        let tex_height_minus_one = tex_height - 1;
         let tex_x = match hit.side {
             Side::Vertical if hit.dir.x > 0.0 => {
                 tex_width - (hit.wall_x * tex_width as f32) as u32 - 1
@@ -51,7 +50,7 @@ impl Raycaster {
                 continue;
             }
 
-            let tex_y_pos = (tex_y as u32).min(tex_height_minus_one);
+            let tex_y_pos = (tex_y as u32).min(tex_height - 1);
             let i = ((tex_height - tex_y_pos - 1) * tex_width * 4 + four_tex_x)
                 as usize;
             let color = &texture[i..i + 4];
