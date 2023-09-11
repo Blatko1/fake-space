@@ -4,7 +4,7 @@ mod transparent;
 mod void;
 mod wall;
 
-use glam::{Vec2, Vec3};
+use glam::Vec3;
 use std::f32::consts::TAU;
 use winit::event::{ElementState, KeyboardInput, VirtualKeyCode};
 
@@ -17,6 +17,8 @@ use crate::{
 
 // TODO rotation control with mouse and/or keyboard
 const MOVEMENT_SPEED: f32 = 0.1;
+const ROTATION_SPEED: f32 = 0.035;
+const DEFAULT_PLANE_V: Vec3 = Vec3::new(0.0, 0.5, 0.0);
 
 #[derive(Debug)]
 pub struct RayHit<'a> {
@@ -51,15 +53,16 @@ pub enum Side {
     Horizontal,
 }
 
+// TODO maybe calculate fov and v_fov in radians instead.
 #[derive(Debug)]
 /// Draws the player view on the screen framebuffer.
 /// Uses a coordinate system where y-axis points upwards,
 /// z-axis forwards and x-axis to the right.
 pub struct Raycaster {
-    /// FOV in radians.
+    /// Field of view in degrees.
     fov: f32,
-    /// Calculated from FOV, used for the plane Vec2.
-    plane_mag: f32,
+    /// Distance from the raycaster position to the camera plane.
+    plane_dist: f32,
     /// Position of the raycaster. Whole number represents the tile and
     /// fraction represents the offset in the tile. Each tile has width and
     /// height of `1.0`.
@@ -81,6 +84,9 @@ pub struct Raycaster {
     height: u32,
     /// Output screen dimension aspect (width/height)
     aspect: f32,
+    /// Creates an illusion that the camera is looking up or down.
+    /// In interval of [-self.height/2.0, self.height/2.0]
+    y_shearing: f32,
 
     // Specific use variables with goal to improve performance.
     four_width: usize,
@@ -94,6 +100,10 @@ pub struct Raycaster {
     turn_right: f32,
     strafe_left: f32,
     strafe_right: f32,
+    increase_fov: f32,
+    decrease_fov: f32,
+    increase_y_shearing: f32,
+    decrease_y_shearing: f32,
     forward: f32,
     backward: f32,
 }
@@ -105,27 +115,25 @@ impl Raycaster {
         pos_y: f32,
         pos_z: f32,
         angle: f32,
-        fov: f32,
         width: u32,
         height: u32,
     ) -> Self {
-        let plane_mag = f32::tan(fov / 2.0);
-        let aspect = width as f32 / height as f32;
-
-        // Raycaster position and main direction (is always normalized)
-        let pos = Vec3::new(pos_x, pos_y, pos_z);
-        let dir_vec2 = Vec2::from_angle(angle);
-        let dir = Vec3::new(dir_vec2.x, 0.0, dir_vec2.y);
-        let plane_v = Vec3::new(0.0, plane_mag / aspect, 0.0);
-        let dir_perp = Vec3::cross(plane_v, dir).normalize();
-        let plane_h = dir_perp * plane_mag;
-
+        let fov = 80f32;
         let f_width = width as f32;
         let f_height = height as f32;
 
+        let plane_dist = 1.0 / f32::tan(fov.to_radians() / 2.0);
+        let aspect = f_width / f_height;
+
+        let pos = Vec3::new(pos_x, pos_y, pos_z);
+        let dir = Vec3::new(angle.cos(), 0.0, angle.sin());
+
+        let plane_v = DEFAULT_PLANE_V / plane_dist;
+        let plane_h = Vec3::cross(DEFAULT_PLANE_V, dir) * aspect / plane_dist;
+
         Self {
             fov,
-            plane_mag,
+            plane_dist,
             pos,
             dir,
             plane_h,
@@ -134,6 +142,7 @@ impl Raycaster {
             width,
             height,
             aspect,
+            y_shearing: 0.0,
 
             four_width: 4 * width as usize,
             width_recip: f_width.recip(),
@@ -145,6 +154,10 @@ impl Raycaster {
             turn_right: 0.0,
             strafe_left: 0.0,
             strafe_right: 0.0,
+            increase_fov: 0.0,
+            decrease_fov: 0.0,
+            increase_y_shearing: 0.0,
+            decrease_y_shearing: 0.0,
             forward: 0.0,
             backward: 0.0,
         }
@@ -389,18 +402,34 @@ impl Raycaster {
     }
 
     pub fn update(&mut self) {
-        // Update rotation and direction
-        self.angle =
-            norm_rad(self.angle + (self.turn_left - self.turn_right) * 0.035);
-        let dir_vec2 = Vec2::from_angle(self.angle);
-        self.dir = Vec3::new(dir_vec2.x, 0.0, dir_vec2.y);
-        let dir_perp = Vec3::cross(self.plane_v, self.dir).normalize();
+        // Change FOV and vertical FOV
+        self.fov = (self.fov + (self.increase_fov - self.decrease_fov))
+            .min(119.0)
+            .max(1.0);
+        self.plane_dist = 1.0 / f32::tan(self.fov.to_radians() * 0.5);
 
-        // Rotate raycaster (camera) horizontal plane
-        self.plane_h = dir_perp * self.plane_mag;
+        // Change y_shearing (look up/down)
+        self.y_shearing = (self.y_shearing
+            + (self.decrease_y_shearing - self.increase_y_shearing) * 2.5)
+            .min(self.float_half_height - 1.0)
+            .max(-self.float_half_height + 1.0);
+
+        // Update rotation and direction
+        self.angle = normalize_rad(
+            self.angle + (self.turn_left - self.turn_right) * ROTATION_SPEED,
+        );
+        self.dir = Vec3::new(self.angle.cos(), 0.0, self.angle.sin());
+
+        // Rotate raycaster (camera) planes
+        self.plane_v = DEFAULT_PLANE_V / self.plane_dist;
+        self.plane_h = Vec3::cross(DEFAULT_PLANE_V, self.dir) * self.aspect
+            / self.plane_dist;
 
         // Update position
-        self.pos += self.dir * (self.forward - self.backward) * MOVEMENT_SPEED;
+        self.pos.x +=
+            self.dir.x * (self.forward - self.backward) * MOVEMENT_SPEED;
+        self.pos.z +=
+            self.dir.z * (self.forward - self.backward) * MOVEMENT_SPEED;
         self.pos += self.plane_h.normalize()
             * (self.strafe_right - self.strafe_left)
             * MOVEMENT_SPEED;
@@ -426,6 +455,16 @@ impl Raycaster {
                 VirtualKeyCode::Q => self.strafe_left = value,
                 // Strafe right:
                 VirtualKeyCode::E => self.strafe_right = value,
+                // Increase FOV:
+                VirtualKeyCode::Up => self.increase_fov = value,
+                // Increase FOV:
+                VirtualKeyCode::Down => self.decrease_fov = value,
+                // Look more up (y_shearing):
+                VirtualKeyCode::PageUp => self.increase_y_shearing = value,
+                // Look more down (y_shearing):
+                VirtualKeyCode::PageDown => self.decrease_y_shearing = value,
+                // Reset look (y_shearing):
+                VirtualKeyCode::Home => self.y_shearing = 0.0,
                 _ => (),
             }
         }
@@ -449,6 +488,6 @@ fn blend(background: &[u8], foreground: &[u8]) -> [u8; 4] {
 }
 
 #[inline]
-fn norm_rad(angle: f32) -> f32 {
+fn normalize_rad(angle: f32) -> f32 {
     angle - (angle / TAU).floor() * TAU
 }

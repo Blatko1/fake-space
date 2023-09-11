@@ -13,11 +13,12 @@ impl Raycaster {
 
         // TODO better names
         let full_line_pixel_height =
-            (self.height as f32 / hit.wall_dist / self.aspect) as i32;
-        let top_height =
-            ((full_line_pixel_height / 2) as f32 * top_height) as i32;
-        let bottom_height =
-            ((full_line_pixel_height / 2) as f32 * bottom_height) as i32;
+            (self.height as f32 / hit.wall_dist * self.plane_dist) as i32;
+        let top_height = ((full_line_pixel_height / 2) as f32 * top_height
+            + self.y_shearing) as i32;
+        let bottom_height = ((full_line_pixel_height / 2) as f32
+            * bottom_height
+            - self.y_shearing) as i32;
         let line_height = top_height.saturating_add(bottom_height);
 
         let begin = (self.int_half_height - bottom_height).max(0) as u32;

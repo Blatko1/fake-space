@@ -19,7 +19,6 @@ impl Raycaster {
         let pos_y = self.pos.y * self.height as f32;
 
         // Precalculating for better performance
-        let pos_y_div_aspect = pos_y / self.aspect;
         let ray_dir_x1_minus_x0 = ray_dir_x1 - ray_dir_x0;
         let ray_dir_z1_minus_z0 = ray_dir_z1 - ray_dir_z0;
         let floor_step_x_factor = ray_dir_x1_minus_x0 * self.width_recip;
@@ -32,40 +31,29 @@ impl Raycaster {
         let mut past_ceiling_tile = Tile::Empty;
         let mut ceiling_tex = textures.get_ceiling_tex(past_ceiling_tile);
 
-        for y in self.height / 2..self.height {
+        // DRAW FLOOR
+        for y in ((self.height as i32 / 2 - self.y_shearing as i32) as u32)
+            ..self.height
+        {
             let p = y as f32 - half_height;
 
-            let floor_row_dist = pos_y_div_aspect / p;
+            let floor_row_dist =
+                pos_y / (p + self.y_shearing) * self.plane_dist;
             let floor_step_x = floor_row_dist * floor_step_x_factor;
             let floor_step_z = floor_row_dist * floor_step_z_factor;
             let mut floor_x = self.pos.x + floor_row_dist * ray_dir_x0;
             let mut floor_z = self.pos.z + floor_row_dist * ray_dir_z0;
 
-            let ceiling_row_dist = floor_row_dist * 2.0;
-            let ceiling_step_x = floor_step_x * 2.0;
-            let ceiling_step_z = floor_step_z * 2.0;
-            let mut ceiling_x = self.pos.x + ceiling_row_dist * ray_dir_x0;
-            let mut ceiling_z = self.pos.z + ceiling_row_dist * ray_dir_z0;
-
-            let draw_ceiling_y_offset =
-                (self.height - y - 1) * self.four_width as u32;
             let draw_floor_y_offset = y * self.four_width as u32;
 
             let mut floor_tile_x = i32::MAX;
             let mut floor_tile_z = i32::MAX;
-            let mut ceiling_tile_x = i32::MAX;
-            let mut ceiling_tile_z = i32::MAX;
 
             for x in 0..self.width {
                 //FLOOR
                 let index = (draw_floor_y_offset + x * 4) as usize;
-                //let rgba = &mut data[index..index + 4];
-                //let alpha = rgba[3];
-                // It's guaranteed that the `index` isn't higher than `data.len() - 4`.
-                // Proof: the variable `y` can have the highest value of self.height,
-                // the variable `x` can have the highest value of self.width.
-                let rgba = unsafe {data.get_unchecked_mut(index..index + 4)};
-                let alpha = unsafe {*rgba.get_unchecked(3)};
+                let rgba = &mut data[index..index + 4];
+                let alpha = rgba[3];
                 if alpha != 255 {
                     let current_floor_tile_x = floor_x as i32;
                     let current_floor_tile_z = floor_z as i32;
@@ -94,46 +82,42 @@ impl Raycaster {
                         .min(tex_height - 1);
                     let i_floor =
                         (tex_width * 4 * ty_floor + tx_floor * 4) as usize;
-                    // It's guaranteed that `i_floor` is not higher than `texture.len() - 4`.
-                    // `tx_floor` and `ty_floor` are being
-                    let color =
-                        unsafe { texture.get_unchecked(i_floor..i_floor + 4) };
-                    //let color = &texture[i_floor..i_floor + 4];
+                    let color = &texture[i_floor..i_floor + 4];
                     if alpha == 0 {
-                        //rgba.copy_from_slice(color);
-                        // It's guaranteed that lengths of `color` and `rgba` are the same.
-                        unsafe {
-                            std::ptr::copy_nonoverlapping(
-                                color.as_ptr(),
-                                rgba.as_mut_ptr(),
-                                rgba.len(),
-                            );
-                        }
+                        rgba.copy_from_slice(color);
                     } else {
-                        //rgba.copy_from_slice(&blend(color, rgba));
-                        // It's guaranteed that lengths of the `blend()` function output
-                        // and `rgba` are the same.
-                        unsafe {
-                            std::ptr::copy_nonoverlapping(
-                                blend(color, rgba).as_ptr(),
-                                rgba.as_mut_ptr(),
-                                rgba.len(),
-                            );
-                        }
+                        rgba.copy_from_slice(&blend(color, rgba));
                     }
                 }
                 floor_x += floor_step_x;
                 floor_z += floor_step_z;
+            }
+        }
 
+        // DRAW CEILING
+        for y in ((self.height as i32 / 2 + self.y_shearing as i32) as u32)
+            ..self.height
+        {
+            let p = y as f32 - half_height;
+
+            let ceiling_row_dist =
+                pos_y / (p - self.y_shearing) * self.plane_dist * 2.0;
+            let ceiling_step_x = ceiling_row_dist * floor_step_x_factor;
+            let ceiling_step_z = ceiling_row_dist * floor_step_z_factor;
+            let mut ceiling_x = self.pos.x + ceiling_row_dist * ray_dir_x0;
+            let mut ceiling_z = self.pos.z + ceiling_row_dist * ray_dir_z0;
+
+            let draw_ceiling_y_offset =
+                (self.height as u32 - y - 1) * self.four_width as u32;
+
+            let mut ceiling_tile_x = i32::MAX;
+            let mut ceiling_tile_z = i32::MAX;
+
+            for x in 0..self.width {
                 // CEILING
                 let index = (draw_ceiling_y_offset + x * 4) as usize;
-                //let rgba = &mut data[index..index + 4];
-                //let alpha = rgba[3];
-                // It's guaranteed that the `index` isn't higher than `data.len() - 4`.
-                // Proof: the variable `y` can have the highest value of self.height,
-                // the variable `x` can have the highest value of self.width.
-                let rgba = unsafe {data.get_unchecked_mut(index..index + 4)};
-                let alpha = unsafe {*rgba.get_unchecked(3)};
+                let rgba = &mut data[index..index + 4];
+                let alpha = rgba[3];
                 if alpha != 255 {
                     let current_ceiling_tile_x = ceiling_x as i32;
                     let current_ceiling_tile_z = ceiling_z as i32;
@@ -165,33 +149,11 @@ impl Raycaster {
                         .min(tex_height - 1);
                     let i_ceiling =
                         (tex_width * 4 * ty_ceiling + tx_ceiling * 4) as usize;
-                    // It's guaranteed that `i_ceiling` is not higher than `texture.len() - 4`.
-                    // `tx_ceiling` and `ty_ceiling` are being
-                    let color = unsafe {
-                        texture.get_unchecked(i_ceiling..i_ceiling + 4)
-                    };
-                    //let color = &texture[i_ceiling..i_ceiling + 4];
+                    let color = &texture[i_ceiling..i_ceiling + 4];
                     if alpha == 0 {
-                        //rgba.copy_from_slice(color);
-                        // It's guaranteed that lengths of `color` and `rgba` are the same.
-                        unsafe {
-                            std::ptr::copy_nonoverlapping(
-                                color.as_ptr(),
-                                rgba.as_mut_ptr(),
-                                rgba.len(),
-                            );
-                        }
+                        rgba.copy_from_slice(color);
                     } else {
-                        //rgba.copy_from_slice(&blend(color, rgba));
-                        // It's guaranteed that lengths of the `blend()` function output
-                        // and `rgba` are the same.
-                        unsafe {
-                            std::ptr::copy_nonoverlapping(
-                                blend(color, rgba).as_ptr(),
-                                rgba.as_mut_ptr(),
-                                rgba.len(),
-                            );
-                        }
+                        rgba.copy_from_slice(&blend(color, rgba));
                     }
                 }
                 ceiling_x += ceiling_step_x;

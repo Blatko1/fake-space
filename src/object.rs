@@ -161,6 +161,7 @@ impl ModelManager {
     }
 }
 
+// TODO switch to 3D array instead of Vec
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Model {
     dimension: usize,
