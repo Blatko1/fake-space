@@ -16,7 +16,6 @@ impl Raycaster {
         let ray_dir_z0 = self.dir.z - self.plane_h.z;
         let ray_dir_x1 = self.dir.x + self.plane_h.x;
         let ray_dir_z1 = self.dir.z + self.plane_h.z;
-        let pos_y = self.pos.y * self.height as f32;
 
         // Precalculating for better performance
         let ray_dir_x1_minus_x0 = ray_dir_x1 - ray_dir_x0;
@@ -37,8 +36,9 @@ impl Raycaster {
         {
             let p = y as f32 - half_height;
 
-            let floor_row_dist =
-                pos_y / (p + self.y_shearing) * self.plane_dist;
+            let floor_row_dist = self.pos.y * self.height as f32
+                / (p + self.y_shearing)
+                * self.plane_dist;
             let floor_step_x = floor_row_dist * floor_step_x_factor;
             let floor_step_z = floor_row_dist * floor_step_z_factor;
             let mut floor_x = self.pos.x + floor_row_dist * ray_dir_x0;
@@ -100,15 +100,16 @@ impl Raycaster {
         {
             let p = y as f32 - half_height;
 
-            let ceiling_row_dist =
-                pos_y / (p - self.y_shearing) * self.plane_dist * 2.0;
+            let ceiling_row_dist = (1.0 - self.pos.y) * self.height as f32
+                / (p - self.y_shearing)
+                * self.plane_dist;
             let ceiling_step_x = ceiling_row_dist * floor_step_x_factor;
             let ceiling_step_z = ceiling_row_dist * floor_step_z_factor;
             let mut ceiling_x = self.pos.x + ceiling_row_dist * ray_dir_x0;
             let mut ceiling_z = self.pos.z + ceiling_row_dist * ray_dir_z0;
 
             let draw_ceiling_y_offset =
-                (self.height as u32 - y - 1) * self.four_width as u32;
+                (self.height - y - 1) * self.four_width as u32;
 
             let mut ceiling_tile_x = i32::MAX;
             let mut ceiling_tile_z = i32::MAX;

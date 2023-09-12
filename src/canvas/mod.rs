@@ -1,7 +1,6 @@
 mod gfx;
 
 use gfx::Gfx;
-use rand::Fill;
 use wgpu::util::DeviceExt;
 use winit::dpi::PhysicalSize;
 

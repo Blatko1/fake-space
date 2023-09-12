@@ -91,6 +91,24 @@ impl TextureData {
         top_height: f32,
         bottom_height: f32,
     ) -> Option<Self> {
+        if top_height < 0.0 {
+            assert!(
+                -top_height < bottom_height,
+                "The `top height` ({}) goes further down \
+                than the `bottom height` ({}).",
+                top_height,
+                bottom_height
+            );
+        }
+        if bottom_height < 0.0 {
+            assert!(
+                -bottom_height < top_height,
+                "The `bottom height` ({}) goes further down \
+                than the `top height` ({}).",
+                bottom_height,
+                top_height
+            );
+        }
         let blue_brick_img = image::load_from_memory(data).unwrap();
         let texture = blue_brick_img.to_rgba8().to_vec();
         let mut texture_darkened = texture.clone();

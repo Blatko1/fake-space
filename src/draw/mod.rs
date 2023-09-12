@@ -18,6 +18,7 @@ use crate::{
 // TODO rotation control with mouse and/or keyboard
 const MOVEMENT_SPEED: f32 = 0.1;
 const ROTATION_SPEED: f32 = 0.035;
+const FLY_UP_DOWN_SPEED: f32 = 0.01;
 const DEFAULT_PLANE_V: Vec3 = Vec3::new(0.0, 0.5, 0.0);
 
 #[derive(Debug)]
@@ -104,6 +105,8 @@ pub struct Raycaster {
     decrease_fov: f32,
     increase_y_shearing: f32,
     decrease_y_shearing: f32,
+    fly_up: f32,
+    fly_down: f32,
     forward: f32,
     backward: f32,
 }
@@ -158,6 +161,8 @@ impl Raycaster {
             decrease_fov: 0.0,
             increase_y_shearing: 0.0,
             decrease_y_shearing: 0.0,
+            fly_up: 0.0,
+            fly_down: 0.0,
             forward: 0.0,
             backward: 0.0,
         }
@@ -433,6 +438,10 @@ impl Raycaster {
         self.pos += self.plane_h.normalize()
             * (self.strafe_right - self.strafe_left)
             * MOVEMENT_SPEED;
+        self.pos.y = (self.pos.y
+            + (self.fly_up - self.fly_down) * FLY_UP_DOWN_SPEED)
+            .min(1.0 - f32::EPSILON)
+            .max(0.0);
     }
 
     pub fn process_input(&mut self, keyboard: KeyboardInput) {
@@ -465,6 +474,10 @@ impl Raycaster {
                 VirtualKeyCode::PageDown => self.decrease_y_shearing = value,
                 // Reset look (y_shearing):
                 VirtualKeyCode::Home => self.y_shearing = 0.0,
+                // Reset look (y_shearing):
+                VirtualKeyCode::Space => self.fly_up = value,
+                // Reset look (y_shearing):
+                VirtualKeyCode::LShift => self.fly_down = value,
                 _ => (),
             }
         }
