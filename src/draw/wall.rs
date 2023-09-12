@@ -16,10 +16,10 @@ impl Raycaster {
             (self.height as f32 / hit.wall_dist * self.plane_dist) as i32;
         let half_wall_height = (wall_pixel_height / 2) as f32;
         let top_height =
-            (half_wall_height * top_height * ((1.0 - self.pos.y) * 2.0)
+            (half_wall_height * ((1.0 - self.pos.y) * 2.0 + (top_height - 1.0))
                 + self.y_shearing) as i32;
         let bottom_height =
-            (half_wall_height * bottom_height * (self.pos.y * 2.0)
+            (half_wall_height * (self.pos.y * 2.0 + (bottom_height - 1.0))
                 - self.y_shearing) as i32;
         let line_height = top_height.saturating_add(bottom_height);
 

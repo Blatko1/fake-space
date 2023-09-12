@@ -100,7 +100,7 @@ impl Raycaster {
         {
             let p = y as f32 - half_height;
 
-            let ceiling_row_dist = (1.0 - self.pos.y) * self.height as f32
+            let ceiling_row_dist = (2.0 - self.pos.y) * self.height as f32
                 / (p - self.y_shearing)
                 * self.plane_dist;
             let ceiling_step_x = ceiling_row_dist * floor_step_x_factor;
