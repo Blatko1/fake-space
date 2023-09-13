@@ -1,4 +1,4 @@
-use crate::map::{Tile, TopBottom, TransparentWall, WallTile};
+use crate::{map::{Tile, TopBottom, TransparentWall, WallTile}, world::EntityTexture};
 
 pub struct TextureManager {
     blue_brick: TextureData,
@@ -71,6 +71,13 @@ impl TextureManager {
                 TopBottom::TopAndBottomBrick => self.blue_brick.as_ref(),
             },
             _ => self.light_plank.as_ref(),
+        }
+    }
+
+    #[inline]
+    pub fn get_entity_texture(&self, tex: EntityTexture) -> TextureDataRef {
+        match tex {
+           EntityTexture::Glass => self.blue_glass.as_ref(),
         }
     }
 }

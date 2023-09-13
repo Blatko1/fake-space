@@ -17,7 +17,6 @@ Excellent explanations about the raycaster [here](https://lodev.org/cgtutor/rayc
 - [x] Implement drawing directly in the ray casting function to avoid mem allocations, to work easier with entities and increase performance
 - [x] Add different floor and ceiling textures for different map tiles
 - [x] Add an ability to look freely up and down, moving up and down
-- [ ] Add 2D sprites (i.e. pillars, barrels)
 - [ ] Add multiple shading effects
 - [ ] Add removable object walls (cool opening or moving animation with voxels)
 - [ ] Add collision detection (circle-rectangle collision detection)

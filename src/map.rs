@@ -14,8 +14,12 @@ impl TestMap {
     }
 
     #[inline]
-    pub fn get_tile(&self, x: usize, z: usize) -> Tile {
-        self.map.get_tile(x, z)
+    pub fn get_wall_tile(&self, x: usize, z: usize) -> Tile {
+        let tile = self.map.get_tile(x, z);
+        if let Tile::TopBottom(_) = tile {
+            return Tile::Empty
+        }
+        return tile;
     }
 
     #[inline]
@@ -70,7 +74,11 @@ impl<const W: usize, const D: usize> Map<W, D> {
         Tile::Void
     }
 }
-
+// TODO divide wall tiles and floor_ceiling tiles into separate enums
+// TODO divide the map into three different maps with same sizes, one with
+// normal wall tiles data, one with floor data and one with ceiling data. 
+// Then put all three tile data in a struct for each tile, put it in an array
+// and use it as a map.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Tile {
     /// Empty walkable tile in map bounds.

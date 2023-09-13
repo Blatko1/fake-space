@@ -3,6 +3,7 @@ mod top_bottom;
 mod transparent;
 mod void;
 mod wall;
+mod sprites;
 
 use glam::Vec3;
 use std::f32::consts::TAU;
@@ -49,6 +50,12 @@ pub struct ObjectHit {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub struct ZBufferValue {
+    tile: Tile,
+    distance: f32
+}
+
+#[derive(Debug, Clone, Copy)]
 pub enum Side {
     Vertical,
     Horizontal,
@@ -88,6 +95,7 @@ pub struct Raycaster {
     /// Creates an illusion that the camera is looking up or down.
     /// In interval of [-self.height/2.0, self.height/2.0]
     y_shearing: f32,
+    z_buffer: Vec<ZBufferValue>,
 
     // Specific use variables with goal to improve performance.
     four_width: usize,
@@ -134,6 +142,7 @@ impl Raycaster {
         let plane_v = DEFAULT_PLANE_V / plane_dist;
         let plane_h = Vec3::cross(DEFAULT_PLANE_V, dir) * aspect / plane_dist;
 
+        let z_buffer = vec![ZBufferValue { tile: Tile::Empty, distance: f32::INFINITY }; width as usize];
         Self {
             fov,
             plane_dist,
@@ -146,6 +155,7 @@ impl Raycaster {
             height,
             aspect,
             y_shearing: 0.0,
+            z_buffer,
 
             four_width: 4 * width as usize,
             width_recip: f_width.recip(),
@@ -292,6 +302,7 @@ impl Raycaster {
             // Iterates over all hit sides until it hits a non empty tile.
             // If a transparent tile is hit, continue iterating.
             // If another transparent tile was hit, store it as a final hit.
+            let mut first_hit = true;
             loop {
                 // Distance to the first hit wall's x/z side if the wall isn't empty
                 let side = if side_dist_x < side_dist_z {
@@ -303,7 +314,7 @@ impl Raycaster {
                     side_dist_z += delta_dist_z;
                     Side::Horizontal
                 };
-                let tile = tile_map.get_tile(map_x as usize, map_z as usize);
+                let tile = tile_map.get_wall_tile(map_x as usize, map_z as usize);
                 // If the hit tile is not Tile::Empty (out of bounds != Tile::Empty) store data
                 if tile != Tile::Empty {
                     // Calculate perpetual wall distance from the camera and wall_x.
@@ -321,6 +332,13 @@ impl Raycaster {
                             (dist.max(0.0), wall_x - wall_x.floor())
                         }
                     };
+                    if first_hit {
+                        self.z_buffer[x as usize] = ZBufferValue {
+                            tile,
+                            distance: perp_wall_dist,
+                        };
+                        first_hit = false;
+                    }
                     let mut hit = RayHit {
                         screen_x: x,
                         dir: ray_dir,
@@ -398,11 +416,14 @@ impl Raycaster {
                             self.draw_void(hit, data);
                             break;
                         }
-                        _ => (),
+                        Tile::Empty => unreachable!(),
+                        _ => ()
                     }
                 }
             }
         }
+        self.draw_sprites(world, textures, data);
+
         self.draw_top_bottom(tile_map, textures, data);
     }
 

@@ -4,7 +4,7 @@ use crate::{
     map::TestMap,
     object::ModelManager,
     textures::TextureManager,
-    world::{Entity, World},
+    world::{Entity, World, EntityTexture},
 };
 use winit::{dpi::PhysicalSize, event::KeyboardInput};
 
@@ -28,7 +28,7 @@ impl State {
             canvas.height(),
         );
         let mut world = World::new();
-        world.new_entity(Entity::new(3.0, 0.5, 7.0, &[1]));
+        world.new_entity(Entity::new(3.0, 0.5, 7.0, EntityTexture::Glass));
 
         Self {
             canvas,

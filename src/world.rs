@@ -30,22 +30,29 @@ impl World {
 
 pub struct Entity {
     pos: Vec3,
-    texture: &'static [u8],
+    texture: EntityTexture,
 }
 
 impl Entity {
-    pub fn new(x: f32, y: f32, z: f32, texture: &'static [u8]) -> Self {
+    pub fn new(x: f32, y: f32, z: f32, texture: EntityTexture) -> Self {
         Self {
             pos: Vec3::new(x, y, z),
             texture,
         }
     }
 
+    #[inline]
     pub fn pos(&self) -> Vec3 {
         self.pos
     }
 
-    pub fn texture(&self) -> &'static [u8] {
+    #[inline]
+    pub fn texture(&self) -> EntityTexture {
         self.texture
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum EntityTexture {
+    Glass
 }
