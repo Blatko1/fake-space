@@ -1,73 +1,10 @@
-use hashbrown::HashMap;
 use std::sync::Arc;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Object {
-    model: Model,
+pub struct VoxelModelManager {
+    models: Vec<VoxelModel>,
 }
 
-impl Object {
-    pub fn new(model: Model) -> Self {
-        Self { model }
-    }
-
-    pub fn cube(models: &ModelManager) -> Self {
-        Self::new(models.get_model(ModelType::Cube))
-    }
-
-    pub fn hole(models: &ModelManager) -> Self {
-        Self::new(models.get_model(ModelType::CubeHole))
-    }
-
-    pub fn voxel(models: &ModelManager) -> Self {
-        Self::new(models.get_model(ModelType::Voxel))
-    }
-
-    pub fn pillars(models: &ModelManager) -> Self {
-        Self::new(models.get_model(ModelType::Pillars))
-    }
-
-    pub fn damaged(models: &ModelManager) -> Self {
-        Self::new(models.get_model(ModelType::Damaged))
-    }
-
-    #[inline]
-    pub fn get_voxel(&self, x: usize, y: usize, z: usize) -> Option<&u8> {
-        self.model.get_voxel(x, y, z)
-    }
-
-    pub fn dimension(&self) -> usize {
-        self.model.dimension
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ObjectType {
-    Cube,
-    Hole,
-    Voxel,
-    Pillars,
-    Damaged,
-}
-
-impl ObjectType {
-    #[inline]
-    pub fn get_object(self, models: &ModelManager) -> Object {
-        match self {
-            Self::Cube => Object::cube(models),
-            Self::Hole => Object::hole(models),
-            Self::Voxel => Object::voxel(models),
-            Self::Pillars => Object::pillars(models),
-            Self::Damaged => Object::damaged(models),
-        }
-    }
-}
-
-pub struct ModelManager {
-    models: HashMap<ModelType, Model>,
-}
-
-impl ModelManager {
+impl VoxelModelManager {
     #[allow(clippy::needless_range_loop)]
     pub fn init() -> Self {
         // Cube model:
@@ -76,7 +13,7 @@ impl ModelManager {
             vec![vec![vec![9; dimension]; dimension]; dimension];
         cube_data[0][0][0] = 0u8;
         let cube_data = cube_data.into_iter().flatten().flatten().collect();
-        let cube = Model::new(cube_data, dimension);
+        let cube = VoxelModel::new(cube_data, dimension);
 
         // Cube with a hole model:
         let dimension = 6;
@@ -91,7 +28,7 @@ impl ModelManager {
         }
         let cube_hole_data =
             cube_hole_data.into_iter().flatten().flatten().collect();
-        let cube_hole = Model::new(cube_hole_data, dimension);
+        let cube_hole = VoxelModel::new(cube_hole_data, dimension);
 
         // Single voxel model:
         let dimension = 10;
@@ -99,7 +36,7 @@ impl ModelManager {
             vec![vec![vec![0; dimension]; dimension]; dimension];
         voxel_data[2][2][2] = 100;
         let voxel_data = voxel_data.into_iter().flatten().flatten().collect();
-        let voxel = Model::new(voxel_data, dimension);
+        let voxel = VoxelModel::new(voxel_data, dimension);
 
         // pillars model:
         let dimension = 8;
@@ -114,7 +51,7 @@ impl ModelManager {
         }
         let pillars_data =
             pillars_data.into_iter().flatten().flatten().collect();
-        let pillars = Model::new(pillars_data, dimension);
+        let pillars = VoxelModel::new(pillars_data, dimension);
 
         // letter B model:
         let dimension = 8;
@@ -140,35 +77,26 @@ impl ModelManager {
         damaged_data[5][2][3] = 20u8;
         let damaged_data =
             damaged_data.into_iter().flatten().flatten().collect();
-        let damaged = Model::new(damaged_data, dimension);
+        let damaged = VoxelModel::new(damaged_data, dimension);
 
-        let models = [
-            (ModelType::Cube, cube),
-            (ModelType::CubeHole, cube_hole),
-            (ModelType::Voxel, voxel),
-            (ModelType::Pillars, pillars),
-            (ModelType::Damaged, damaged),
-        ]
-        .iter()
-        .cloned()
-        .collect();
+        let models = vec![cube, cube_hole, voxel, pillars, damaged];
 
         Self { models }
     }
 
-    pub fn get_model(&self, model_type: ModelType) -> Model {
-        self.models.get(&model_type).unwrap().clone()
+    pub fn get_model(&self, model_type: VoxelModelType) -> VoxelModel {
+        self.models.get(model_type.to_index()).unwrap().clone()
     }
 }
 
 // TODO switch to 3D array instead of Vec
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Model {
-    dimension: usize,
-    data: Arc<Vec<u8>>,
+pub struct VoxelModel {
+    pub dimension: usize,
+    pub data: Arc<Vec<u8>>,
 }
 
-impl Model {
+impl VoxelModel {
     pub fn new(data: Vec<u8>, dimension: usize) -> Self {
         Self {
             dimension,
@@ -177,7 +105,7 @@ impl Model {
     }
 
     #[inline]
-    fn get_voxel(&self, x: usize, y: usize, z: usize) -> Option<&u8> {
+    pub fn get_voxel(&self, x: usize, y: usize, z: usize) -> Option<&u8> {
         let index =
             x + z * self.dimension + y * self.dimension * self.dimension;
         self.data.get(index)
@@ -185,10 +113,16 @@ impl Model {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum ModelType {
-    Cube,
+pub enum VoxelModelType {
+    Cube = 0,
     CubeHole,
     Voxel,
     Pillars,
     Damaged,
+}
+
+impl VoxelModelType {
+    fn to_index(self) -> usize {
+        self as usize
+    }
 }

@@ -1,4 +1,4 @@
-use crate::{map::{Tile, TopBottom, TransparentWall, WallTile}, world::EntityTexture};
+use crate::map::{FullWallType, TransparentWallType, FloorType, CeilingType};
 
 pub struct TextureManager {
     blue_brick: TextureData,
@@ -39,45 +39,34 @@ impl TextureManager {
     }
 
     #[inline]
-    pub fn get_wall_tex(&self, tile: WallTile) -> TextureDataRef {
+    pub fn get_full_wall_tex(&self, tile: FullWallType) -> TextureDataRef {
         match tile {
-            WallTile::BlueBrick => self.blue_brick.as_ref(),
-            WallTile::LightPlank => self.light_plank.as_ref(),
+            FullWallType::BlueBrick => self.blue_brick.as_ref(),
+            FullWallType::LightPlank => self.light_plank.as_ref(),
         }
     }
 
     #[inline]
-    pub fn get_transparent_tex(&self, tile: TransparentWall) -> TextureDataRef {
+    pub fn get_transparent_wall_tex(&self, tile: TransparentWallType) -> TextureDataRef {
         match tile {
-            TransparentWall::Fence => self.fence.as_ref(),
-            TransparentWall::BlueGlass => self.blue_glass.as_ref(),
+            TransparentWallType::Fence => self.fence.as_ref(),
+            TransparentWallType::BlueGlass => self.blue_glass.as_ref(),
         }
     }
 
     #[inline]
-    pub fn get_floor_tex(&self, tile: Tile) -> TextureDataRef {
+    pub fn get_floor_tex(&self, tile: FloorType) -> TextureDataRef {
         match tile {
-            Tile::TopBottom(top_bottom_tile) => match top_bottom_tile {
-                TopBottom::TopAndBottomBrick => self.blue_brick.as_ref(),
-            },
-            _ => self.mossy_stone.as_ref(),
+            FloorType::MossyStone => self.mossy_stone.as_ref(),
+            FloorType::Brick => self.blue_brick.as_ref(),
         }
     }
 
     #[inline]
-    pub fn get_ceiling_tex(&self, tile: Tile) -> TextureDataRef {
+    pub fn get_ceiling_tex(&self, tile: CeilingType) -> TextureDataRef {
         match tile {
-            Tile::TopBottom(top_bottom_tile) => match top_bottom_tile {
-                TopBottom::TopAndBottomBrick => self.blue_brick.as_ref(),
-            },
-            _ => self.light_plank.as_ref(),
-        }
-    }
-
-    #[inline]
-    pub fn get_entity_texture(&self, tex: EntityTexture) -> TextureDataRef {
-        match tex {
-           EntityTexture::Glass => self.blue_glass.as_ref(),
+            CeilingType::LightPlank => self.light_plank.as_ref(),
+            CeilingType::Brick => self.blue_brick.as_ref(),
         }
     }
 }

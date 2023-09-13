@@ -1,5 +1,5 @@
 use crate::{
-    map::{TestMap, Tile},
+    map::{TestMap, MapTile},
     textures::TextureManager,
 };
 
@@ -24,11 +24,11 @@ impl Raycaster {
         let floor_step_z_factor = ray_dir_z1_minus_z0 * self.width_recip;
         let half_height = self.height as f32 / 2.0;
 
-        let mut past_floor_tile = Tile::Empty;
-        let mut floor_tex = textures.get_floor_tex(past_floor_tile);
+        let mut past_floor_tile = MapTile::VOID;
+        let mut floor_tex = textures.get_floor_tex(past_floor_tile.floor_tile);
 
-        let mut past_ceiling_tile = Tile::Empty;
-        let mut ceiling_tex = textures.get_ceiling_tex(past_ceiling_tile);
+        let mut past_ceiling_tile = MapTile::VOID;
+        let mut ceiling_tex = textures.get_ceiling_tex(past_ceiling_tile.ceiling_tile);
 
         // DRAW FLOOR
         for y in ((self.height as i32 / 2 - self.y_shearing as i32) as u32)
@@ -60,13 +60,13 @@ impl Raycaster {
                     if floor_tile_x != current_floor_tile_x
                         || floor_tile_z != current_floor_tile_z
                     {
-                        let tile = map.get_top_bottom_tile(
+                        let tile = map.get_tile(
                             current_floor_tile_x as usize,
                             current_floor_tile_z as usize,
                         );
                         if past_floor_tile != tile {
                             past_floor_tile = tile;
-                            floor_tex = textures.get_floor_tex(tile);
+                            floor_tex = textures.get_floor_tex(tile.floor_tile);
                         }
                     }
                     floor_tile_x = current_floor_tile_x;
@@ -125,13 +125,13 @@ impl Raycaster {
                     if ceiling_tile_x != current_ceiling_tile_x
                         || ceiling_tile_z != current_ceiling_tile_z
                     {
-                        let tile = map.get_top_bottom_tile(
+                        let tile = map.get_tile(
                             current_ceiling_tile_x as usize,
                             current_ceiling_tile_z as usize,
                         );
                         if past_ceiling_tile != tile {
                             past_ceiling_tile = tile;
-                            ceiling_tex = textures.get_ceiling_tex(tile);
+                            ceiling_tex = textures.get_ceiling_tex(tile.ceiling_tile);
                         }
                     }
                     ceiling_tile_x = current_ceiling_tile_x;

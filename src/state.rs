@@ -1,19 +1,14 @@
 use crate::{
-    canvas::Canvas,
-    draw::Raycaster,
-    map::TestMap,
-    object::ModelManager,
-    textures::TextureManager,
-    world::{Entity, World, EntityTexture},
+    canvas::Canvas, draw::Raycaster, map::TestMap,
+    textures::TextureManager, voxel::VoxelModelManager,
 };
 use winit::{dpi::PhysicalSize, event::KeyboardInput};
 
 pub struct State {
     canvas: Canvas,
     raycaster: Raycaster,
-    models: ModelManager,
+    models: VoxelModelManager,
     map: TestMap,
-    world: World,
     textures: TextureManager,
 }
 
@@ -27,15 +22,12 @@ impl State {
             canvas.width(),
             canvas.height(),
         );
-        let mut world = World::new();
-        world.new_entity(Entity::new(3.0, 0.5, 7.0, EntityTexture::Glass));
 
         Self {
             canvas,
             raycaster,
-            models: ModelManager::init(),
+            models: VoxelModelManager::init(),
             map: TestMap::new(),
-            world,
             textures: TextureManager::init(),
         }
     }
@@ -46,7 +38,6 @@ impl State {
         self.raycaster.cast_rays(
             &self.map,
             &self.models,
-            &self.world,
             &self.textures,
             self.canvas.data_mut(),
         );

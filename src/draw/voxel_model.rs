@@ -2,15 +2,16 @@ use glam::Vec3;
 
 use crate::colors::COLOR_LUT;
 
-use super::{blend, ObjectHit, RayHit, Raycaster, Side};
+use super::{blend, RayHit, Raycaster, Side, VoxelModelHit};
 
 impl Raycaster {
-    pub fn draw_object(&self, hit: RayHit, object: ObjectHit, data: &mut [u8]) {
-        let dimension = object.obj.dimension() as f32;
+    pub fn draw_voxel_model(&self, hit: RayHit, model_hit: VoxelModelHit, data: &mut [u8]) {
+        let dimension = model_hit.model.dimension as f32;
+        let model = model_hit.model;
         let dimension_i = dimension as i32;
         let ray_origin = self.pos * dimension;
-        let obj_x_pos = object.obj_map_pos_x as f32 * dimension;
-        let obj_z_pos = object.obj_map_pos_z as f32 * dimension;
+        let obj_x_pos = model_hit.map_pos_x as f32 * dimension;
+        let obj_z_pos = model_hit.map_pos_z as f32 * dimension;
         // North is in front (positive Z)
         let (top_left_point, top_side, voxel_side) = match hit.side {
             Side::Vertical => {
@@ -151,7 +152,7 @@ impl Raycaster {
                 _ => (),
             }
             loop {
-                let voxel = object.obj.get_voxel(
+                let voxel = model.get_voxel(
                     grid_x as usize,
                     grid_y as usize,
                     grid_z as usize,
