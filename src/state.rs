@@ -1,6 +1,6 @@
 use crate::{
-    canvas::Canvas, draw::Raycaster, map::TestMap,
-    textures::TextureManager, voxel::VoxelModelManager,
+    canvas::Canvas, draw::Raycaster, map::TestMap, textures::TextureManager,
+    voxel::VoxelModelManager,
 };
 use winit::{dpi::PhysicalSize, event::KeyboardInput};
 

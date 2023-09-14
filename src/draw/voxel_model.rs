@@ -1,11 +1,16 @@
 use glam::Vec3;
 
-use crate::colors::COLOR_LUT;
+use super::colors::COLOR_LUT;
 
 use super::{blend, RayHit, Raycaster, Side, VoxelModelHit};
 
 impl Raycaster {
-    pub fn draw_voxel_model(&self, hit: RayHit, model_hit: VoxelModelHit, data: &mut [u8]) {
+    pub fn draw_voxel_model(
+        &self,
+        hit: RayHit,
+        model_hit: VoxelModelHit,
+        data: &mut [u8],
+    ) {
         let dimension = model_hit.model.dimension as f32;
         let model = model_hit.model;
         let dimension_i = dimension as i32;

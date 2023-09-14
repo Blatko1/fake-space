@@ -122,6 +122,7 @@ pub enum VoxelModelType {
 }
 
 impl VoxelModelType {
+    #[inline]
     fn to_index(self) -> usize {
         self as usize
     }

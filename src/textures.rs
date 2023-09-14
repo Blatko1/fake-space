@@ -1,4 +1,4 @@
-use crate::map::{FullWallType, TransparentWallType, FloorType, CeilingType};
+use crate::map::{CeilingType, FloorType, FullWallType, TransparentWallType};
 
 pub struct TextureManager {
     blue_brick: TextureData,
@@ -12,22 +12,22 @@ impl TextureManager {
     pub fn init() -> Self {
         let blue_brick_data = include_bytes!("../res/blue_brick.png");
         let blue_brick =
-            TextureData::from_data(blue_brick_data, 1.0, 1.0).unwrap();
+            TextureData::from_data(blue_brick_data, 1.0, 1.0, false).unwrap();
 
         let fence_data = include_bytes!("../res/fence.png");
-        let fence = TextureData::from_data(fence_data, -0.3125, 1.0).unwrap();
+        let fence = TextureData::from_data(fence_data, -0.3125, 1.0, true).unwrap();
 
         let blue_glass_data = include_bytes!("../res/blue_glass.png");
         let blue_glass =
-            TextureData::from_data(blue_glass_data, 1.0, 1.0).unwrap();
+            TextureData::from_data(blue_glass_data, 1.0, 1.0, true).unwrap();
 
         let light_plank_data = include_bytes!("../res/light_plank.png");
         let light_plank =
-            TextureData::from_data(light_plank_data, 1.0, 1.0).unwrap();
+            TextureData::from_data(light_plank_data, 1.0, 1.0, false).unwrap();
 
         let mossy_stone_data = include_bytes!("../res/mossy_stone.png");
         let mossy_stone =
-            TextureData::from_data(mossy_stone_data, 1.0, 1.0).unwrap();
+            TextureData::from_data(mossy_stone_data, 1.0, 1.0, false).unwrap();
 
         Self {
             blue_brick,
@@ -47,7 +47,10 @@ impl TextureManager {
     }
 
     #[inline]
-    pub fn get_transparent_wall_tex(&self, tile: TransparentWallType) -> TextureDataRef {
+    pub fn get_transparent_wall_tex(
+        &self,
+        tile: TransparentWallType,
+    ) -> TextureDataRef {
         match tile {
             TransparentWallType::Fence => self.fence.as_ref(),
             TransparentWallType::BlueGlass => self.blue_glass.as_ref(),
@@ -77,6 +80,7 @@ pub struct TextureData {
     pub height: u32,
     pub top_height: f32,
     pub bottom_height: f32,
+    has_transparency: bool,
     pub texture: Vec<u8>,
     pub texture_darkened: Vec<u8>,
 }
@@ -86,6 +90,7 @@ impl TextureData {
         data: &[u8],
         top_height: f32,
         bottom_height: f32,
+        has_transparency: bool
     ) -> Option<Self> {
         if top_height < 0.0 {
             assert!(
@@ -118,6 +123,7 @@ impl TextureData {
             height: blue_brick_img.height(),
             top_height,
             bottom_height,
+            has_transparency,
             texture,
             texture_darkened,
         })
@@ -130,6 +136,7 @@ impl TextureData {
             height: self.height,
             top_height: self.top_height,
             bottom_height: self.bottom_height,
+            has_transparency: self.has_transparency,
             texture: self.texture.as_slice(),
             texture_darkened: self.texture_darkened.as_slice(),
         }
@@ -142,6 +149,13 @@ pub struct TextureDataRef<'a> {
     pub height: u32,
     pub top_height: f32,
     pub bottom_height: f32,
+    pub has_transparency: bool,
     pub texture: &'a [u8],
     pub texture_darkened: &'a [u8],
+}
+
+impl<'a> Default for TextureDataRef<'a> {
+    fn default() -> Self {
+        Self { width: 4, height: 4, top_height: 1.0, bottom_height: 1.0, has_transparency: false, texture: &[0, 0, 0, 255], texture_darkened: &[0, 0, 0, 255] }
+    }
 }

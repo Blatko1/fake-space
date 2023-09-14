@@ -17,7 +17,7 @@ Excellent explanations about the raycaster [here](https://lodev.org/cgtutor/rayc
 - [x] Implement drawing directly in the ray casting function to avoid memory allocations and preserve performance
 - [x] Add different floor and ceiling textures for different map tiles
 - [x] Add an ability to look freely up and down, moving up and down
-- [ ] Improve how map tiles are stored, split the map into three maps, one for regular wall tiles, one for ceiling tiles and one for floor tiles
+- [x] Improve how map tiles are stored, split the map into three maps, one for regular wall tiles, one for ceiling tiles and one for floor tiles
 - [ ] Add multiple shading effects
 - [ ] Add removable object walls (cool opening or moving animation with voxels)
 - [ ] Add collision detection (circle-rectangle collision detection)

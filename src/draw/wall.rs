@@ -2,50 +2,63 @@ use super::{blend, RayHit, Raycaster, Side};
 
 // TODO write tests for each draw call function to check for overflows
 impl Raycaster {
+    // Draws full and transparent walls.
     pub fn draw_wall(&self, hit: RayHit, data: &mut [u8]) {
-        let tex = hit.texture.unwrap();
+        // Find out what texture to use when drawing
+        let tex = hit.texture;
         let (tex_width, tex_height, bottom_height, top_height) =
-            (tex.width, tex.height, tex.bottom_height, tex.top_height);
+            (tex.width as usize, tex.height as usize, tex.bottom_height, tex.top_height);
         let texture = match hit.side {
             Side::Vertical => tex.texture,
             Side::Horizontal => tex.texture_darkened,
         };
 
         // TODO better names
+        // Calculate wall pixel height for the parts above and below the middle
         let wall_pixel_height =
             (self.height as f32 / hit.wall_dist * self.plane_dist) as i32;
         let half_wall_height = (wall_pixel_height / 2) as f32;
-        let top_height = (half_wall_height
+        let top_height = half_wall_height
             * ((1.0 - self.pos.y) * 2.0 + (top_height - 1.0))
-            + self.y_shearing) as i32;
-        let bottom_height = (half_wall_height
+            + self.y_shearing;
+        let bottom_height = half_wall_height
             * (self.pos.y * 2.0 + (bottom_height - 1.0))
-            - self.y_shearing) as i32;
-        let line_height = top_height.saturating_add(bottom_height);
+            - self.y_shearing;
+        let wall_full_height = top_height + bottom_height;
 
-        let begin = (self.int_half_height - bottom_height).max(0) as u32;
-        let end = ((self.int_half_height + top_height).max(0) as u32)
-            .min(self.height - 1);
+        // From which pixel to begin drawing and on which to end
+        let begin = (self.float_half_height - bottom_height).max(0.0) as usize;
+        let end = (self.float_half_height + top_height).max(0.0).min(self.height as f32 - 1.0) as usize;
 
+        // Texture mapping variables
         let tex_x = match hit.side {
             Side::Vertical if hit.dir.x > 0.0 => {
-                tex_width - (hit.wall_x * tex_width as f32) as u32 - 1
+                tex_width - (hit.wall_x * tex_width as f32) as usize - 1
             }
 
             Side::Horizontal if hit.dir.z < 0.0 => {
-                tex_width - (hit.wall_x * tex_width as f32) as u32 - 1
+                tex_width - (hit.wall_x * tex_width as f32) as usize - 1
             }
-            _ => (hit.wall_x * tex_width as f32) as u32,
+            _ => (hit.wall_x * tex_width as f32) as usize,
         };
-        let four_tex_x = tex_x * 4;
-        let tex_y_step = tex_height as f32 / line_height as f32;
+        let tex_y_step = tex_height as f32 / wall_full_height;
         let mut tex_y = (begin as f32 + bottom_height as f32
             - self.float_half_height)
             * tex_y_step;
-        for y in begin..end {
-            let index = (self.height as usize - 1 - y as usize)
+        let draw: fn(target: &mut [u8], color: &[u8]) = match tex.has_transparency {
+            true => draw_transparent_wall_pixel,
+            false => draw_full_wall_pixel,
+        };
+
+        // Precomputed variables for performance increase
+        let height = self.height as usize;
+        let four_screen_x = hit.screen_x as usize * 4;
+        let four_tex_width = tex_width * 4;
+        let four_tex_x = tex_x * 4;
+        for y in begin..=end {
+            let index = (height - 1 - y)
                 * self.four_width
-                + hit.screen_x as usize * 4;
+                + four_screen_x;
             let rgba = &mut data[index..index + 4];
             let alpha = rgba[3];
             if alpha == 255 {
@@ -53,16 +66,35 @@ impl Raycaster {
                 continue;
             }
 
-            let tex_y_pos = (tex_y as u32).min(tex_height - 1);
-            let i = ((tex_height - tex_y_pos - 1) * tex_width * 4 + four_tex_x)
-                as usize;
+            let tex_y_pos = (tex_y as usize).min(tex_height - 1);
+            let i = (tex_height - tex_y_pos - 1) * four_tex_width + four_tex_x;
             let color = &texture[i..i + 4];
-            if alpha == 0 {
-                rgba.copy_from_slice(color);
-            } else {
-                rgba.copy_from_slice(&blend(color, rgba));
-            }
+
+            draw(rgba, color);
+            // TODO maybe make it so `tex_y_step` is being subtracted.
             tex_y += tex_y_step;
         }
+    }
+}
+
+#[inline]
+fn draw_full_wall_pixel(target: &mut [u8], color: &[u8]) {
+    if target[3] == 0 {
+        target.copy_from_slice(color);
+    } else {
+        target.copy_from_slice(&blend(color, target));
+    }
+}
+
+#[inline]
+fn draw_transparent_wall_pixel(target: &mut [u8], color: &[u8]) {
+    let a = color[3];
+    if a == 0 {
+        return;
+    }
+    if a == 255 {
+        draw_full_wall_pixel(target, color);
+    } else {
+        target.copy_from_slice(&blend(color, target));
     }
 }

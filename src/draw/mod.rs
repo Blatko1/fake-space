@@ -1,16 +1,17 @@
-mod voxel_model;
 mod top_bottom;
-mod transparent;
 mod void;
+mod voxel_model;
 mod wall;
+mod colors;
 
 use glam::Vec3;
 use std::f32::consts::TAU;
 use winit::event::{ElementState, KeyboardInput, VirtualKeyCode};
 
 use crate::{
-    map::{TestMap, ObjectType},
-    textures::{TextureDataRef, TextureManager}, voxel::{VoxelModel, VoxelModelManager},
+    map::{ObjectType, TestMap},
+    textures::{TextureDataRef, TextureManager},
+    voxel::{VoxelModel, VoxelModelManager},
 };
 
 // TODO rotation control with mouse and/or keyboard
@@ -34,7 +35,7 @@ pub struct RayHit<'a> {
     /// If the ray hit the left portion of the tile side (wall), the
     /// x-coordinate would be somewhere in range [0.0, 0.5].
     wall_x: f32,
-    texture: Option<TextureDataRef<'a>>,
+    texture: TextureDataRef<'a>,
     delta_dist_x: f32,
     delta_dist_z: f32,
 }
@@ -91,7 +92,6 @@ pub struct Raycaster {
     four_width: usize,
     width_recip: f32,
     height_recip: f32,
-    int_half_height: i32,
     float_half_height: f32,
 
     // Variables for controlling and moving the scene.
@@ -148,7 +148,6 @@ impl Raycaster {
             four_width: 4 * width as usize,
             width_recip: f_width.recip(),
             height_recip: f_height.recip(),
-            int_half_height: height as i32 / 2,
             float_half_height: height as f32 * 0.5,
 
             turn_left: 0.0,
@@ -221,8 +220,7 @@ impl Raycaster {
                     side_dist_z += delta_dist_z;
                     Side::Horizontal
                 };
-                let tile =
-                    tile_map.get_tile(map_x as usize, map_z as usize);
+                let tile = tile_map.get_tile(map_x as usize, map_z as usize);
                 // If the hit tile is not Tile::Empty (out of bounds != Tile::Empty) store data
                 if tile.object_tile != ObjectType::Empty {
                     // Calculate perpetual wall distance from the camera and wall_x.
@@ -246,7 +244,7 @@ impl Raycaster {
                         wall_dist: perp_wall_dist,
                         side,
                         wall_x,
-                        texture: None,
+                        texture: TextureDataRef::default(),
                         delta_dist_x,
                         delta_dist_z,
                     };
@@ -254,47 +252,39 @@ impl Raycaster {
                         // If the hit tile has transparency, also calculate the Hit to the next closest
                         // Vertical or Horizontal side on the ray path and `continue`
                         ObjectType::TransparentWall(tile) => {
-                                
-                                    let (perp_wall_dist, wall_x, side) =
-                                        if side_dist_x < side_dist_z {
-                                            let dist = side_dist_x.max(0.0);
-                                            let wall_x =
-                                                self.pos.z + dist * ray_dir.z;
-                                            (
-                                                dist,
-                                                wall_x - wall_x.floor(),
-                                                Side::Vertical,
-                                            )
-                                        } else {
-                                            let dist = side_dist_z.max(0.0);
-                                            let wall_x =
-                                                self.pos.x + dist * ray_dir.x;
-                                            (
-                                                dist,
-                                                wall_x - wall_x.floor(),
-                                                Side::Horizontal,
-                                            )
-                                        };
-                                    let transparent_tex = textures
-                                        .get_transparent_wall_tex(tile);
-                                    let hit_2 = RayHit {
-                                        screen_x: x,
-                                        dir: ray_dir,
-                                        wall_dist: perp_wall_dist,
-                                        side,
-                                        wall_x,
-                                        texture: Some(transparent_tex),
-                                        delta_dist_x,
-                                        delta_dist_z,
-                                    };
-                                    hit.texture = Some(transparent_tex);
+                            let (perp_wall_dist, wall_x, side) = if side_dist_x
+                                < side_dist_z
+                            {
+                                let dist = side_dist_x.max(0.0);
+                                let wall_x = self.pos.z + dist * ray_dir.z;
+                                (dist, wall_x - wall_x.floor(), Side::Vertical)
+                            } else {
+                                let dist = side_dist_z.max(0.0);
+                                let wall_x = self.pos.x + dist * ray_dir.x;
+                                (
+                                    dist,
+                                    wall_x - wall_x.floor(),
+                                    Side::Horizontal,
+                                )
+                            };
+                            let transparent_tex =
+                                textures.get_transparent_wall_tex(tile);
+                            let hit_2 = RayHit {
+                                screen_x: x,
+                                dir: ray_dir,
+                                wall_dist: perp_wall_dist,
+                                side,
+                                wall_x,
+                                texture: transparent_tex,
+                                delta_dist_x,
+                                delta_dist_z,
+                            };
+                            hit.texture = transparent_tex;
 
-                                    self.draw_transparent(hit, data);
-                                    self.draw_transparent(hit_2, data)
-                                
+                            self.draw_wall(hit, data);
+                            self.draw_wall(hit_2, data);
                         }
-                        ObjectType::VoxelModel(model) => self
-                        .draw_voxel_model(
+                        ObjectType::VoxelModel(model) => self.draw_voxel_model(
                             hit,
                             VoxelModelHit {
                                 model: models.get_model(model),
@@ -305,7 +295,7 @@ impl Raycaster {
                         ),
                         ObjectType::FullWall(tile) => {
                             hit.texture =
-                                Some(textures.get_full_wall_tex(tile));
+                                textures.get_full_wall_tex(tile);
                             self.draw_wall(hit, data);
                             break;
                         }
@@ -399,6 +389,7 @@ impl Raycaster {
     }
 }
 
+// TODO convert to unsafe for speed
 #[inline(always)]
 fn blend(background: &[u8], foreground: &[u8]) -> [u8; 4] {
     let alpha = foreground[3] as f32 / 255.0;

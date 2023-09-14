@@ -9,7 +9,11 @@ impl TestMap {
     const DEPTH: u32 = TEST_MAP_DEPTH;
     pub fn new() -> Self {
         Self {
-            map: Map::new(TEST_MAP_OBJECT_DATA, TEST_MAP_FLOOR_DATA, TEST_MAP_CEILING_DATA),
+            map: Map::new(
+                TEST_MAP_OBJECT_DATA,
+                TEST_MAP_FLOOR_DATA,
+                TEST_MAP_CEILING_DATA,
+            ),
         }
     }
 
@@ -67,9 +71,12 @@ impl<const W: usize, const D: usize> Map<W, D> {
                                 ((tile, object_data_tile), floor_data_tile),
                                 ceiling_data_tile,
                             )| {
-                                let object_tile = ObjectType::from(object_data_tile);
-                                let floor_tile = FloorType::from(floor_data_tile);
-                                let ceiling_tile = CeilingType::from(ceiling_data_tile);
+                                let object_tile =
+                                    ObjectType::from(object_data_tile);
+                                let floor_tile =
+                                    FloorType::from(floor_data_tile);
+                                let ceiling_tile =
+                                    CeilingType::from(ceiling_data_tile);
                                 *tile = MapTile {
                                     object_tile,
                                     floor_tile,
@@ -229,10 +236,10 @@ const TEST_MAP_FLOOR_DATA: [[u32; TEST_MAP_WIDTH as usize]; TEST_MAP_DEPTH as us
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 ];
