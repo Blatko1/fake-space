@@ -15,7 +15,8 @@ impl TextureManager {
             TextureData::from_data(blue_brick_data, 1.0, 1.0, false).unwrap();
 
         let fence_data = include_bytes!("../res/fence.png");
-        let fence = TextureData::from_data(fence_data, -0.3125, 1.0, true).unwrap();
+        let fence =
+            TextureData::from_data(fence_data, -0.3125, 1.0, true).unwrap();
 
         let blue_glass_data = include_bytes!("../res/blue_glass.png");
         let blue_glass =
@@ -90,7 +91,7 @@ impl TextureData {
         data: &[u8],
         top_height: f32,
         bottom_height: f32,
-        has_transparency: bool
+        has_transparency: bool,
     ) -> Option<Self> {
         if top_height < 0.0 {
             assert!(
@@ -156,6 +157,14 @@ pub struct TextureDataRef<'a> {
 
 impl<'a> Default for TextureDataRef<'a> {
     fn default() -> Self {
-        Self { width: 4, height: 4, top_height: 1.0, bottom_height: 1.0, has_transparency: false, texture: &[0, 0, 0, 255], texture_darkened: &[0, 0, 0, 255] }
+        Self {
+            width: 4,
+            height: 4,
+            top_height: 1.0,
+            bottom_height: 1.0,
+            has_transparency: false,
+            texture: &[0, 0, 0, 255],
+            texture_darkened: &[0, 0, 0, 255],
+        }
     }
 }

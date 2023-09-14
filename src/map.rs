@@ -44,7 +44,7 @@ impl MapTile {
 pub struct Map<const W: usize, const D: usize> {
     data: [[MapTile; W]; D],
 }
-// TODO anti-aliasing
+
 impl<const W: usize, const D: usize> Map<W, D> {
     pub fn new(
         raw_object_data: [[u32; W]; D],
@@ -107,11 +107,6 @@ impl<const W: usize, const D: usize> Map<W, D> {
         MapTile::VOID
     }
 }
-// TODO divide object tiles and floor_ceiling tiles into separate enums
-// TODO divide the map into three different maps with same sizes, one with
-// normal object tiles data, one with floor data and one with ceiling data.
-// Then put all three tile data in a struct for each tile, put it in an array
-// and use it as a map.
 
 /// Represents all tiles not including ceiling or floor tiles.
 /// Additionally, contains a non-tile `Void` type.

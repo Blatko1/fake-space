@@ -180,7 +180,7 @@ impl Raycaster {
                 if side_dist_x < side_dist_y {
                     if side_dist_x < side_dist_z {
                         grid_x += step_x;
-                        if grid_x < 0 || grid_x >= dimension_i {
+                        if grid_x >= dimension_i {
                             break;
                         }
                         side = if step_x.is_positive() {
@@ -191,7 +191,7 @@ impl Raycaster {
                         side_dist_x += delta_dist.x;
                     } else {
                         grid_z += step_z;
-                        if grid_z < 0 || grid_z >= dimension_i {
+                        if grid_z >= dimension_i {
                             break;
                         }
                         side = if step_z.is_positive() {
@@ -203,7 +203,7 @@ impl Raycaster {
                     }
                 } else if side_dist_y < side_dist_z {
                     grid_y += step_y;
-                    if grid_y < 0 || grid_y >= dimension_i {
+                    if grid_y >= dimension_i {
                         break;
                     }
                     side = if step_y.is_positive() {

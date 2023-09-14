@@ -1,8 +1,8 @@
-// TODO problem! some textures below the walls 
+// TODO problem! some textures below the walls
 // are bleeding out when further away
 // TODO problem! trying to implement sprite entities
-// is difficult due to existence of transparent walls 
-// and their fully transparent parts 
+// is difficult due to existence of transparent walls
+// and their fully transparent parts
 // TODO problem! adding unsafe could improve performance
 use crate::{
     map::{MapTile, TestMap},
@@ -35,14 +35,12 @@ impl Raycaster {
             textures.get_ceiling_tex(past_ceiling_tile.ceiling_tile);
 
         // DRAW FLOOR
-        for y in ((height as i32 / 2 - self.y_shearing as i32) as usize)
-            ..height
+        for y in ((height as i32 / 2 - self.y_shearing as i32) as usize)..height
         {
             let p = y as f32 - half_height;
 
-            let floor_row_dist = self.pos.y * f_height
-                / (p + self.y_shearing)
-                * self.plane_dist;
+            let floor_row_dist =
+                self.pos.y * f_height / (p + self.y_shearing) * self.plane_dist;
             let floor_step = tile_step_factor * floor_row_dist;
             let mut floor_pos = self.pos + ray_dir * floor_row_dist;
 
@@ -74,16 +72,18 @@ impl Raycaster {
                     floor_tile_x = current_floor_tile_x;
                     floor_tile_z = current_floor_tile_z;
 
-                    let (texture, tex_width, tex_height) =
-                        (floor_tex.texture, floor_tex.width as usize, floor_tex.height as usize);
+                    let (texture, tex_width, tex_height) = (
+                        floor_tex.texture,
+                        floor_tex.width as usize,
+                        floor_tex.height as usize,
+                    );
                     let tx_floor = ((tex_width as f32 * floor_pos.x.fract())
                         as usize)
                         .min(tex_width - 1);
                     let ty_floor = ((tex_height as f32 * floor_pos.z.fract())
                         as usize)
                         .min(tex_height - 1);
-                    let i_floor =
-                        tex_width * 4 * ty_floor + tx_floor * 4;
+                    let i_floor = tex_width * 4 * ty_floor + tx_floor * 4;
                     let color = &texture[i_floor..i_floor + 4];
                     if alpha == 0 {
                         rgba.copy_from_slice(color);
@@ -97,8 +97,8 @@ impl Raycaster {
         }
 
         // DRAW CEILING
-        for y in ((self.height as i32 / 2 + self.y_shearing as i32) as usize)
-            ..height
+        for y in
+            ((self.height as i32 / 2 + self.y_shearing as i32) as usize)..height
         {
             let p = y as f32 - half_height;
 
@@ -108,8 +108,7 @@ impl Raycaster {
             let ceiling_step = tile_step_factor * ceiling_row_dist;
             let mut ceiling_pos = self.pos + ray_dir * ceiling_row_dist;
 
-            let draw_ceiling_y_offset =
-                (height - y - 1) * self.four_width;
+            let draw_ceiling_y_offset = (height - y - 1) * self.four_width;
 
             let mut ceiling_tile_x = i32::MAX;
             let mut ceiling_tile_z = i32::MAX;
@@ -143,14 +142,13 @@ impl Raycaster {
                         ceiling_tex.height as usize,
                     );
 
-                    let tx_ceiling = ((tex_width as f32 * ceiling_pos.x.fract())
-                        as usize)
-                        .min(tex_width - 1);
-                    let ty_ceiling = ((tex_height as f32 * ceiling_pos.z.fract())
-                        as usize)
-                        .min(tex_height - 1);
-                    let i_ceiling =
-                    tex_width * 4 * ty_ceiling + tx_ceiling * 4;
+                    let tx_ceiling =
+                        ((tex_width as f32 * ceiling_pos.x.fract()) as usize)
+                            .min(tex_width - 1);
+                    let ty_ceiling =
+                        ((tex_height as f32 * ceiling_pos.z.fract()) as usize)
+                            .min(tex_height - 1);
+                    let i_ceiling = tex_width * 4 * ty_ceiling + tx_ceiling * 4;
                     let color = &texture[i_ceiling..i_ceiling + 4];
                     if alpha == 0 {
                         rgba.copy_from_slice(color);

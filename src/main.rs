@@ -19,7 +19,6 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder as WinitWindowBuilder,
 };
-// TODO add portals like in Portal game
 
 const FPS: u32 = 60;
 

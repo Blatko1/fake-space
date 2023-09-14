@@ -1,23 +1,25 @@
+mod colors;
 mod top_bottom;
 mod void;
 mod voxel_model;
 mod wall;
-mod colors;
 
 use glam::Vec3;
-use std::f32::consts::TAU;
+use std::f32::consts::{PI, TAU};
 use winit::event::{ElementState, KeyboardInput, VirtualKeyCode};
 
 use crate::{
     map::{ObjectType, TestMap},
     textures::{TextureDataRef, TextureManager},
-    voxel::{VoxelModel, VoxelModelManager},
+    voxel::{VoxelModelManager, VoxelModelRef},
 };
 
 // TODO rotation control with mouse and/or keyboard
 const MOVEMENT_SPEED: f32 = 0.1;
 const ROTATION_SPEED: f32 = 0.035;
 const FLY_UP_DOWN_SPEED: f32 = 0.01;
+const ONE_DEGREE_RAD: f32 = PI / 180.0;
+const MAX_FOV_RAD: f32 = 119.0 * ONE_DEGREE_RAD;
 const DEFAULT_PLANE_V: Vec3 = Vec3::new(0.0, 0.5, 0.0);
 
 #[derive(Debug)]
@@ -41,8 +43,8 @@ pub struct RayHit<'a> {
 }
 
 #[derive(Debug)]
-pub struct VoxelModelHit {
-    model: VoxelModel,
+pub struct VoxelModelHit<'a> {
+    model: VoxelModelRef<'a>,
     map_pos_x: i32,
     map_pos_z: i32,
 }
@@ -53,7 +55,6 @@ pub enum Side {
     Horizontal,
 }
 
-// TODO maybe calculate fov and v_fov in radians instead.
 #[derive(Debug)]
 /// Draws the player view on the screen framebuffer.
 /// Uses a coordinate system where y-axis points upwards,
@@ -119,11 +120,11 @@ impl Raycaster {
         width: u32,
         height: u32,
     ) -> Self {
-        let fov = 80f32;
+        let fov = 80f32.to_radians();
         let f_width = width as f32;
         let f_height = height as f32;
 
-        let plane_dist = 1.0 / f32::tan(fov.to_radians() / 2.0);
+        let plane_dist = 1.0 / f32::tan(fov / 2.0);
         let aspect = f_width / f_height;
 
         let pos = Vec3::new(pos_x, pos_y, pos_z);
@@ -294,8 +295,7 @@ impl Raycaster {
                             data,
                         ),
                         ObjectType::FullWall(tile) => {
-                            hit.texture =
-                                textures.get_full_wall_tex(tile);
+                            hit.texture = textures.get_full_wall_tex(tile);
                             self.draw_wall(hit, data);
                             break;
                         }
@@ -313,10 +313,11 @@ impl Raycaster {
 
     pub fn update(&mut self) {
         // Change FOV and vertical FOV
-        self.fov = (self.fov + (self.increase_fov - self.decrease_fov))
-            .min(119.0)
-            .max(1.0);
-        self.plane_dist = 1.0 / f32::tan(self.fov.to_radians() * 0.5);
+        self.fov = (self.fov
+            + (self.increase_fov - self.decrease_fov) * ONE_DEGREE_RAD)
+            .min(MAX_FOV_RAD)
+            .max(ONE_DEGREE_RAD);
+        self.plane_dist = 1.0 / f32::tan(self.fov * 0.5);
 
         // Change y_shearing (look up/down)
         self.y_shearing = (self.y_shearing

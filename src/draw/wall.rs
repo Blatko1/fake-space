@@ -6,8 +6,12 @@ impl Raycaster {
     pub fn draw_wall(&self, hit: RayHit, data: &mut [u8]) {
         // Find out what texture to use when drawing
         let tex = hit.texture;
-        let (tex_width, tex_height, bottom_height, top_height) =
-            (tex.width as usize, tex.height as usize, tex.bottom_height, tex.top_height);
+        let (tex_width, tex_height, bottom_height, top_height) = (
+            tex.width as usize,
+            tex.height as usize,
+            tex.bottom_height,
+            tex.top_height,
+        );
         let texture = match hit.side {
             Side::Vertical => tex.texture,
             Side::Horizontal => tex.texture_darkened,
@@ -28,7 +32,9 @@ impl Raycaster {
 
         // From which pixel to begin drawing and on which to end
         let begin = (self.float_half_height - bottom_height).max(0.0) as usize;
-        let end = (self.float_half_height + top_height).max(0.0).min(self.height as f32 - 1.0) as usize;
+        let end = (self.float_half_height + top_height)
+            .max(0.0)
+            .min(self.height as f32 - 1.0) as usize;
 
         // Texture mapping variables
         let tex_x = match hit.side {
@@ -42,13 +48,13 @@ impl Raycaster {
             _ => (hit.wall_x * tex_width as f32) as usize,
         };
         let tex_y_step = tex_height as f32 / wall_full_height;
-        let mut tex_y = (begin as f32 + bottom_height as f32
-            - self.float_half_height)
+        let mut tex_y = (begin as f32 + bottom_height - self.float_half_height)
             * tex_y_step;
-        let draw: fn(target: &mut [u8], color: &[u8]) = match tex.has_transparency {
-            true => draw_transparent_wall_pixel,
-            false => draw_full_wall_pixel,
-        };
+        let draw_fn: fn(target: &mut [u8], color: &[u8]) =
+            match tex.has_transparency {
+                true => draw_transparent_wall_pixel,
+                false => draw_full_wall_pixel,
+            };
 
         // Precomputed variables for performance increase
         let height = self.height as usize;
@@ -56,9 +62,7 @@ impl Raycaster {
         let four_tex_width = tex_width * 4;
         let four_tex_x = tex_x * 4;
         for y in begin..=end {
-            let index = (height - 1 - y)
-                * self.four_width
-                + four_screen_x;
+            let index = (height - 1 - y) * self.four_width + four_screen_x;
             let rgba = &mut data[index..index + 4];
             let alpha = rgba[3];
             if alpha == 255 {
@@ -70,7 +74,7 @@ impl Raycaster {
             let i = (tex_height - tex_y_pos - 1) * four_tex_width + four_tex_x;
             let color = &texture[i..i + 4];
 
-            draw(rgba, color);
+            draw_fn(rgba, color);
             // TODO maybe make it so `tex_y_step` is being subtracted.
             tex_y += tex_y_step;
         }

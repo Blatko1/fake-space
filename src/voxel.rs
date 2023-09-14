@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 pub struct VoxelModelManager {
     models: Vec<VoxelModel>,
 }
@@ -84,26 +82,39 @@ impl VoxelModelManager {
         Self { models }
     }
 
-    pub fn get_model(&self, model_type: VoxelModelType) -> VoxelModel {
-        self.models.get(model_type.to_index()).unwrap().clone()
+    pub fn get_model(&self, model_type: VoxelModelType) -> VoxelModelRef {
+        self.models.get(model_type.to_index()).unwrap().as_ref()
     }
 }
 
 // TODO switch to 3D array instead of Vec
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct VoxelModel {
     pub dimension: usize,
-    pub data: Arc<Vec<u8>>,
+    pub data: Vec<u8>,
 }
 
 impl VoxelModel {
     pub fn new(data: Vec<u8>, dimension: usize) -> Self {
-        Self {
-            dimension,
-            data: Arc::new(data),
-        }
+        Self { dimension, data }
     }
 
+    pub fn as_ref(&self) -> VoxelModelRef {
+        VoxelModelRef {
+            dimension: self.dimension,
+            data: self.data.as_slice(),
+        }
+    }
+}
+
+/// A [`VoxelModel`] reference for faster `data` access.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VoxelModelRef<'a> {
+    pub dimension: usize,
+    pub data: &'a [u8],
+}
+
+impl<'a> VoxelModelRef<'a> {
     #[inline]
     pub fn get_voxel(&self, x: usize, y: usize, z: usize) -> Option<&u8> {
         let index =
