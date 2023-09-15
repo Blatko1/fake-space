@@ -59,22 +59,23 @@ impl Raycaster {
         // parts of it wouldn't be drawn since they were out of projection plane bounds.
         // To fix this, we are going to draw by going over the screen height bounds or
         // into negatives for the `y_shearing` amount.
-        for y in (-self.y_shearing as i32).min(0)
-            ..(self.height as i32 - self.y_shearing as i32)
-                .max(self.height as i32)
+        let height = self.height as i32;
+        let y_shearing = self.y_shearing as i32;
+        let four_screen_x = hit.screen_x as usize * 4;
+        let two_height_recip = 2.0 * self.height_recip;
+        for y in (-y_shearing).min(0)
+            ..(height - y_shearing).max(height)
         {
-            let index = (self.height as i32 - 1 - y - self.y_shearing as i32)
-                .min(self.height as i32 - 1)
-                .max(0) as usize
+            let index = (height - 1 - y - y_shearing) as usize
                 * self.four_width
-                + hit.screen_x as usize * 4;
+                + four_screen_x;
             let rgba = &mut data[index..index + 4];
             let alpha = rgba[3];
             if alpha == 255 {
                 continue;
             }
             // Y-coordinate on the vertical camera plane (range [-1.0, 1.0])
-            let plane_y = 2.0 * (y as f32 * self.height_recip) - 1.0;
+            let plane_y = y as f32 * two_height_recip - 1.0;
             // Ray direction for current pixel column
             let ray_dir = hit.dir + self.plane_v * plane_y;
             // Length of ray from one x/y/z side to next x/y/z side on the tile_map
@@ -84,12 +85,13 @@ impl Raycaster {
                 hit.delta_dist_z,
             );
 
-            // Coordinates of the 3D model matrix the ray first interacts with
+            // Somehow I don't need to normalize ray_dir since I am getting the same result
+            // without normalization
             let intersect = match rectangle_vector_intersection(
                 top_left_point,
                 left_side,
                 rectangle_normal,
-                ray_dir.normalize(),
+                ray_dir,
                 ray_origin,
                 voxel_side,
             ) {
@@ -180,7 +182,7 @@ impl Raycaster {
                 if side_dist_x < side_dist_y {
                     if side_dist_x < side_dist_z {
                         grid_x += step_x;
-                        if grid_x >= dimension_i {
+                        if grid_x < 0 || grid_x >= dimension_i {
                             break;
                         }
                         side = if step_x.is_positive() {
@@ -191,7 +193,7 @@ impl Raycaster {
                         side_dist_x += delta_dist.x;
                     } else {
                         grid_z += step_z;
-                        if grid_z >= dimension_i {
+                        if grid_z < 0 || grid_z >= dimension_i {
                             break;
                         }
                         side = if step_z.is_positive() {
@@ -203,7 +205,7 @@ impl Raycaster {
                     }
                 } else if side_dist_y < side_dist_z {
                     grid_y += step_y;
-                    if grid_y >= dimension_i {
+                    if grid_y < 0 || grid_y >= dimension_i {
                         break;
                     }
                     side = if step_y.is_positive() {
@@ -265,7 +267,7 @@ fn rectangle_vector_intersection(
 
     let p0p = intersection_point - corner;
     //let q1: f32 = p0p.dot(top_side) / top_side_len;
-    let q2: f32 = p0p.dot(left_side) / left_side_len;
+    let q2 = p0p.dot(left_side) / left_side_len;
 
     // Check if the intersection point is inside the rectangle.
     // Only check if the intersection point is too high or too low.
