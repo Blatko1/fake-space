@@ -31,7 +31,9 @@ impl Raycaster {
         let wall_full_height = top_height + bottom_height;
 
         // From which pixel to begin drawing and on which to end
-        let begin = (self.float_half_height - bottom_height).max(0.0).min(self.height as f32 - 1.0) as usize;
+        let begin = (self.float_half_height - bottom_height)
+            .max(0.0)
+            .min(self.height as f32 - 1.0) as usize;
         let end = (self.float_half_height + top_height)
             .max(0.0)
             .min(self.height as f32 - 1.0) as usize;
@@ -61,7 +63,27 @@ impl Raycaster {
         let four_screen_x = hit.screen_x as usize * 4;
         let four_tex_width = tex_width * 4;
         let four_tex_x = tex_x * 4;
-        for y in begin..=end {
+        data.chunks_exact_mut(self.width as usize).rev()
+        data.chunks_exact_mut(4)
+            .skip(hit.screen_x as usize)
+            .skip((end) * self.width as usize)
+            .take((end - begin) * self.width as usize)
+            .step_by(self.width as usize)
+            .for_each(|rgba| {
+                if rgba[3] != 255 {
+                let tex_y_pos = (tex_y as usize).min(tex_height - 1);
+                let i = tex_y_pos * four_tex_width + four_tex_x;
+                let color = &texture[i..i + 4];
+
+                // Draw the pixel:
+                draw_fn(rgba, color);                
+                }
+                tex_y += tex_y_step;
+            });
+
+
+
+        /*for y in begin..=end {
             let index = (height - 1 - y) * self.four_width + four_screen_x;
             let rgba = &mut data[index..index + 4];
             let alpha = rgba[3];
@@ -78,7 +100,7 @@ impl Raycaster {
             draw_fn(rgba, color);
             // TODO maybe make it so `tex_y_step` is being subtracted.
             tex_y += tex_y_step;
-        }
+        }*/
     }
 }
 
