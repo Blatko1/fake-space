@@ -31,7 +31,7 @@ impl Raycaster {
         let wall_full_height = top_height + bottom_height;
 
         // From which pixel to begin drawing and on which to end
-        let begin = (self.float_half_height - bottom_height).max(0.0) as usize;
+        let begin = (self.float_half_height - bottom_height).max(0.0).min(self.height as f32 - 1.0) as usize;
         let end = (self.float_half_height + top_height)
             .max(0.0)
             .min(self.height as f32 - 1.0) as usize;
@@ -74,6 +74,7 @@ impl Raycaster {
             let i = (tex_height - tex_y_pos - 1) * four_tex_width + four_tex_x;
             let color = &texture[i..i + 4];
 
+            // Draw the pixel:
             draw_fn(rgba, color);
             // TODO maybe make it so `tex_y_step` is being subtracted.
             tex_y += tex_y_step;

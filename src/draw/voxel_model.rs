@@ -66,7 +66,13 @@ impl Raycaster {
         for y in (-y_shearing).min(0)
             ..(height - y_shearing).max(height)
         {
-            let index = (height - 1 - y - y_shearing) as usize
+            let rgba_y = height - 1 - y - y_shearing;
+            if rgba_y < 0 {
+                break;
+            } else if rgba_y > (height - 1) {
+                continue;
+            }
+            let index = rgba_y as usize
                 * self.four_width
                 + four_screen_x;
             let rgba = &mut data[index..index + 4];
