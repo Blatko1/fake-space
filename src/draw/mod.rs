@@ -176,7 +176,7 @@ impl Raycaster {
         data: &mut [u8],
     ) {
         // For each pixel column on the screen
-        for x in 0..self.width {
+        (0..self.width).for_each(|x| {
             // X-coordinate on the horizontal camera plane (range [-1.0, 1.0])
             let plane_x = 2.0 * (x as f32 * self.width_recip) - 1.0;
             // Ray direction for current pixel column
@@ -281,9 +281,13 @@ impl Raycaster {
                                 delta_dist_z,
                             };
                             hit.texture = transparent_tex;
-
                             self.draw_wall(hit, data);
                             self.draw_wall(hit_2, data);
+                        }
+                        ObjectType::FullWall(tile) => {
+                            hit.texture = textures.get_full_wall_tex(tile);
+                            self.draw_wall(hit, data);
+                            break;
                         }
                         ObjectType::VoxelModel(model) => self.draw_voxel_model(
                             hit,
@@ -294,11 +298,6 @@ impl Raycaster {
                             },
                             data,
                         ),
-                        ObjectType::FullWall(tile) => {
-                            hit.texture = textures.get_full_wall_tex(tile);
-                            self.draw_wall(hit, data);
-                            break;
-                        }
                         ObjectType::Void => {
                             self.draw_void(hit, data);
                             break;
@@ -307,7 +306,7 @@ impl Raycaster {
                     }
                 }
             }
-        }
+        });
         self.draw_top_bottom(tile_map, textures, data);
     }
 
