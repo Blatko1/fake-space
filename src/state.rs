@@ -2,7 +2,7 @@ use crate::{
     canvas::Canvas, draw::Raycaster, map::TestMap, textures::TextureManager,
     voxel::VoxelModelManager,
 };
-use winit::{dpi::PhysicalSize, event::KeyboardInput};
+use winit::{dpi::PhysicalSize, event::{KeyboardInput, DeviceEvent}};
 
 pub struct State {
     canvas: Canvas,
@@ -51,8 +51,12 @@ impl State {
         self.canvas.resize(new_size);
     }
 
-    pub fn process_input(&mut self, keyboard: KeyboardInput) {
-        self.raycaster.process_input(keyboard);
+    pub fn process_keyboard_input(&mut self, event: KeyboardInput) {
+        self.raycaster.process_keyboard_input(event);
+    }
+
+    pub fn process_mouse_input(&mut self, event: DeviceEvent) {
+        self.raycaster.process_mouse_input(event);
     }
 
     pub fn on_surface_lost(&self) {

@@ -36,7 +36,7 @@ impl Raycaster {
 
         // DRAW FLOOR
         data.chunks_exact_mut(width * 4)
-            .skip((self.height as i32 / 2 - self.y_shearing as i32) as usize)
+            .skip((height as i32 / 2 - self.y_shearing as i32) as usize)
             .enumerate()
             .for_each(|(y, row)| {
                 let floor_row_dist =
@@ -94,7 +94,7 @@ impl Raycaster {
 
         // DRAW CEILING
         data.chunks_exact_mut(width * 4)
-            .take((self.height as i32 / 2 - self.y_shearing as i32) as usize)
+            .take((height as i32 / 2 - self.y_shearing as i32) as usize)
             .rev()
             .enumerate()
             .for_each(|(y, row)| {

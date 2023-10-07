@@ -6,7 +6,7 @@ mod wall;
 
 use glam::Vec3;
 use std::f32::consts::{PI, TAU};
-use winit::event::{ElementState, KeyboardInput, VirtualKeyCode};
+use winit::event::{ElementState, KeyboardInput, VirtualKeyCode, DeviceEvent};
 
 use crate::{
     map::{ObjectType, TestMap},
@@ -21,6 +21,8 @@ const FLY_UP_DOWN_SPEED: f32 = 0.01;
 const ONE_DEGREE_RAD: f32 = PI / 180.0;
 const MAX_FOV_RAD: f32 = 119.0 * ONE_DEGREE_RAD;
 const DEFAULT_PLANE_V: Vec3 = Vec3::new(0.0, 0.5, 0.0);
+const Y_SHEARING_SENSITIVITY: f32 = 0.8;
+const MOUSE_ROTATION_SPEED: f32 = 0.08;
 
 #[derive(Debug)]
 pub struct RayHit<'a> {
@@ -349,26 +351,36 @@ impl Raycaster {
             .max(0.0);
     }
 
-    pub fn process_input(&mut self, keyboard: KeyboardInput) {
-        if let Some(key) = keyboard.virtual_keycode {
-            let value = match keyboard.state {
+    pub fn process_mouse_input(&mut self, event: DeviceEvent) {
+        match event {
+            DeviceEvent::MouseMotion { delta } => {
+                self.y_shearing += delta.1 as f32 * Y_SHEARING_SENSITIVITY;
+                self.angle -= delta.0 as f32 * ONE_DEGREE_RAD * MOUSE_ROTATION_SPEED;
+            },
+            _ => ()
+        }
+    }
+
+    pub fn process_keyboard_input(&mut self, event: KeyboardInput) {
+        if let Some(key) = event.virtual_keycode {
+            let value = match event.state {
                 ElementState::Pressed => 1.0,
                 ElementState::Released => 0.0,
             };
 
             match key {
                 // Turn left:
-                VirtualKeyCode::A => self.turn_left = value,
+                VirtualKeyCode::Q => self.turn_left = value,
                 // Turn right:
-                VirtualKeyCode::D => self.turn_right = value,
+                VirtualKeyCode::E => self.turn_right = value,
                 // Move forward:
                 VirtualKeyCode::W => self.forward = value,
                 // Move backward:
                 VirtualKeyCode::S => self.backward = value,
                 // Strafe left:
-                VirtualKeyCode::Q => self.strafe_left = value,
+                VirtualKeyCode::A => self.strafe_left = value,
                 // Strafe right:
-                VirtualKeyCode::E => self.strafe_right = value,
+                VirtualKeyCode::D => self.strafe_right = value,
                 // Increase FOV:
                 VirtualKeyCode::Up => self.increase_fov = value,
                 // Increase FOV:

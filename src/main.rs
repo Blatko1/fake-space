@@ -58,7 +58,7 @@ fn main() {
                     ..
                 } => *control = ControlFlow::Exit,
                 WindowEvent::KeyboardInput { input, .. } => {
-                    state.process_input(input)
+                    state.process_keyboard_input(input)
                 }
                 WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
                     state.resize(*new_inner_size);
@@ -66,6 +66,9 @@ fn main() {
                 WindowEvent::Resized(new_size) => state.resize(new_size),
                 _ => (),
             },
+            Event::DeviceEvent { event, .. } => {
+                state.process_mouse_input(event)
+            }
             Event::RedrawRequested(..) => {
                 state.update();
 
