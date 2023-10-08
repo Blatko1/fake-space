@@ -2,7 +2,10 @@ use crate::{
     canvas::Canvas, draw::Raycaster, map::TestMap, textures::TextureManager,
     voxel::VoxelModelManager,
 };
-use winit::{dpi::PhysicalSize, event::{KeyboardInput, DeviceEvent}};
+use winit::{
+    dpi::PhysicalSize,
+    event::{DeviceEvent, KeyboardInput},
+};
 
 pub struct State {
     canvas: Canvas,

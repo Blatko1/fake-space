@@ -112,9 +112,9 @@ impl<const W: usize, const D: usize> Map<W, D> {
 /// Additionally, contains a non-tile `Void` type.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum ObjectType {
-    /// Non-transparent wall tile.
+    /// Non-transparent wall tile, possibly with modified height.
     FullWall(FullWallType),
-    /// A wall tile which contains transparent parts.
+    /// A wall tile which contains transparent parts or has modified height.
     TransparentWall(TransparentWallType),
     /// A voxel model object tile which possibly contains
     /// transparent/hollow parts.

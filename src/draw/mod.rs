@@ -6,10 +6,10 @@ mod wall;
 
 use glam::Vec3;
 use std::f32::consts::{PI, TAU};
-use winit::event::{ElementState, KeyboardInput, VirtualKeyCode, DeviceEvent};
+use winit::event::{DeviceEvent, ElementState, KeyboardInput, VirtualKeyCode};
 
 use crate::{
-    map::{ObjectType, TestMap},
+    map::{FloorType, MapTile, ObjectType, TestMap},
     textures::{TextureDataRef, TextureManager},
     voxel::{VoxelModelManager, VoxelModelRef},
 };
@@ -17,7 +17,7 @@ use crate::{
 // TODO rotation control with mouse and/or keyboard
 const MOVEMENT_SPEED: f32 = 0.1;
 const ROTATION_SPEED: f32 = 0.035;
-const FLY_UP_DOWN_SPEED: f32 = 0.01;
+const FLY_UP_DOWN_SPEED: f32 = 0.05;
 const ONE_DEGREE_RAD: f32 = PI / 180.0;
 const MAX_FOV_RAD: f32 = 119.0 * ONE_DEGREE_RAD;
 const DEFAULT_PLANE_V: Vec3 = Vec3::new(0.0, 0.5, 0.0);
@@ -32,6 +32,8 @@ pub struct RayHit<'a> {
     dir: Vec3,
     /// Perpetual distance from the raycaster to the hit point on tile (wall).
     wall_dist: f32,
+    last_wall_dist: f32,
+    max_height_on_path: usize,
     /// Which side of tile was hit.
     side: Side,
     /// Number in range [0.0, 1.0) which represents the x-coordinate of
@@ -93,6 +95,7 @@ pub struct Raycaster {
 
     // Specific use variables with goal to improve performance.
     four_width: usize,
+    f_height: f32,
     width_recip: f32,
     height_recip: f32,
     float_half_height: f32,
@@ -149,6 +152,7 @@ impl Raycaster {
             y_shearing: 0.0,
 
             four_width: 4 * width as usize,
+            f_height,
             width_recip: f_width.recip(),
             height_recip: f_height.recip(),
             float_half_height: height as f32 * 0.5,
@@ -212,6 +216,8 @@ impl Raycaster {
             // Iterates over all hit sides until it hits a non empty tile.
             // If a transparent tile is hit, continue iterating.
             // If another transparent tile was hit, store it as a final hit.
+            let mut last_perp_wall_dist = 0.0;
+            let max_height_on_path = (self.pos.y * self.f_height) as usize;
             loop {
                 // Distance to the first hit wall's x/z side if the wall isn't empty
                 let side = if side_dist_x < side_dist_z {
@@ -223,28 +229,30 @@ impl Raycaster {
                     side_dist_z += delta_dist_z;
                     Side::Horizontal
                 };
+                // Calculate perpetual wall distance from the camera and wall_x.
+                // wall_x represents which part of wall was hit from the left border (0.0)
+                // to the right border (0.99999) and everything in between in range <0.0, 1.0>
+                let (perp_wall_dist, wall_x) = match side {
+                    Side::Vertical => {
+                        let dist = side_dist_x - delta_dist_x;
+                        let wall_x = self.pos.z + dist * ray_dir.z;
+                        (dist.max(0.0), wall_x - wall_x.floor())
+                    }
+                    Side::Horizontal => {
+                        let dist = side_dist_z - delta_dist_z;
+                        let wall_x = self.pos.x + dist * ray_dir.x;
+                        (dist.max(0.0), wall_x - wall_x.floor())
+                    }
+                };
                 let tile = tile_map.get_tile(map_x as usize, map_z as usize);
                 // If the hit tile is not Tile::Empty (out of bounds != Tile::Empty) store data
                 if tile.object_tile != ObjectType::Empty {
-                    // Calculate perpetual wall distance from the camera and wall_x.
-                    // wall_x represents which part of wall was hit from the left border (0.0)
-                    // to the right border (0.99999) and everything in between in range <0.0, 1.0>
-                    let (perp_wall_dist, wall_x) = match side {
-                        Side::Vertical => {
-                            let dist = side_dist_x - delta_dist_x;
-                            let wall_x = self.pos.z + dist * ray_dir.z;
-                            (dist.max(0.0), wall_x - wall_x.floor())
-                        }
-                        Side::Horizontal => {
-                            let dist = side_dist_z - delta_dist_z;
-                            let wall_x = self.pos.x + dist * ray_dir.x;
-                            (dist.max(0.0), wall_x - wall_x.floor())
-                        }
-                    };
                     let mut hit = RayHit {
                         screen_x: x,
                         dir: ray_dir,
                         wall_dist: perp_wall_dist,
+                        last_wall_dist: last_perp_wall_dist,
+                        max_height_on_path,
                         side,
                         wall_x,
                         texture: TextureDataRef::default(),
@@ -255,7 +263,7 @@ impl Raycaster {
                         // If the hit tile has transparency, also calculate the Hit to the next closest
                         // Vertical or Horizontal side on the ray path and `continue`
                         ObjectType::TransparentWall(tile) => {
-                            let (perp_wall_dist, wall_x, side) = if side_dist_x
+                            let (perp_wall_dist_2, wall_x, side) = if side_dist_x
                                 < side_dist_z
                             {
                                 let dist = side_dist_x.max(0.0);
@@ -275,7 +283,9 @@ impl Raycaster {
                             let hit_2 = RayHit {
                                 screen_x: x,
                                 dir: ray_dir,
-                                wall_dist: perp_wall_dist,
+                                wall_dist: perp_wall_dist_2,
+                                last_wall_dist: perp_wall_dist,
+                                max_height_on_path,
                                 side,
                                 wall_x,
                                 texture: transparent_tex,
@@ -283,13 +293,16 @@ impl Raycaster {
                                 delta_dist_z,
                             };
                             hit.texture = transparent_tex;
+                            // Closer one
                             self.draw_wall(hit, data);
+                            // Further one
                             self.draw_wall(hit_2, data);
+                            last_perp_wall_dist = perp_wall_dist;
                         }
                         ObjectType::FullWall(tile) => {
                             hit.texture = textures.get_full_wall_tex(tile);
                             self.draw_wall(hit, data);
-                            break;
+                            last_perp_wall_dist = perp_wall_dist;
                         }
                         ObjectType::VoxelModel(model) => self.draw_voxel_model(
                             hit,
@@ -300,16 +313,29 @@ impl Raycaster {
                             },
                             data,
                         ),
+                        //ObjectType::Void => {
+                        //    self.draw_void(hit, data);
+                        //    break;
+                        //}
                         ObjectType::Void => {
-                            self.draw_void(hit, data);
                             break;
                         }
                         _ => (),
                     }
+                } else {
+                    self.draw_floor(
+                        last_perp_wall_dist,
+                        perp_wall_dist,
+                        0.41,
+                        textures.get_floor_tex(FloorType::MossyStone),
+                        x,
+                        data,
+                    );
+                    last_perp_wall_dist = perp_wall_dist;
                 }
             }
         });
-        self.draw_top_bottom(tile_map, textures, data);
+        //self.draw_top_bottom(tile_map, textures, data);
     }
 
     pub fn update(&mut self) {
@@ -348,16 +374,17 @@ impl Raycaster {
         self.pos.y = (self.pos.y
             + (self.fly_up - self.fly_down) * FLY_UP_DOWN_SPEED)
             .min(1.0 - f32::EPSILON)
-            .max(0.0);
+            .max(0.01);
     }
 
     pub fn process_mouse_input(&mut self, event: DeviceEvent) {
         match event {
             DeviceEvent::MouseMotion { delta } => {
                 self.y_shearing += delta.1 as f32 * Y_SHEARING_SENSITIVITY;
-                self.angle -= delta.0 as f32 * ONE_DEGREE_RAD * MOUSE_ROTATION_SPEED;
-            },
-            _ => ()
+                self.angle -=
+                    delta.0 as f32 * ONE_DEGREE_RAD * MOUSE_ROTATION_SPEED;
+            }
+            _ => (),
         }
     }
 
