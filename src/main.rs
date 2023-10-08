@@ -32,7 +32,7 @@ fn main() {
     let winit_window = WinitWindowBuilder::new().build(&event_loop).unwrap();
     winit_window.set_title("False Space");
 
-    let canvas = block_on(Canvas::init(&winit_window, 640, 480));
+    let canvas = block_on(Canvas::init(&winit_window, 320, 240));
 
     let mut state = State::new(canvas);
 

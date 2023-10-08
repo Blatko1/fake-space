@@ -1,4 +1,4 @@
-use crate::map::{CeilingType, FloorType, FullWallType, TransparentWallType};
+use crate::map::{BoundType, FullWallType, TransparentWallType};
 
 pub struct TextureManager {
     blue_brick: TextureData,
@@ -59,18 +59,12 @@ impl TextureManager {
     }
 
     #[inline]
-    pub fn get_floor_tex(&self, tile: FloorType) -> TextureDataRef {
+    pub fn get_bound_tex(&self, tile: BoundType) -> TextureDataRef {
         match tile {
-            FloorType::MossyStone => self.mossy_stone.as_ref(),
-            FloorType::Brick => self.blue_brick.as_ref(),
-        }
-    }
-
-    #[inline]
-    pub fn get_ceiling_tex(&self, tile: CeilingType) -> TextureDataRef {
-        match tile {
-            CeilingType::LightPlank => self.light_plank.as_ref(),
-            CeilingType::Brick => self.blue_brick.as_ref(),
+            BoundType::MossyStone => self.mossy_stone.as_ref(),
+            BoundType::Brick => self.blue_brick.as_ref(),
+            BoundType::Empty => todo!(),
+            BoundType::LightPlank => self.light_plank.as_ref(),
         }
     }
 }

@@ -101,7 +101,7 @@ impl Raycaster {
             first.copy_from_slice(&[255, 0, 0, 255]);
         };
     }
-    pub fn draw_top_bottom(
+    /*pub fn draw_top_bottom(
         &self,
         map: &TestMap,
         textures: &TextureManager,
@@ -240,5 +240,5 @@ impl Raycaster {
                     ceiling_pos.z += ceiling_step.z;
                 });
             });
-    }
+    }*/
 }

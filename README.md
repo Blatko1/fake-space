@@ -22,6 +22,7 @@ Excellent explanations about the raycaster [here](https://lodev.org/cgtutor/rayc
 - [ ] Add removable object walls (cool opening or moving animation with voxels)
 - [ ] Add collision detection (circle-rectangle collision detection)
 - [ ] Draw a skybox when outside of the map (looking at out of bound parts or at transparent ceiling)
+- [ ] Simplify map creation by making possible creating maps in external .txt files while following a defined format
 - [ ] Add different height walls while also their tops sides (floor), if seen from above, and bottom sides (ceilings), if seen from below
 - [ ] Add portals and a portal gun like in the Portal game
 - [ ] Add special tiles through which the player would fall to their demise

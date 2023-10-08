@@ -9,7 +9,7 @@ use std::f32::consts::{PI, TAU};
 use winit::event::{DeviceEvent, ElementState, KeyboardInput, VirtualKeyCode};
 
 use crate::{
-    map::{FloorType, MapTile, ObjectType, TestMap},
+    map::{BoundType, ObjectType, TestMap},
     textures::{TextureDataRef, TextureManager},
     voxel::{VoxelModelManager, VoxelModelRef},
 };
@@ -246,7 +246,7 @@ impl Raycaster {
                 };
                 let tile = tile_map.get_tile(map_x as usize, map_z as usize);
                 // If the hit tile is not Tile::Empty (out of bounds != Tile::Empty) store data
-                if tile.object_tile != ObjectType::Empty {
+                if tile.object != ObjectType::Empty {
                     let mut hit = RayHit {
                         screen_x: x,
                         dir: ray_dir,
@@ -259,25 +259,28 @@ impl Raycaster {
                         delta_dist_x,
                         delta_dist_z,
                     };
-                    match tile.object_tile {
+                    match tile.object {
                         // If the hit tile has transparency, also calculate the Hit to the next closest
                         // Vertical or Horizontal side on the ray path and `continue`
                         ObjectType::TransparentWall(tile) => {
-                            let (perp_wall_dist_2, wall_x, side) = if side_dist_x
-                                < side_dist_z
-                            {
-                                let dist = side_dist_x.max(0.0);
-                                let wall_x = self.pos.z + dist * ray_dir.z;
-                                (dist, wall_x - wall_x.floor(), Side::Vertical)
-                            } else {
-                                let dist = side_dist_z.max(0.0);
-                                let wall_x = self.pos.x + dist * ray_dir.x;
-                                (
-                                    dist,
-                                    wall_x - wall_x.floor(),
-                                    Side::Horizontal,
-                                )
-                            };
+                            let (perp_wall_dist_2, wall_x, side) =
+                                if side_dist_x < side_dist_z {
+                                    let dist = side_dist_x.max(0.0);
+                                    let wall_x = self.pos.z + dist * ray_dir.z;
+                                    (
+                                        dist,
+                                        wall_x - wall_x.floor(),
+                                        Side::Vertical,
+                                    )
+                                } else {
+                                    let dist = side_dist_z.max(0.0);
+                                    let wall_x = self.pos.x + dist * ray_dir.x;
+                                    (
+                                        dist,
+                                        wall_x - wall_x.floor(),
+                                        Side::Horizontal,
+                                    )
+                                };
                             let transparent_tex =
                                 textures.get_transparent_wall_tex(tile);
                             let hit_2 = RayHit {
@@ -327,7 +330,7 @@ impl Raycaster {
                         last_perp_wall_dist,
                         perp_wall_dist,
                         0.41,
-                        textures.get_floor_tex(FloorType::MossyStone),
+                        textures.get_bound_tex(BoundType::MossyStone),
                         x,
                         data,
                     );

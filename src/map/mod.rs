@@ -1,3 +1,6 @@
+mod map_parser;
+mod parse_error;
+
 use crate::voxel::VoxelModelType;
 
 pub struct TestMap {
@@ -23,18 +26,26 @@ impl TestMap {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy)]
 pub struct MapTile {
-    pub object_tile: ObjectType,
-    pub floor_tile: FloorType,
-    pub ceiling_tile: CeilingType,
+    pub object: ObjectType,
+    pub object_top: BoundType,
+    pub object_bottom: BoundType,
+    pub floor: BoundType,
+    pub ceiling: BoundType,
+    pub tile_top_height: f32,
+    pub tile_bottom_height: f32,
 }
 
 impl MapTile {
     pub const VOID: Self = MapTile {
-        object_tile: ObjectType::Void,
-        floor_tile: FloorType::DEFAULT,
-        ceiling_tile: CeilingType::DEFAULT,
+        object: ObjectType::Void,
+        object_top: BoundType::MossyStone,
+        object_bottom: BoundType::Brick,
+        floor: BoundType::Brick,
+        ceiling: BoundType::MossyStone,
+        tile_top_height: f32::INFINITY,
+        tile_bottom_height: f32::INFINITY,
     };
 }
 
@@ -71,16 +82,18 @@ impl<const W: usize, const D: usize> Map<W, D> {
                                 ((tile, object_data_tile), floor_data_tile),
                                 ceiling_data_tile,
                             )| {
-                                let object_tile =
-                                    ObjectType::from(object_data_tile);
-                                let floor_tile =
-                                    FloorType::from(floor_data_tile);
-                                let ceiling_tile =
-                                    CeilingType::from(ceiling_data_tile);
+                                let object = ObjectType::from(object_data_tile);
+                                let floor = BoundType::from(floor_data_tile);
+                                let ceiling =
+                                    BoundType::from(ceiling_data_tile);
                                 *tile = MapTile {
-                                    object_tile,
-                                    floor_tile,
-                                    ceiling_tile,
+                                    object,
+                                    object_top: BoundType::Brick,
+                                    object_bottom: BoundType::Brick,
+                                    floor,
+                                    ceiling,
+                                    tile_top_height: f32::INFINITY,
+                                    tile_bottom_height: f32::INFINITY,
                                 };
                             },
                         );
@@ -137,26 +150,13 @@ pub enum TransparentWallType {
     BlueGlass,
 }
 
-/// Represents a type of a floor tile.
+/// Represents a floor or a ceiling or a top or a bottom part of an object.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum FloorType {
+pub enum BoundType {
+    Empty,
     MossyStone,
-    Brick,
-}
-
-impl FloorType {
-    const DEFAULT: FloorType = FloorType::MossyStone;
-}
-
-/// Represents a type of a ceiling tile.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CeilingType {
     LightPlank,
     Brick,
-}
-
-impl CeilingType {
-    const DEFAULT: CeilingType = CeilingType::LightPlank;
 }
 
 impl From<u32> for ObjectType {
@@ -177,22 +177,12 @@ impl From<u32> for ObjectType {
     }
 }
 
-impl From<u32> for FloorType {
+impl From<u32> for BoundType {
     fn from(value: u32) -> Self {
         match value {
             0 => Self::MossyStone,
             1 => Self::Brick,
-            _ => Self::DEFAULT,
-        }
-    }
-}
-
-impl From<u32> for CeilingType {
-    fn from(value: u32) -> Self {
-        match value {
-            0 => Self::LightPlank,
-            1 => Self::Brick,
-            _ => Self::DEFAULT,
+            _ => Self::Empty,
         }
     }
 }
@@ -218,6 +208,25 @@ const TEST_MAP_OBJECT_DATA: [[u32; TEST_MAP_WIDTH as usize]; TEST_MAP_DEPTH as u
     [1, 0, 0, 0, 0, 9, 0, 0, 2, 0, 0, 0, 1, 0, 0, 1],
     [1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1],
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+];
+#[rustfmt::skip]
+const TEST_MAP_OBJECT_TOP_HEIGHT: [[f32; TEST_MAP_WIDTH as usize]; TEST_MAP_DEPTH as usize] = [
+    [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0],
+    [1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0],
+    [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    [1.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 0.0, 0.0, 0.0],
+    [1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0],
+    [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+    [1.0, 0.0, 0.0, 1.0, 3.0, 2.0, 3.0, 2.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0],
+    [1.0, 0.0, 0.0, 0.0, 3.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0],
+    [1.0, 0.0, 0.0, 0.0, 0.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0],
+    [1.0, 0.0, 0.0, 0.0, 0.0, 3.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0],
+    [1.0, 0.0, 0.0, 0.0, 0.0, 6.0, 0.0, 0.0, 4.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0],
+    [1.0, 0.0, 0.0, 0.0, 0.0, 7.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0],
+    [1.0, 0.0, 0.0, 0.0, 0.0, 8.0, 0.0, 0.0, 4.0, 2.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0],
+    [1.0, 0.0, 0.0, 0.0, 0.0, 9.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0],
+    [1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 1.0],
+    [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
 ];
 #[rustfmt::skip]
 const TEST_MAP_FLOOR_DATA: [[u32; TEST_MAP_WIDTH as usize]; TEST_MAP_DEPTH as usize] = [
