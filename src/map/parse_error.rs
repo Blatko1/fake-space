@@ -10,6 +10,11 @@ pub enum MapParseError {
     MissingDirectiveWord,
     InvalidDirectiveWord(usize),
     UnknownDirectiveWord(usize),
+
+    FalseExpression(usize),
+    UnknownLeftOperand(usize),
+    InvalidValueType(usize),
+    InsufficientTileDefinitions(usize),
 }
 
 impl Display for MapParseError {

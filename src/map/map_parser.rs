@@ -1,4 +1,7 @@
-use std::{iter::Enumerate, str::Lines};
+use std::{
+    iter::Enumerate,
+    str::{FromStr, Lines},
+};
 
 use crate::map;
 
@@ -50,9 +53,14 @@ fn parse(data: &str) -> Result<((u32, u32), Vec<MapTile>), MapParseError> {
                 }
             },
         )
-        .unwrap_or(lines.clone().count()-1)+1;
+        .unwrap_or(lines.clone().count() - 1)
+        + 1;
     let tile_lines_iter = lines.clone().take(tile_element_count);
     let lines = lines.skip(tile_element_count);
+    let a = match directive {
+        DirectiveWord::Variables => todo!(),
+        DirectiveWord::Tiles => parse_tiles(tile_lines_iter)?,
+    };
 
     Ok((dimensions, tiles))
 }
@@ -122,9 +130,115 @@ fn is_directive_word(line: &str) -> bool {
     }
 }
 
-//fn parse_tiles() -> Result<Vec<MapTile>, MapParseError> {
-//
-//}
+const TILE_DEFINITION_KEYWORDS: &[char] = &['o', 't', 'b', 'f', 'c'];
+
+fn parse_tiles<'a, L: Iterator<Item = (usize, &'a str)> + Clone>(
+    lines: L,
+) -> Result<Vec<MapTile>, MapParseError> {
+    let tiles = Vec::with_capacity(lines.clone().count());
+    // Iterate over every line:
+    for (i, line) in lines {
+        let line = line.trim();
+        let tile = parse_tile(line, i)?;
+    }
+    Ok(tiles)
+}
+// TODO get rid of asserts afterwards maybe
+// TODO make it so index is needed to be given to err only at the main callsite.
+fn parse_tile(line: &str, index: usize) -> Result<MapTile, MapParseError> {
+    let mut object_type = None;
+    let mut object_top_type = None;
+    let mut object_bottom_type = None;
+    let mut floor_type = None;
+    let mut ceiling_type = None;
+    let mut object_top_height = None;
+    let mut object_bottom_height = None;
+
+    // Split the line into multiple words where 'spaces' and 'tabs'
+    // are considered separators. Get rid of words with no text.
+    let expressions = line
+        .split(|c| matches!(c, ' ' | '\t'))
+        .filter(|k| !k.trim().is_empty());
+    for expr in expressions {
+        // Split the expression into operands where as the separator
+        // is considered a '=' sign or a ':' sign. (e.g. obj:GRASS or o=BRICK)
+        let operands: Vec<&str> =
+            expr.split(|c| matches!(c, '=' | ':')).collect();
+        assert!(operands.len() > 0);
+        match operands.len() {
+            1 => {
+                if is_variable_keyword(operands.first().unwrap()) {
+                    todo!();
+                }
+            }
+            2 => (),
+            _ => return Err(MapParseError::FalseExpression(index)),
+        }
+        let left = operands.first().unwrap();
+        let right = operands.last().unwrap();
+
+        match *left {
+            // Object type definition:
+            "o" | "obj" | "object" => todo!(),
+            // Object top side type definition:
+            "ot" | "o_top" | "obj_top" | "object_top" => todo!(),
+            // Object bottom side type definition:
+            "ob" | "o_bot" | "o_bottom" | "obj_bot" | "obj_bottom"
+            | "object_bottom" => todo!(),
+            // Floor type definition:
+            "f" | "floor" => todo!(),
+            // Ceiling type definition:
+            "c" | "ceiling" => todo!(),
+            // Top object part height value:
+            "th" | "top_h" | "top_height" | "t_height" => {
+                object_top_height = Some(parse_from_str(right, index)?)
+            }
+            // Bottom object part height value:
+            "bh" | "bot_h" | "bottom_h" | "b_height" | "bot_height"
+            | "bottom_height" => {
+                object_bottom_height = Some(parse_from_str(right, index)?)
+            }
+            _ => return Err(MapParseError::UnknownLeftOperand(index)),
+        }
+    }
+    if object_type.is_none()
+        || object_top_type.is_none()
+        || object_bottom_type.is_none()
+        || floor_type.is_none()
+        || ceiling_type.is_none()
+        || object_top_height.is_none()
+        || object_bottom_type.is_none()
+    {
+        return Err(MapParseError::InsufficientTileDefinitions(index));
+    }
+    let tile = MapTile {
+        object: object_type.unwrap(),
+        object_top: object_top_type.unwrap(),
+        object_bottom: object_bottom_type.unwrap(),
+        floor: floor_type.unwrap(),
+        ceiling: ceiling_type.unwrap(),
+        obj_top_height: object_top_height.unwrap(),
+        obj_bottom_height: object_bottom_height.unwrap(),
+    };
+    todo!()
+}
+
+fn parse_from_str<P: FromStr>(
+    s: &str,
+    index: usize,
+) -> Result<P, MapParseError> {
+    match s.parse() {
+        Ok(p) => return Ok(p),
+        Err(_) => return Err(MapParseError::InvalidValueType(index)),
+    }
+}
+
+/// Takes the keyword which only contains text without spaces or similar.
+/// Checks if the provided word could be a variable keyword by checking
+/// if it has a '#' sign at the beginning.
+fn is_variable_keyword(word: &str) -> bool {
+    word.chars().nth(0).unwrap() == '#'
+}
 
 #[derive(Debug, PartialEq, Eq)]
 enum DirectiveWord {

@@ -1,0 +1,20 @@
+10x10
+// Keys: o->object, t->top, b->bottom, ot->object top, ob->object bottom,
+//       f->floor, c-> ceiling
+
+#vars
+$grass -> o:BLUEBRICK th:1.0 bh:1.0 ot:BRICK ob:BRICK f:LIGHTPLANK c:LIGHTPLANK
+$topBottom -> f=LIGHTPLANK c=LIGHTPLANK
+
+#tiles
+// First row:
+o:LIGHTPLANK t=1.0 b=1.0 ot=BRICK ob=BRICK f=LIGHTPLANK c=LIGHTPLANK
+o:LIGHTPLANK t=1.0 b=1.0 ot=BRICK ob=BRICK $topBottom
+$grass t=1.5 b=0.8
+$grass
+$grass //5
+$grass:4
+$grass //10
+
+// Second row:
+$grass:10

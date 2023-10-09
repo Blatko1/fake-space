@@ -33,8 +33,8 @@ pub struct MapTile {
     pub object_bottom: BoundType,
     pub floor: BoundType,
     pub ceiling: BoundType,
-    pub tile_top_height: f32,
-    pub tile_bottom_height: f32,
+    pub obj_top_height: f32,
+    pub obj_bottom_height: f32,
 }
 
 impl MapTile {
@@ -44,8 +44,8 @@ impl MapTile {
         object_bottom: BoundType::Brick,
         floor: BoundType::Brick,
         ceiling: BoundType::MossyStone,
-        tile_top_height: f32::INFINITY,
-        tile_bottom_height: f32::INFINITY,
+        obj_top_height: f32::INFINITY,
+        obj_bottom_height: f32::INFINITY,
     };
 }
 
@@ -92,8 +92,8 @@ impl<const W: usize, const D: usize> Map<W, D> {
                                     object_bottom: BoundType::Brick,
                                     floor,
                                     ceiling,
-                                    tile_top_height: f32::INFINITY,
-                                    tile_bottom_height: f32::INFINITY,
+                                    obj_top_height: f32::INFINITY,
+                                    obj_bottom_height: f32::INFINITY,
                                 };
                             },
                         );
