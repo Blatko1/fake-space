@@ -12,12 +12,12 @@ use crate::{
 use super::{blend, Raycaster};
 
 impl Raycaster {
-    pub fn draw_floor<'a>(
+    pub fn draw_floor(
         &self,
         from_wall_dist: f32,
         to_wall_dist: f32,
         floor_height_bottom: f32,
-        texture_data: TextureDataRef<'a>,
+        texture_data: TextureDataRef<'_>,
         draw_x: u32,
         data: &mut [u8],
     ) {

@@ -2,19 +2,32 @@ use std::{error::Error, fmt::Display};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum MapParseError {
-    IllegalCharacter(char, usize),
+    Dimensions(DimensionsError),
+    Directive(DirectiveError),
+    TileDefinition(TileDefinitionError),
+}
 
+#[derive(Debug, PartialEq, Eq)]
+pub enum DimensionsError {
+    IllegalCharacter(usize),
     MissingDimensions,
-    InvalidDimensionsFormat(usize),
+    InvalidDimensions(usize),
+}
 
-    MissingDirectiveWord,
+#[derive(Debug, PartialEq, Eq)]
+pub enum DirectiveError {
+    MissingTilesDirective,
+    MultipleSameDirectives,
     InvalidDirectiveWord(usize),
     UnknownDirectiveWord(usize),
+}
 
-    FalseExpression(usize),
+#[derive(Debug, PartialEq, Eq)]
+pub enum TileDefinitionError {
+    MissingTileDefinitions(usize),
+    InvalidExpression(usize),
     UnknownLeftOperand(usize),
     InvalidValueType(usize),
-    InsufficientTileDefinitions(usize),
 }
 
 impl Display for MapParseError {
@@ -24,3 +37,21 @@ impl Display for MapParseError {
 }
 
 impl Error for MapParseError {}
+
+impl From<DimensionsError> for MapParseError {
+    fn from(value: DimensionsError) -> Self {
+        Self::Dimensions(value)
+    }
+}
+
+impl From<DirectiveError> for MapParseError {
+    fn from(value: DirectiveError) -> Self {
+        Self::Directive(value)
+    }
+}
+
+impl From<TileDefinitionError> for MapParseError {
+    fn from(value: TileDefinitionError) -> Self {
+        Self::TileDefinition(value)
+    }
+}

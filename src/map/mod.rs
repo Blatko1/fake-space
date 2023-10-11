@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 mod map_parser;
 mod parse_error;
 

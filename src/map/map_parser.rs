@@ -1,11 +1,11 @@
-use std::{
-    iter::Enumerate,
-    str::{FromStr, Lines},
+use std::{io::Lines, str::FromStr};
+
+use crate::map::parse_error::TileDefinitionError;
+
+use super::{
+    parse_error::{DimensionsError, DirectiveError, MapParseError},
+    MapTile,
 };
-
-use crate::map;
-
-use super::{parse_error::MapParseError, MapTile};
 
 struct Map {
     width: usize,
@@ -19,133 +19,141 @@ impl Map {
     }
 }
 
-fn parse(data: &str) -> Result<((u32, u32), Vec<MapTile>), MapParseError> {
+pub(super) fn parse(
+    data: &str,
+) -> Result<((u32, u32), Vec<MapTile>), MapParseError> {
     // Split the input data into lines, remove the lines which
     // only contain comments, remove lines with no text,
     // remove the commented out parts from lines with content.
     let mut lines = data
         .lines()
         .enumerate()
-        .map(|(i, line)| (i, line.split("//").nth(0).unwrap()))
-        .filter(|(_, line)| !line.trim().is_empty());
+        .map(|(i, line)| (i, line.split("//").next().unwrap().trim()))
+        .filter(|(_, line)| !line.is_empty());
+    let content_line_count = lines.clone().count();
     // Parse dimensions:
     let dimensions = match lines.next() {
-        Some((i, l)) => parse_dimensions(l, i)?,
-        None => return Err(MapParseError::MissingDimensions),
+        Some((i, l)) => parse_dimensions(i, l)?,
+        None => return Err(DimensionsError::MissingDimensions)?,
     };
 
     let map_size = (dimensions.0 * dimensions.1) as usize;
     let tiles = Vec::with_capacity(map_size);
 
-    // The next line should contain a directive word like 'vars:' or 'tiles:'.
-    let directive = match lines.next() {
-        Some((i, l)) => parse_directive_word(l, i)?,
-        None => return Err(MapParseError::MissingDirectiveWord),
-    };
-    let tile_element_count = lines
+    match lines
         .clone()
-        .position(
-            |(_, line)| {
-                if is_directive_word(line) {
-                    true
-                } else {
-                    false
+        .map(|(_, l)| l.matches("#tiles").count())
+        .sum()
+    {
+        0 | 1 => (),
+        _ => return Err(DirectiveError::MultipleSameDirectives)?,
+    }
+    match lines
+        .clone()
+        .map(|(_, l)| l.matches("#variables").count())
+        .sum()
+    {
+        1 => (),
+        0 => return Err(DirectiveError::MissingTilesDirective)?,
+        _ => return Err(DirectiveError::MultipleSameDirectives)?,
+    }
+    let mut lines = lines.enumerate();
+    while let Some((_real_index, (index, line))) = lines.next() {
+        if is_directive_word(line) {
+            let lines_temp = lines.clone();
+            let expressions_count = lines_temp
+                .enumerate()
+                .find(|(_, (_, (_, l)))| is_directive_word(l))
+                .map(|(_, (_, (i, _)))| i)
+                .unwrap_or(content_line_count - (index + 1));
+            let expressions = lines
+                .clone()
+                .take(expressions_count)
+                .map(|(i_real, (_, l))| (i_real, l));
+            lines.nth(expressions_count - 1);
+            let directive = parse_directive_word(index, line)?;
+            match directive {
+                DirectiveWord::Variables => todo!(),
+                DirectiveWord::Tiles => {
+                    parse_tiles(expressions)?;
                 }
-            },
-        )
-        .unwrap_or(lines.clone().count() - 1)
-        + 1;
-    let tile_lines_iter = lines.clone().take(tile_element_count);
-    let lines = lines.skip(tile_element_count);
-    let a = match directive {
-        DirectiveWord::Variables => todo!(),
-        DirectiveWord::Tiles => parse_tiles(tile_lines_iter)?,
-    };
+            }
+        }
+    }
+
+    //if tiles == 0 {
+    //    return Err(/*Nema podataka za tile */)
+    //}
 
     Ok((dimensions, tiles))
 }
 
-fn parse_dimensions(
-    line: &str,
+pub(super) fn parse_dimensions(
     index: usize,
-) -> Result<(u32, u32), MapParseError> {
-    let mut line = line.to_string();
-    line.retain(|c| ![' ', '\t'].contains(&c));
-    // The line should have more 3 or more chars (minimal example 9x9)
-    if line.chars().count() < 3 {
-        return Err(MapParseError::InvalidDimensionsFormat(index));
+    line: &str,
+) -> Result<(u32, u32), DimensionsError> {
+    // There should be only one 'x' separator and only one
+    // value to the left and one to the right.
+    let operands: Vec<&str> = line.split('x').collect();
+    if operands.len() != 2 {
+        return Err(DimensionsError::InvalidDimensions(index));
     }
-    // Check if there are any illegal characters is the line.
-    if let Some(illegal_char) =
-        line.chars().find(|c| !matches!(c, '0'..='9' | 'x'))
+    if operands
+        .iter()
+        .any(|o| o.split_whitespace().count() != 1)
     {
-        return Err(MapParseError::IllegalCharacter(illegal_char, index));
+        return Err(DimensionsError::InvalidDimensions(index));
     }
-    // There should be only one 'x' separator.
-    if line.matches('x').count() != 1 {
-        return Err(MapParseError::InvalidDimensionsFormat(index));
+    let d1_str = operands.first().unwrap().split_whitespace().next().unwrap();
+    let d2_str = operands.last().unwrap().split_whitespace().next().unwrap();
+    // Check if there are any illegal characters is the line.
+    if d1_str.chars().any(|c| !c.is_ascii_digit())
+        || d2_str.chars().any(|c| !c.is_ascii_digit())
+    {
+        return Err(DimensionsError::IllegalCharacter(index));
     }
-    let dimensions: Vec<&str> = line.split('x').collect();
-    assert_eq!(dimensions.len(), 2);
-    // Make sure that there is a number
-    // left and right from the 'x' separator.
-    if dimensions.iter().any(|d| d.is_empty()) {
-        return Err(MapParseError::InvalidDimensionsFormat(index));
-    }
-    Ok((
-        dimensions.get(0).unwrap().parse().unwrap(),
-        dimensions.get(1).unwrap().parse().unwrap(),
-    ))
+    let (d1, d2) = match (d1_str.parse(), d2_str.parse()) {
+        (Ok(d1), Ok(d2)) => (d1, d2),
+        _ => return Err(DimensionsError::InvalidDimensions(index)),
+    };
+    Ok((d1, d2))
 }
 
-fn parse_directive_word(
-    line: &str,
+pub(super) fn parse_directive_word(
     index: usize,
-) -> Result<DirectiveWord, MapParseError> {
-    let mut line = line.to_string();
-    line.retain(|c| ![' ', '\t'].contains(&c));
-    let line = line.trim_end_matches(':');
-
-    if line.chars().count() < 2 {
-        return Err(MapParseError::InvalidDirectiveWord(index));
+    line: &str,
+) -> Result<DirectiveWord, DirectiveError> {
+    if !is_directive_word(line) {
+        return Err(DirectiveError::InvalidDirectiveWord(index));
     }
-    if line.chars().nth(0).unwrap() != '#' {
-        return Err(MapParseError::InvalidDirectiveWord(index));
+    let directive_word: Vec<&str> = line[1..].split_whitespace().collect();
+    if directive_word.len() != 1 {
+        return Err(DirectiveError::InvalidDirectiveWord(index));
     }
-    let directive = match line.get(1..).unwrap() {
-        "v" | "vars" | "variables" => DirectiveWord::Variables,
-        "t" | "tiles" => DirectiveWord::Tiles,
-        _ => return Err(MapParseError::UnknownDirectiveWord(index)),
+    let directive = match *directive_word.first().unwrap() {
+        "variables" => DirectiveWord::Variables,
+        "tiles" => DirectiveWord::Tiles,
+        _ => return Err(DirectiveError::UnknownDirectiveWord(index)),
     };
     Ok(directive)
 }
 
-fn is_directive_word(line: &str) -> bool {
-    let mut line = line.to_string();
-    line.retain(|c| ![' ', '\t'].contains(&c));
-    if line.chars().nth(0).unwrap() == '#' {
-        true
-    } else {
-        false
-    }
-}
-
-const TILE_DEFINITION_KEYWORDS: &[char] = &['o', 't', 'b', 'f', 'c'];
-
-fn parse_tiles<'a, L: Iterator<Item = (usize, &'a str)> + Clone>(
-    lines: L,
+pub(super) fn parse_tiles<'a, I: Iterator<Item = (usize, &'a str)> + Clone>(
+    lines: I,
 ) -> Result<Vec<MapTile>, MapParseError> {
-    let tiles = Vec::with_capacity(lines.clone().count());
+    let mut tiles = Vec::with_capacity(lines.clone().count());
     // Iterate over every line:
     for (i, line) in lines {
-        let line = line.trim();
-        let tile = parse_tile(line, i)?;
+        tiles.push(parse_tile(line, i)?);
     }
     Ok(tiles)
 }
 // TODO get rid of asserts afterwards maybe
 // TODO make it so index is needed to be given to err only at the main callsite.
-fn parse_tile(line: &str, index: usize) -> Result<MapTile, MapParseError> {
+pub(super) fn parse_tile(
+    line: &str,
+    index: usize,
+) -> Result<MapTile, TileDefinitionError> {
     let mut object_type = None;
     let mut object_top_type = None;
     let mut object_bottom_type = None;
@@ -164,15 +172,15 @@ fn parse_tile(line: &str, index: usize) -> Result<MapTile, MapParseError> {
         // is considered a '=' sign or a ':' sign. (e.g. obj:GRASS or o=BRICK)
         let operands: Vec<&str> =
             expr.split(|c| matches!(c, '=' | ':')).collect();
-        assert!(operands.len() > 0);
+        assert!(!operands.is_empty());
         match operands.len() {
             1 => {
-                if is_variable_keyword(operands.first().unwrap()) {
+                if is_directive_word(operands.first().unwrap()) {
                     todo!();
                 }
             }
             2 => (),
-            _ => return Err(MapParseError::FalseExpression(index)),
+            _ => return Err(TileDefinitionError::InvalidExpression(index))?,
         }
         let left = operands.first().unwrap();
         let right = operands.last().unwrap();
@@ -198,7 +206,7 @@ fn parse_tile(line: &str, index: usize) -> Result<MapTile, MapParseError> {
             | "bottom_height" => {
                 object_bottom_height = Some(parse_from_str(right, index)?)
             }
-            _ => return Err(MapParseError::UnknownLeftOperand(index)),
+            _ => return Err(TileDefinitionError::UnknownLeftOperand(index)),
         }
     }
     if object_type.is_none()
@@ -209,7 +217,7 @@ fn parse_tile(line: &str, index: usize) -> Result<MapTile, MapParseError> {
         || object_top_height.is_none()
         || object_bottom_type.is_none()
     {
-        return Err(MapParseError::InsufficientTileDefinitions(index));
+        return Err(TileDefinitionError::MissingTileDefinitions(index));
     }
     let tile = MapTile {
         object: object_type.unwrap(),
@@ -223,107 +231,22 @@ fn parse_tile(line: &str, index: usize) -> Result<MapTile, MapParseError> {
     todo!()
 }
 
-fn parse_from_str<P: FromStr>(
+pub(super) fn parse_from_str<P: FromStr>(
     s: &str,
     index: usize,
-) -> Result<P, MapParseError> {
+) -> Result<P, TileDefinitionError> {
     match s.parse() {
-        Ok(p) => return Ok(p),
-        Err(_) => return Err(MapParseError::InvalidValueType(index)),
+        Ok(p) => Ok(p),
+        Err(_) => Err(TileDefinitionError::InvalidValueType(index)),
     }
 }
 
-/// Takes the keyword which only contains text without spaces or similar.
-/// Checks if the provided word could be a variable keyword by checking
-/// if it has a '#' sign at the beginning.
-fn is_variable_keyword(word: &str) -> bool {
-    word.chars().nth(0).unwrap() == '#'
+pub(super) fn is_directive_word(line: &str) -> bool {
+    line.starts_with('#')
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum DirectiveWord {
+pub(super) enum DirectiveWord {
     Variables,
     Tiles,
-}
-
-#[test]
-fn parse_dimensions_test() {
-    let i = 1;
-    let line = "10x10";
-    assert_eq!(parse_dimensions(line, i), Ok((10, 10)));
-    let line = "1x100";
-    assert_eq!(parse_dimensions(line, i), Ok((1, 100)));
-    let line = "    11x27   ";
-    assert_eq!(parse_dimensions(line, i), Ok((11, 27)));
-    let line = "    11  x   27   ";
-    assert_eq!(parse_dimensions(line, i), Ok((11, 27)));
-    let line = "x10";
-    assert_eq!(
-        parse_dimensions(line, i),
-        Err(MapParseError::InvalidDimensionsFormat(i))
-    );
-    let line = "10x";
-    assert_eq!(
-        parse_dimensions(line, i),
-        Err(MapParseError::InvalidDimensionsFormat(i))
-    );
-    let line = "x";
-    assert_eq!(
-        parse_dimensions(line, i),
-        Err(MapParseError::InvalidDimensionsFormat(i))
-    );
-    let line = "1010";
-    assert_eq!(
-        parse_dimensions(line, i),
-        Err(MapParseError::InvalidDimensionsFormat(i))
-    );
-    let line = "x10x";
-    assert_eq!(
-        parse_dimensions(line, i),
-        Err(MapParseError::InvalidDimensionsFormat(i))
-    );
-    let line = "xxx";
-    assert_eq!(
-        parse_dimensions(line, i),
-        Err(MapParseError::InvalidDimensionsFormat(i))
-    );
-    let line = "x1cx";
-    assert_eq!(
-        parse_dimensions(line, i),
-        Err(MapParseError::IllegalCharacter('c', i))
-    );
-    let line = "11cx27";
-    assert_eq!(
-        parse_dimensions(line, i),
-        Err(MapParseError::IllegalCharacter('c', i))
-    );
-}
-
-#[test]
-fn parse_directive_word_test() {
-    let i = 1;
-    let line = "#vars:";
-    assert_eq!(parse_directive_word(line, i), Ok(DirectiveWord::Variables));
-    let line = "#t";
-    assert_eq!(parse_directive_word(line, i), Ok(DirectiveWord::Tiles));
-    let line = "vars:";
-    assert_eq!(
-        parse_directive_word(line, i),
-        Err(MapParseError::InvalidDirectiveWord(i))
-    );
-    let line = "varst";
-    assert_eq!(
-        parse_directive_word(line, i),
-        Err(MapParseError::InvalidDirectiveWord(i))
-    );
-    let line = "#varst";
-    assert_eq!(
-        parse_directive_word(line, i),
-        Err(MapParseError::UnknownDirectiveWord(i))
-    );
-    let line = "#tt;";
-    assert_eq!(
-        parse_directive_word(line, i),
-        Err(MapParseError::UnknownDirectiveWord(i))
-    );
 }
