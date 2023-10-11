@@ -1,4 +1,4 @@
-use std::{io::Lines, str::FromStr};
+use std::str::FromStr;
 
 use crate::map::parse_error::TileDefinitionError;
 
@@ -42,7 +42,7 @@ pub(super) fn parse(
 
     match lines
         .clone()
-        .map(|(_, l)| l.matches("#tiles").count())
+        .map(|(_, l)| l.matches("#variables").count())
         .sum()
     {
         0 | 1 => (),
@@ -50,7 +50,7 @@ pub(super) fn parse(
     }
     match lines
         .clone()
-        .map(|(_, l)| l.matches("#variables").count())
+        .map(|(_, l)| l.matches("#tiles").count())
         .sum()
     {
         1 => (),
@@ -58,26 +58,28 @@ pub(super) fn parse(
         _ => return Err(DirectiveError::MultipleSameDirectives)?,
     }
     let mut lines = lines.enumerate();
-    while let Some((_real_index, (index, line))) = lines.next() {
+    while let Some((index, (_real_index, line))) = lines.next() {
         if is_directive_word(line) {
             let lines_temp = lines.clone();
             let expressions_count = lines_temp
                 .enumerate()
                 .find(|(_, (_, (_, l)))| is_directive_word(l))
-                .map(|(_, (_, (i, _)))| i)
+                .map(|(i, (_, (_, _)))| i)
                 .unwrap_or(content_line_count - (index + 1));
             let expressions = lines
                 .clone()
                 .take(expressions_count)
-                .map(|(i_real, (_, l))| (i_real, l));
+                .map(|(_, (i_real, l))| (i_real, l));
             lines.nth(expressions_count - 1);
+            
             let directive = parse_directive_word(index, line)?;
             match directive {
                 DirectiveWord::Variables => todo!(),
                 DirectiveWord::Tiles => {
-                    parse_tiles(expressions)?;
+                    println!("tiles: {:?}", parse_tiles(expressions)?);
                 }
             }
+            
         }
     }
 

@@ -1,7 +1,9 @@
 use crate::map::{
     map_parser::{parse_dimensions, parse_directive_word, DirectiveWord},
-    parse_error::{DimensionsError, DirectiveError, MapParseError},
+    parse_error::{DimensionsError, DirectiveError},
 };
+
+use super::map_parser::parse;
 
 #[test]
 fn parse_dimensions_test() {
@@ -93,4 +95,9 @@ fn parse_directive_word_test() {
         parse_directive_word(i, line),
         Err(DirectiveError::UnknownDirectiveWord(i))
     );
+}
+
+#[test]
+fn map_parser_test() {
+    parse(include_str!("../../maps/map1.txt")).unwrap();
 }

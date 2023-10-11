@@ -2,9 +2,9 @@
 // Keys: o->object, t->top, b->bottom, ot->object top, ob->object bottom,
 //       f->floor, c-> ceiling
 
-#vars
-$grass = o:BLUEBRICK th:1.0 bh:1.0 ot:BRICK ob:BRICK f:LIGHTPLANK c:LIGHTPLANK;
-$topBottom = f:LIGHTPLANK c:LIGHTPLANK;
+//#vars
+//$grass = o:BLUEBRICK th:1.0 bh:1.0 ot:BRICK ob:BRICK f:LIGHTPLANK c:LIGHTPLANK;
+//$topBottom = f:LIGHTPLANK c:LIGHTPLANK;
 
 #tiles
 // First row
