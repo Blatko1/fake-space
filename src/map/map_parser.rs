@@ -76,7 +76,7 @@ pub(super) fn parse(
             match directive {
                 DirectiveWord::Variables => todo!(),
                 DirectiveWord::Tiles => {
-                    println!("tiles: {:?}", parse_tiles(expressions)?);
+                    parse_tiles(expressions)?
                 }
             }
             
@@ -141,12 +141,16 @@ pub(super) fn parse_directive_word(
 }
 
 pub(super) fn parse_tiles<'a, I: Iterator<Item = (usize, &'a str)> + Clone>(
-    lines: I,
-) -> Result<Vec<MapTile>, MapParseError> {
+    mut lines: I,
+) -> Result<Vec<MapTile>, TileDefinitionError> {
     let mut tiles = Vec::with_capacity(lines.clone().count());
-    // Iterate over every line:
-    for (i, line) in lines {
-        tiles.push(parse_tile(line, i)?);
+    
+    while let Some((index, line)) = lines.next() {
+        let number: u32 = match line.chars().next().unwrap().to_digit(10) {
+            Some(n) => n,
+            None => return Err(TileDefinitionError::MissingTileNumber(index)),
+        };
+
     }
     Ok(tiles)
 }

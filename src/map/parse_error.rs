@@ -28,6 +28,7 @@ pub enum TileDefinitionError {
     InvalidExpression(usize),
     UnknownLeftOperand(usize),
     InvalidValueType(usize),
+    MissingTileNumber(usize)
 }
 
 impl Display for MapParseError {
