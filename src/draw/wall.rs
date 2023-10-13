@@ -3,7 +3,7 @@ use super::{blend, RayHit, Raycaster, Side};
 // TODO write tests for each draw call function to check for overflows
 impl Raycaster {
     // Draws full and transparent walls.
-    pub fn draw_wall(&self, hit: RayHit, data: &mut [u8]) {
+    /*pub fn draw_wall(&self, hit: RayHit, data: &mut [u8]) {
         // Find out what texture to use when drawing
         let tex = hit.texture;
         let (tex_width, tex_height, bottom_height, top_height) = (
@@ -37,16 +37,6 @@ impl Raycaster {
         let end = (self.float_half_height + top_height)
             .max(0.0)
             .min(self.height as f32 - 1.0) as usize;
-
-        /*if hit.max_height_on_path
-        self.draw_floor(
-            last_perp_wall_dist,
-            perp_wall_dist,
-            0.41,
-            textures.get_floor_tex(FloorType::MossyStone),
-            x,
-            data,
-        );*/
 
         // Texture mapping variables
         let tex_x = match hit.side {
@@ -91,7 +81,7 @@ impl Raycaster {
                 // TODO maybe make it so `tex_y_step` is being subtracted.
                 tex_y += tex_y_step;
             });
-    }
+    }*/
 }
 
 #[inline]

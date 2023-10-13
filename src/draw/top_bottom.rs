@@ -4,10 +4,7 @@
 // is difficult due to existence of transparent walls
 // and their fully transparent parts
 // TODO problem! adding unsafe could improve performance
-use crate::{
-    map::{MapTile, TestMap},
-    textures::{TextureDataRef, TextureManager},
-};
+use crate::map::MapTile;
 
 use super::{blend, Raycaster};
 
@@ -17,7 +14,7 @@ impl Raycaster {
         from_wall_dist: f32,
         to_wall_dist: f32,
         floor_height_bottom: f32,
-        texture_data: TextureDataRef<'_>,
+        //texture_data: TextureDataRef<'_>,
         draw_x: u32,
         data: &mut [u8],
     ) {
@@ -47,7 +44,7 @@ impl Raycaster {
 
         //println!("draw_from: {draw_from}, draw_to: {draw_to}");
         let ray_dir = self.dir - self.plane_h;
-        let floor_tex = texture_data;
+        let floor_tex: u32 = todo!(); //texture_data;
         let tile_step_factor = self.plane_h * 2.0 * self.width_recip;
 
         data.chunks_exact_mut(4)
@@ -66,18 +63,18 @@ impl Raycaster {
                     + floor_step * draw_x as f32;
 
                 let (texture, tex_width, tex_height) = (
-                    floor_tex.texture,
-                    floor_tex.width as usize,
-                    floor_tex.height as usize,
+                    todo!(), //floor_tex.texture,
+                    todo!(), //floor_tex.width as usize,
+                    todo!(), //floor_tex.height as usize,
                 );
                 let tx_floor = ((tex_width as f32 * floor_pos.x.fract())
                     as usize)
-                    .min(tex_width - 1);
+                    .min(todo!() /*tex_width - 1*/);
                 let ty_floor = ((tex_height as f32 * floor_pos.z.fract())
                     as usize)
-                    .min(tex_height - 1);
-                let i_floor = tex_width * 4 * ty_floor + tx_floor * 4;
-                let color = &texture[i_floor..i_floor + 4];
+                    .min(todo!() /*tex_height - 1*/);
+                let i_floor = todo!(); //tex_width * 4 * ty_floor + tx_floor * 4;
+                let color = todo!(); //&texture[i_floor..i_floor + 4];
                 rgba.copy_from_slice(color);
             });
         if let Some(first) = data

@@ -5,6 +5,7 @@ pub enum MapParseError {
     Dimensions(DimensionsError),
     Directive(DirectiveError),
     TileDefinition(TileDefinitionError),
+    Undefined(usize, String),
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -18,17 +19,29 @@ pub enum DimensionsError {
 pub enum DirectiveError {
     MissingTilesDirective,
     MultipleSameDirectives,
-    InvalidDirectiveWord(usize),
-    UnknownDirectiveWord(usize),
+    InvalidDirective(usize),
+    UnknownDirective(usize),
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum TileDefinitionError {
     MissingTileDefinitions(usize),
-    InvalidExpression(usize),
-    UnknownLeftOperand(usize),
+    InvalidExpression(usize, String),
+    UnknownLeftOperand(usize, String),
     InvalidValueType(usize),
-    MissingTileNumber(usize)
+    UnknownObjectType(usize, String),
+    MissingTileNumber(usize),
+    InvalidFormat(usize),
+
+    InvalidTileIndex(usize),
+    InvalidTileIndexFormat(usize),
+    IllegalTileIndexCharacter(usize),
+    InvalidTileIndexRange(usize),
+    FailedToParseTileIndex(usize),
+    TileIndexNotContinuous(usize),
+
+    InvalidVariableFormat(usize),
+    UnknownVariable(usize, String),
 }
 
 impl Display for MapParseError {

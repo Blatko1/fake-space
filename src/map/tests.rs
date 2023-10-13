@@ -1,9 +1,9 @@
 use crate::map::{
-    map_parser::{parse_dimensions, parse_directive_word, DirectiveWord},
-    parse_error::{DimensionsError, DirectiveError},
+    map_parser::{parse_dimensions, parse_directive, Directive},
+    parse_error::{DimensionsError, DirectiveError, TileDefinitionError},
 };
 
-use super::map_parser::parse;
+use super::map_parser::{parse, parse_tile_index};
 
 #[test]
 fn parse_dimensions_test() {
@@ -67,37 +67,74 @@ fn parse_dimensions_test() {
 fn parse_directive_word_test() {
     let i = 1;
     let line = "#variables";
-    assert_eq!(parse_directive_word(i, line), Ok(DirectiveWord::Variables));
+    assert_eq!(parse_directive(i, line), Ok(Directive::Variables));
     let line = "#          tiles";
-    assert_eq!(parse_directive_word(i, line), Ok(DirectiveWord::Tiles));
+    assert_eq!(parse_directive(i, line), Ok(Directive::Tiles));
     let line = "vars";
     assert_eq!(
-        parse_directive_word(i, line),
-        Err(DirectiveError::InvalidDirectiveWord(i))
+        parse_directive(i, line),
+        Err(DirectiveError::InvalidDirective(i))
     );
     let line = "# vari ables";
     assert_eq!(
-        parse_directive_word(i, line),
-        Err(DirectiveError::InvalidDirectiveWord(i))
+        parse_directive(i, line),
+        Err(DirectiveError::InvalidDirective(i))
     );
     let line = "varst";
     assert_eq!(
-        parse_directive_word(i, line),
-        Err(DirectiveError::InvalidDirectiveWord(i))
+        parse_directive(i, line),
+        Err(DirectiveError::InvalidDirective(i))
     );
     let line = "#varst";
     assert_eq!(
-        parse_directive_word(i, line),
-        Err(DirectiveError::UnknownDirectiveWord(i))
+        parse_directive(i, line),
+        Err(DirectiveError::UnknownDirective(i))
     );
     let line = "#tt;";
     assert_eq!(
-        parse_directive_word(i, line),
-        Err(DirectiveError::UnknownDirectiveWord(i))
+        parse_directive(i, line),
+        Err(DirectiveError::UnknownDirective(i))
+    );
+}
+
+#[test]
+fn parse_tile_index_test() {
+    let index = 1;
+    let operand = "1";
+    assert_eq!(parse_tile_index(index, operand), Ok(0..1));
+    let operand = "100";
+    assert_eq!(parse_tile_index(index, operand), Ok(99..100));
+    let operand = "100.=101";
+    assert_eq!(parse_tile_index(index, operand), Ok(99..100));
+    let operand = "100.=109";
+    assert_eq!(parse_tile_index(index, operand), Ok(99..108));
+    let operand = "100.=99";
+    assert_eq!(
+        parse_tile_index(index, operand),
+        Err(TileDefinitionError::InvalidTileIndexRange(index))
+    );
+    let operand = "100.=98";
+    assert_eq!(
+        parse_tile_index(index, operand),
+        Err(TileDefinitionError::InvalidTileIndexRange(index))
+    );
+    let operand = "100.=9.=8";
+    assert_eq!(
+        parse_tile_index(index, operand),
+        Err(TileDefinitionError::InvalidTileIndexFormat(index))
+    );
+    let operand = "1.=9.9.0";
+    assert_eq!(
+        parse_tile_index(index, operand),
+        Err(TileDefinitionError::FailedToParseTileIndex(index))
     );
 }
 
 #[test]
 fn map_parser_test() {
-    parse(include_str!("../../maps/map1.txt")).unwrap();
+    let parsed = parse(include_str!("../../maps/map1.txt")).unwrap();
+    println!("dimensions: {:?}", parsed.0);
+    for t in parsed.1 {
+        println!("tile: {:?}", t);
+    }
 }

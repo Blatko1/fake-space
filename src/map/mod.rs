@@ -4,9 +4,13 @@ mod tests;
 mod map_parser;
 mod parse_error;
 
+use std::str::FromStr;
+
 use crate::voxel::VoxelModelType;
 
-pub struct TestMap {
+use self::parse_error::TileDefinitionError;
+
+/*pub struct TestMap {
     map: Map<{ Self::WIDTH as usize }, { Self::DEPTH as usize }>,
 }
 
@@ -27,26 +31,26 @@ impl TestMap {
     pub fn get_tile(&self, x: usize, z: usize) -> MapTile {
         self.map.get_tile(x, z)
     }
-}
+}*/
 
 #[derive(Debug, Clone, Copy)]
 pub struct MapTile {
     pub object: ObjectType,
-    pub object_top: BoundType,
-    pub object_bottom: BoundType,
-    pub floor: BoundType,
-    pub ceiling: BoundType,
+    pub object_top: ObjectType,
+    pub object_bottom: ObjectType,
+    pub floor: ObjectType,
+    pub ceiling: ObjectType,
     pub obj_top_height: f32,
     pub obj_bottom_height: f32,
 }
 
 impl MapTile {
     pub const VOID: Self = MapTile {
-        object: ObjectType::Void,
-        object_top: BoundType::MossyStone,
-        object_bottom: BoundType::Brick,
-        floor: BoundType::Brick,
-        ceiling: BoundType::MossyStone,
+        object: ObjectType::MossyStone,
+        object_top: ObjectType::MossyStone,
+        object_bottom: ObjectType::BlueBrick,
+        floor: ObjectType::BlueBrick,
+        ceiling: ObjectType::MossyStone,
         obj_top_height: f32::INFINITY,
         obj_bottom_height: f32::INFINITY,
     };
@@ -55,7 +59,7 @@ impl MapTile {
 /// A map where the player is positioned. Contains all map data.
 /// The (0,0) coordinate is positioned at the bottom-left
 /// and (`width`, `height`) at the top-right.
-pub struct Map<const W: usize, const D: usize> {
+/*pub struct Map<const W: usize, const D: usize> {
     data: [[MapTile; W]; D],
 }
 
@@ -122,27 +126,30 @@ impl<const W: usize, const D: usize> Map<W, D> {
         // If out of map bounds:
         MapTile::VOID
     }
-}
+}*/
 
 /// Represents all tiles not including ceiling or floor tiles.
 /// Additionally, contains a non-tile `Void` type.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum ObjectType {
-    
-    /// Non-transparent wall tile, possibly with modified height.
-    FullWall(FullWallType),
-    /// A wall tile which contains transparent parts or has modified height.
-    TransparentWall(TransparentWallType),
-    /// A voxel model object tile which possibly contains
-    /// transparent/hollow parts.
-    VoxelModel(VoxelModelType),
+    MossyStone,
+    BlueBrick,
+    LightPlank,
+    Fence,
+    BlueGlass,
+    ///// Non-transparent wall tile, possibly with modified height.
+    //FullWall(FullWallType),
+    ///// A wall tile which contains transparent parts or has modified height.
+    //TransparentWall(TransparentWallType),
     /// Empty tile inside the map bounds.
     Empty,
-    /// Represents the space out of the map bounds (non-tile).
-    Void,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+// A voxel model object tile which possibly contains
+// transparent/hollow parts.
+//VoxelModel(VoxelModelType),
+
+/*#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FullWallType {
     BlueBrick,
     LightPlank,
@@ -152,10 +159,10 @@ pub enum FullWallType {
 pub enum TransparentWallType {
     Fence,
     BlueGlass,
-}
+}*/
 
-/// Represents a floor or a ceiling or a top or a bottom part of an object.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+//// Represents a floor or a ceiling or a top or a bottom part of an object.
+/*#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BoundType {
     Empty,
     MossyStone,
@@ -270,3 +277,4 @@ const TEST_MAP_CEILING_DATA: [[u32; TEST_MAP_WIDTH as usize]; TEST_MAP_DEPTH as 
     [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 ];
+*/

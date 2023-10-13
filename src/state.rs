@@ -1,5 +1,6 @@
 use crate::{
-    canvas::Canvas, draw::Raycaster, map::TestMap, textures::TextureManager,
+    canvas::Canvas,
+    draw::Raycaster, //textures::TextureManager,
     voxel::VoxelModelManager,
 };
 use winit::{
@@ -11,8 +12,8 @@ pub struct State {
     canvas: Canvas,
     raycaster: Raycaster,
     models: VoxelModelManager,
-    map: TestMap,
-    textures: TextureManager,
+    //map: TestMap,
+    //textures: TextureManager,
 }
 
 impl State {
@@ -30,20 +31,20 @@ impl State {
             canvas,
             raycaster,
             models: VoxelModelManager::init(),
-            map: TestMap::new(),
-            textures: TextureManager::init(),
+            //map: TestMap::new(),
+            //textures: TextureManager::init(),
         }
     }
 
     pub fn update(&mut self) {
         self.canvas.clear_data();
         self.raycaster.update();
-        self.raycaster.cast_rays(
-            &self.map,
+        /*self.raycaster.cast_rays(
+            todo!(),
             &self.models,
-            &self.textures,
+            todo!(),
             self.canvas.data_mut(),
-        );
+        );*/
     }
 
     pub fn render(&self) -> Result<(), wgpu::SurfaceError> {

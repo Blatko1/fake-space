@@ -9,8 +9,7 @@ use std::f32::consts::{PI, TAU};
 use winit::event::{DeviceEvent, ElementState, KeyboardInput, VirtualKeyCode};
 
 use crate::{
-    map::{BoundType, ObjectType, TestMap},
-    textures::{TextureDataRef, TextureManager},
+    map::ObjectType,
     voxel::{VoxelModelManager, VoxelModelRef},
 };
 
@@ -25,7 +24,7 @@ const Y_SHEARING_SENSITIVITY: f32 = 0.8;
 const MOUSE_ROTATION_SPEED: f32 = 0.08;
 
 #[derive(Debug)]
-pub struct RayHit<'a> {
+pub struct RayHit /*<'a>*/ {
     /// X-coordinate of a pixel column out of which the ray was casted.
     screen_x: u32,
     /// Direction of the ray which hit the tile (wall).
@@ -41,7 +40,7 @@ pub struct RayHit<'a> {
     /// If the ray hit the left portion of the tile side (wall), the
     /// x-coordinate would be somewhere in range [0.0, 0.5].
     wall_x: f32,
-    texture: TextureDataRef<'a>,
+    //texture: TextureDataRef<'a>,
     delta_dist_x: f32,
     delta_dist_z: f32,
 }
@@ -176,9 +175,9 @@ impl Raycaster {
     /// Stores all [`RayHit`]s in the internal array.
     pub fn cast_rays(
         &mut self,
-        tile_map: &TestMap,
+        //tile_map: &TestMap,
         models: &VoxelModelManager,
-        textures: &TextureManager,
+        //textures: &TextureManager,
         data: &mut [u8],
     ) {
         // For each pixel column on the screen
@@ -218,7 +217,7 @@ impl Raycaster {
             // If another transparent tile was hit, store it as a final hit.
             let mut last_perp_wall_dist = 0.0;
             let max_height_on_path = (self.pos.y * self.f_height) as usize;
-            loop {
+            /*loop {
                 // Distance to the first hit wall's x/z side if the wall isn't empty
                 let side = if side_dist_x < side_dist_z {
                     map_x += step_x;
@@ -255,7 +254,7 @@ impl Raycaster {
                         max_height_on_path,
                         side,
                         wall_x,
-                        texture: TextureDataRef::default(),
+                        //texture: TextureDataRef::default(),
                         delta_dist_x,
                         delta_dist_z,
                     };
@@ -336,7 +335,7 @@ impl Raycaster {
                     );
                     last_perp_wall_dist = perp_wall_dist;
                 }
-            }
+            }*/
         });
         //self.draw_top_bottom(tile_map, textures, data);
     }

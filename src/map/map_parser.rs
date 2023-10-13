@@ -1,10 +1,12 @@
-use std::str::FromStr;
+use std::{ops::Range, str::FromStr};
+
+use hashbrown::HashMap;
 
 use crate::map::parse_error::TileDefinitionError;
 
 use super::{
     parse_error::{DimensionsError, DirectiveError, MapParseError},
-    MapTile,
+    MapTile, ObjectType,
 };
 
 struct Map {
@@ -30,6 +32,9 @@ pub(super) fn parse(
         .enumerate()
         .map(|(i, line)| (i, line.split("//").next().unwrap().trim()))
         .filter(|(_, line)| !line.is_empty());
+    //for l in lines.clone() {
+    //    println!("l: {}: {}", l.0, l.1);
+    //}
     let content_line_count = lines.clone().count();
     // Parse dimensions:
     let dimensions = match lines.next() {
@@ -38,7 +43,8 @@ pub(super) fn parse(
     };
 
     let map_size = (dimensions.0 * dimensions.1) as usize;
-    let tiles = Vec::with_capacity(map_size);
+    let mut tiles = Vec::with_capacity(map_size);
+    let mut variables = HashMap::new();
 
     match lines
         .clone()
@@ -58,28 +64,30 @@ pub(super) fn parse(
         _ => return Err(DirectiveError::MultipleSameDirectives)?,
     }
     let mut lines = lines.enumerate();
-    while let Some((index, (_real_index, line))) = lines.next() {
-        if is_directive_word(line) {
-            let lines_temp = lines.clone();
-            let expressions_count = lines_temp
-                .enumerate()
-                .find(|(_, (_, (_, l)))| is_directive_word(l))
-                .map(|(i, (_, (_, _)))| i)
-                .unwrap_or(content_line_count - (index + 1));
-            let expressions = lines
-                .clone()
-                .take(expressions_count)
-                .map(|(_, (i_real, l))| (i_real, l));
-            lines.nth(expressions_count - 1);
-            
-            let directive = parse_directive_word(index, line)?;
-            match directive {
-                DirectiveWord::Variables => todo!(),
-                DirectiveWord::Tiles => {
-                    parse_tiles(expressions)?
-                }
+    while let Some((index, (real_index, line))) = lines.next() {
+        if !is_directive(line) {
+            return Err(MapParseError::Undefined(real_index, line.to_string()));
+        }
+        let lines_temp = lines.clone();
+        let expressions_count = lines_temp
+            .enumerate()
+            .find(|(_, (_, (_, l)))| is_directive(l))
+            .map(|(i, (_, (_, _)))| i)
+            .unwrap_or(content_line_count - (index + 1));
+        println!("expr_count: {expressions_count}");    
+        let expressions = lines
+            .clone()
+            .take(expressions_count)
+            .map(|(_, (i_real, l))| (i_real, l));
+        lines.by_ref().take(expressions_count).for_each(drop);
+        let directive = parse_directive(real_index, line)?;
+        match directive {
+            Directive::Variables => {
+                variables = parse_variables(expressions)?;
             }
-            
+            Directive::Tiles => {
+                tiles = parse_tiles(expressions, map_size, &variables)?;
+            }
         }
     }
 
@@ -100,10 +108,7 @@ pub(super) fn parse_dimensions(
     if operands.len() != 2 {
         return Err(DimensionsError::InvalidDimensions(index));
     }
-    if operands
-        .iter()
-        .any(|o| o.split_whitespace().count() != 1)
-    {
+    if operands.iter().any(|o| o.split_whitespace().count() != 1) {
         return Err(DimensionsError::InvalidDimensions(index));
     }
     let d1_str = operands.first().unwrap().split_whitespace().next().unwrap();
@@ -121,125 +126,240 @@ pub(super) fn parse_dimensions(
     Ok((d1, d2))
 }
 
-pub(super) fn parse_directive_word(
+pub(super) fn parse_directive(
     index: usize,
     line: &str,
-) -> Result<DirectiveWord, DirectiveError> {
-    if !is_directive_word(line) {
-        return Err(DirectiveError::InvalidDirectiveWord(index));
+) -> Result<Directive, DirectiveError> {
+    if !is_directive(line) {
+        return Err(DirectiveError::InvalidDirective(index));
     }
-    let directive_word: Vec<&str> = line[1..].split_whitespace().collect();
-    if directive_word.len() != 1 {
-        return Err(DirectiveError::InvalidDirectiveWord(index));
+    let directive: Vec<&str> = line[1..].split_whitespace().collect();
+    if directive.len() != 1 {
+        return Err(DirectiveError::InvalidDirective(index));
     }
-    let directive = match *directive_word.first().unwrap() {
-        "variables" => DirectiveWord::Variables,
-        "tiles" => DirectiveWord::Tiles,
-        _ => return Err(DirectiveError::UnknownDirectiveWord(index)),
+    let directive = match *directive.first().unwrap() {
+        "variables" => Directive::Variables,
+        "tiles" => Directive::Tiles,
+        _ => return Err(DirectiveError::UnknownDirective(index)),
     };
     Ok(directive)
 }
 
 pub(super) fn parse_tiles<'a, I: Iterator<Item = (usize, &'a str)> + Clone>(
     mut lines: I,
+    tile_count: usize,
+    variables: &HashMap<&'a str, MapTileVariable>,
 ) -> Result<Vec<MapTile>, TileDefinitionError> {
-    let mut tiles = Vec::with_capacity(lines.clone().count());
-    
-    while let Some((index, line)) = lines.next() {
-        let number: u32 = match line.chars().next().unwrap().to_digit(10) {
-            Some(n) => n,
-            None => return Err(TileDefinitionError::MissingTileNumber(index)),
-        };
+    let mut tiles = Vec::with_capacity(tile_count);
 
+    while let Some((index, line)) = lines.next() {
+        let operands: Vec<&str> = line.split('=').collect();
+        if operands.len() != 2 {
+            return Err(TileDefinitionError::InvalidFormat(index));
+        }
+        let left_operand: Vec<&str> =
+            operands.first().unwrap().split_whitespace().collect();
+        if left_operand.len() != 1 {
+            return Err(TileDefinitionError::InvalidTileIndexFormat(index));
+        }
+        let tile_index =
+            parse_tile_index(index, left_operand.first().unwrap())?;
+        let first_index = tile_index.clone().next().unwrap();
+        let expressions = operands.last().unwrap();
+
+        if tiles.len() != first_index {
+            return Err(TileDefinitionError::TileIndexNotContinuous(index));
+        }
+
+        let tile = parse_tile(index, expressions, variables)?.to_map_tile();
+        if tile.is_none() {
+            return Err(TileDefinitionError::MissingTileDefinitions(index));
+        }
+        for _i in tile_index {
+            tiles.insert(_i, tile.unwrap())
+            //tiles.push(tile);
+        }
     }
     Ok(tiles)
 }
 // TODO get rid of asserts afterwards maybe
 // TODO make it so index is needed to be given to err only at the main callsite.
-pub(super) fn parse_tile(
-    line: &str,
+// TODO remember: if there are multiple same definitions for same tile,
+//                the last definition will be taken
+pub(super) fn parse_tile<'a>(
     index: usize,
-) -> Result<MapTile, TileDefinitionError> {
-    let mut object_type = None;
-    let mut object_top_type = None;
-    let mut object_bottom_type = None;
-    let mut floor_type = None;
-    let mut ceiling_type = None;
-    let mut object_top_height = None;
-    let mut object_bottom_height = None;
+    line: &str,
+    variables: &HashMap<&'a str, MapTileVariable>,
+) -> Result<MapTileVariable, TileDefinitionError> {
+    let mut tile = MapTileVariable::default();
 
-    // Split the line into multiple words where 'spaces' and 'tabs'
-    // are considered separators. Get rid of words with no text.
-    let expressions = line
-        .split(|c| matches!(c, ' ' | '\t'))
-        .filter(|k| !k.trim().is_empty());
-    for expr in expressions {
+    // Split the line into multiple words separated by whitespaces.
+    for expr in line.split_whitespace() {
         // Split the expression into operands where as the separator
-        // is considered a '=' sign or a ':' sign. (e.g. obj:GRASS or o=BRICK)
-        let operands: Vec<&str> =
-            expr.split(|c| matches!(c, '=' | ':')).collect();
-        assert!(!operands.is_empty());
+        // is considered a ':' sign. (e.g. obj:GRASS)
+        let operands: Vec<&str> = expr.split(':').collect();
         match operands.len() {
             1 => {
-                if is_directive_word(operands.first().unwrap()) {
-                    todo!();
+                let key = operands.first().unwrap();
+                match variables.get(key) {
+                    Some(var) => {
+                        update_if_some(&mut tile.object, var.object);
+                        update_if_some(&mut tile.object_top, var.object_top);
+                        update_if_some(
+                            &mut tile.object_bottom,
+                            var.object_bottom,
+                        );
+                        update_if_some(&mut tile.floor, var.floor);
+                        update_if_some(&mut tile.ceiling, var.ceiling);
+                        update_if_some(
+                            &mut tile.obj_top_height,
+                            var.obj_top_height,
+                        );
+                        update_if_some(
+                            &mut tile.obj_bottom_height,
+                            var.obj_bottom_height,
+                        );
+                    }
+                    None => {
+                        return Err(TileDefinitionError::UnknownVariable(
+                            index,
+                            key.to_string(),
+                        ))
+                    }
                 }
+                continue;
             }
             2 => (),
-            _ => return Err(TileDefinitionError::InvalidExpression(index))?,
+            _ => {
+                return Err(TileDefinitionError::InvalidExpression(
+                    index,
+                    expr.to_string(),
+                ))?
+            }
         }
         let left = operands.first().unwrap();
         let right = operands.last().unwrap();
 
         match *left {
             // Object type definition:
-            "o" | "obj" | "object" => todo!(),
+            "o" | "obj" | "object" => {
+                tile.object = Some(parse_object_type(index, right)?)
+            }
             // Object top side type definition:
-            "ot" | "o_top" | "obj_top" | "object_top" => todo!(),
+            "ot" | "o_top" | "obj_top" | "object_top" => {
+                tile.object_top = Some(parse_object_type(index, right)?)
+            }
             // Object bottom side type definition:
             "ob" | "o_bot" | "o_bottom" | "obj_bot" | "obj_bottom"
-            | "object_bottom" => todo!(),
+            | "object_bottom" => {
+                tile.object_bottom = Some(parse_object_type(index, right)?)
+            }
             // Floor type definition:
-            "f" | "floor" => todo!(),
+            "f" | "floor" => {
+                tile.floor = Some(parse_object_type(index, right)?)
+            }
             // Ceiling type definition:
-            "c" | "ceiling" => todo!(),
+            "c" | "ceiling" => {
+                tile.ceiling = Some(parse_object_type(index, right)?)
+            }
             // Top object part height value:
             "th" | "top_h" | "top_height" | "t_height" => {
-                object_top_height = Some(parse_from_str(right, index)?)
+                tile.obj_top_height = Some(parse_number(index, right)?)
             }
             // Bottom object part height value:
             "bh" | "bot_h" | "bottom_h" | "b_height" | "bot_height"
             | "bottom_height" => {
-                object_bottom_height = Some(parse_from_str(right, index)?)
+                tile.obj_bottom_height = Some(parse_number(index, right)?)
             }
-            _ => return Err(TileDefinitionError::UnknownLeftOperand(index)),
+            _ => {
+                return Err(TileDefinitionError::UnknownLeftOperand(
+                    index,
+                    left.to_string(),
+                ))
+            }
         }
     }
-    if object_type.is_none()
-        || object_top_type.is_none()
-        || object_bottom_type.is_none()
-        || floor_type.is_none()
-        || ceiling_type.is_none()
-        || object_top_height.is_none()
-        || object_bottom_type.is_none()
-    {
-        return Err(TileDefinitionError::MissingTileDefinitions(index));
-    }
-    let tile = MapTile {
-        object: object_type.unwrap(),
-        object_top: object_top_type.unwrap(),
-        object_bottom: object_bottom_type.unwrap(),
-        floor: floor_type.unwrap(),
-        ceiling: ceiling_type.unwrap(),
-        obj_top_height: object_top_height.unwrap(),
-        obj_bottom_height: object_bottom_height.unwrap(),
-    };
-    todo!()
+    Ok(tile)
 }
 
-pub(super) fn parse_from_str<P: FromStr>(
-    s: &str,
+pub(super) fn parse_variables<
+    'a,
+    I: Iterator<Item = (usize, &'a str)> + Clone,
+>(
+    mut lines: I,
+) -> Result<HashMap<&'a str, MapTileVariable>, TileDefinitionError> {
+    let mut variables = HashMap::new();
+    for (index, line) in lines {
+        let operands: Vec<&str> = line.split('=').collect();
+        if operands.len() != 2 {
+            return Err(TileDefinitionError::InvalidVariableFormat(index));
+        }
+        let left_operand: Vec<&str> =
+            operands.first().unwrap().split_whitespace().collect();
+        if left_operand.len() != 1 {
+            return Err(TileDefinitionError::InvalidVariableFormat(index));
+        }
+        let key = left_operand.first().unwrap();
+
+        let expressions = operands.last().unwrap();
+        let parsed_expressions = parse_tile(index, expressions, &variables)?;
+        variables.insert(key, parsed_expressions);
+    }
+
+    Ok(variables)
+}
+
+pub(super) fn parse_tile_index(
     index: usize,
+    operand: &str,
+) -> Result<Range<usize>, TileDefinitionError> {
+    if operand.chars().any(|c| !matches!(c, '0'..='9' | '.' | '=')) {
+        return Err(TileDefinitionError::IllegalTileIndexCharacter(index));
+    }
+    let tile_index: Range<usize> = if operand.contains(".=") {
+        let values: Vec<&str> = operand.split(".=").collect();
+        if values.len() != 2 {
+            return Err(TileDefinitionError::InvalidTileIndexFormat(index));
+        }
+        match (
+            values.first().unwrap().parse::<usize>(),
+            values.last().unwrap().parse::<usize>(),
+        ) {
+            (Ok(from), Ok(to)) => from..(to + 1),
+            _ => {
+                return Err(TileDefinitionError::FailedToParseTileIndex(index))
+            }
+        }
+    } else {
+        match operand.parse::<usize>() {
+            Ok(i) => i..i + 1,
+            Err(_) => {
+                return Err(TileDefinitionError::FailedToParseTileIndex(index))
+            }
+        }
+    };
+    let first = match tile_index.clone().next() {
+        Some(f) => f,
+        None => return Err(TileDefinitionError::InvalidTileIndexRange(index)),
+    };
+    let last = match tile_index.clone().last() {
+        Some(l) => l,
+        None => return Err(TileDefinitionError::InvalidTileIndexRange(index)),
+    };
+    if first > last || first == 0 {
+        return Err(TileDefinitionError::InvalidTileIndexRange(index));
+    }
+    let range = if first == last {
+        first.saturating_sub(1)..last
+    } else {
+        first.saturating_sub(1)..last.saturating_sub(1)
+    };
+    Ok(range)
+}
+
+pub(super) fn parse_number<P: FromStr>(
+    index: usize,
+    s: &str,
 ) -> Result<P, TileDefinitionError> {
     match s.parse() {
         Ok(p) => Ok(p),
@@ -247,12 +367,66 @@ pub(super) fn parse_from_str<P: FromStr>(
     }
 }
 
-pub(super) fn is_directive_word(line: &str) -> bool {
+pub(super) fn parse_object_type(
+    index: usize,
+    s: &str,
+) -> Result<ObjectType, TileDefinitionError> {
+    match s {
+        "EMPTY" => Ok(ObjectType::Empty),
+        "MOSSYSTONE" => Ok(ObjectType::MossyStone),
+        "BLUEBRICK" => Ok(ObjectType::BlueBrick),
+        "LIGHTPLANK" => Ok(ObjectType::LightPlank),
+        "FENCE" => Ok(ObjectType::Fence),
+        "BLUEGLASS" => Ok(ObjectType::BlueGlass),
+
+        _ => {
+            return Err(TileDefinitionError::UnknownObjectType(
+                index,
+                s.to_string(),
+            ))
+        }
+    }
+}
+
+/// Updates the `variable` if the input value is `Some`.
+pub(super) fn update_if_some<T>(var: &mut Option<T>, input: Option<T>) {
+    if input.is_some() {
+        *var = input;
+    }
+}
+
+pub(super) fn is_directive(line: &str) -> bool {
     line.starts_with('#')
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub(super) enum DirectiveWord {
+pub(super) enum Directive {
     Variables,
     Tiles,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub(super) struct MapTileVariable {
+    pub object: Option<ObjectType>,
+    pub object_top: Option<ObjectType>,
+    pub object_bottom: Option<ObjectType>,
+    pub floor: Option<ObjectType>,
+    pub ceiling: Option<ObjectType>,
+    pub obj_top_height: Option<f32>,
+    pub obj_bottom_height: Option<f32>,
+}
+
+impl MapTileVariable {
+    fn to_map_tile(self) -> Option<MapTile> {
+        let tile = MapTile {
+            object: self.object?,
+            object_top: self.object_top?,
+            object_bottom: self.object_bottom?,
+            floor: self.floor?,
+            ceiling: self.ceiling?,
+            obj_top_height: self.obj_top_height?,
+            obj_bottom_height: self.obj_bottom_height?,
+        };
+        Some(tile)
+    }
 }

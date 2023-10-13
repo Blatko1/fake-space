@@ -1,4 +1,4 @@
-use crate::map::{BoundType, FullWallType, TransparentWallType};
+/*use crate::map::{BoundType, FullWallType, TransparentWallType};
 
 pub struct TextureManager {
     blue_brick: TextureData,
@@ -162,3 +162,4 @@ impl<'a> Default for TextureDataRef<'a> {
         }
     }
 }
+*/
