@@ -3,9 +3,9 @@
 //       f->floor, c-> ceiling
 
 #variables
-$grass = o:BLUEBRICK th:1.0 bh:1.0 ot:BLUEBRICK ob:BLUEBRICK f:LIGHTPLANK c:LIGHTPLANK
+$grass = o:BLUEBRICK th:1.0 bh:1.0 ot:BLUEBRICK ob:BLUEBRICK f:BLUEBRICK c:BLUEBRICK
 $topBottom = f:LIGHTPLANK c:LIGHTPLANK
-$dada = o:BLUEBRICK $topBottom
+$dada = o:LIGHTPLANK $topBottom
 
 #tiles
 // First row
@@ -14,9 +14,9 @@ $dada = o:BLUEBRICK $topBottom
 3 = $grass th:1.5 bh:0.8
 4 = $grass
 5 = $grass //5
-//6..9 = //$grass
-//9 = o:LIGHTPLANK t:1.0 b:1.0 ot:BRICK ob:BRICK //$topBottom
-//10 = //$grass //10
-//
-//// Second row
-//11 = //$grass
+6-8 = $grass
+9 = o:LIGHTPLANK th:1.0 bh:1.0 ot:BLUEBRICK ob:BLUEBRICK $topBottom
+10 = $grass //10
+
+// Second row
+11 = $grass $dada

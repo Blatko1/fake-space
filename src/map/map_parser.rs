@@ -1,4 +1,4 @@
-use std::{ops::Range, str::FromStr};
+use std::{ops::{Range, RangeInclusive}, str::FromStr};
 
 use hashbrown::HashMap;
 
@@ -9,21 +9,26 @@ use super::{
     MapTile, ObjectType,
 };
 
-struct Map {
+pub struct Map {
     width: usize,
     height: usize,
     tiles: Vec<MapTile>,
 }
 
 impl Map {
-    fn from_file_str(data: &str) -> Self {
-        todo!()
+    pub fn from_file_str(data: &str) -> Result<Self, MapParseError> {
+        let ((w, h), tiles) = parse(data)?;
+        Ok(Self {
+            width: w,
+            height: h,
+            tiles,
+        })
     }
 }
 
 pub(super) fn parse(
     data: &str,
-) -> Result<((u32, u32), Vec<MapTile>), MapParseError> {
+) -> Result<((usize, usize), Vec<MapTile>), MapParseError> {
     // Split the input data into lines, remove the lines which
     // only contain comments, remove lines with no text,
     // remove the commented out parts from lines with content.
@@ -32,11 +37,9 @@ pub(super) fn parse(
         .enumerate()
         .map(|(i, line)| (i, line.split("//").next().unwrap().trim()))
         .filter(|(_, line)| !line.is_empty());
-    //for l in lines.clone() {
-    //    println!("l: {}: {}", l.0, l.1);
-    //}
+
     let content_line_count = lines.clone().count();
-    // Parse dimensions:
+    // Parse dimensions from the first content line:
     let dimensions = match lines.next() {
         Some((i, l)) => parse_dimensions(i, l)?,
         None => return Err(DimensionsError::MissingDimensions)?,
@@ -68,18 +71,17 @@ pub(super) fn parse(
         if !is_directive(line) {
             return Err(MapParseError::Undefined(real_index, line.to_string()));
         }
-        let lines_temp = lines.clone();
-        let expressions_count = lines_temp
-            .enumerate()
-            .find(|(_, (_, (_, l)))| is_directive(l))
-            .map(|(i, (_, (_, _)))| i)
+        let expressions_count = lines.clone()
+            .find(|(_, (_, l))| is_directive(l))
+            .map(|(i, (_, _))| i-index-1)
             .unwrap_or(content_line_count - (index + 1));
-        println!("expr_count: {expressions_count}");    
+          
         let expressions = lines
             .clone()
             .take(expressions_count)
             .map(|(_, (i_real, l))| (i_real, l));
         lines.by_ref().take(expressions_count).for_each(drop);
+
         let directive = parse_directive(real_index, line)?;
         match directive {
             Directive::Variables => {
@@ -91,9 +93,9 @@ pub(super) fn parse(
         }
     }
 
-    //if tiles == 0 {
-    //    return Err(/*Nema podataka za tile */)
-    //}
+    if tiles.len() != map_size {
+        return Err(MapParseError::NotEnoughTiles(tiles.len(), map_size))
+    }
 
     Ok((dimensions, tiles))
 }
@@ -101,7 +103,7 @@ pub(super) fn parse(
 pub(super) fn parse_dimensions(
     index: usize,
     line: &str,
-) -> Result<(u32, u32), DimensionsError> {
+) -> Result<(usize, usize), DimensionsError> {
     // There should be only one 'x' separator and only one
     // value to the left and one to the right.
     let operands: Vec<&str> = line.split('x').collect();
@@ -146,13 +148,13 @@ pub(super) fn parse_directive(
 }
 
 pub(super) fn parse_tiles<'a, I: Iterator<Item = (usize, &'a str)> + Clone>(
-    mut lines: I,
+    lines: I,
     tile_count: usize,
     variables: &HashMap<&'a str, MapTileVariable>,
 ) -> Result<Vec<MapTile>, TileDefinitionError> {
     let mut tiles = Vec::with_capacity(tile_count);
 
-    while let Some((index, line)) = lines.next() {
+    for (index, line) in lines {
         let operands: Vec<&str> = line.split('=').collect();
         if operands.len() != 2 {
             return Err(TileDefinitionError::InvalidFormat(index));
@@ -186,10 +188,10 @@ pub(super) fn parse_tiles<'a, I: Iterator<Item = (usize, &'a str)> + Clone>(
 // TODO make it so index is needed to be given to err only at the main callsite.
 // TODO remember: if there are multiple same definitions for same tile,
 //                the last definition will be taken
-pub(super) fn parse_tile<'a>(
+pub(super) fn parse_tile(
     index: usize,
     line: &str,
-    variables: &HashMap<&'a str, MapTileVariable>,
+    variables: &HashMap<&str, MapTileVariable>,
 ) -> Result<MapTileVariable, TileDefinitionError> {
     let mut tile = MapTileVariable::default();
 
@@ -286,7 +288,7 @@ pub(super) fn parse_variables<
     'a,
     I: Iterator<Item = (usize, &'a str)> + Clone,
 >(
-    mut lines: I,
+    lines: I,
 ) -> Result<HashMap<&'a str, MapTileVariable>, TileDefinitionError> {
     let mut variables = HashMap::new();
     for (index, line) in lines {
@@ -312,29 +314,31 @@ pub(super) fn parse_variables<
 pub(super) fn parse_tile_index(
     index: usize,
     operand: &str,
-) -> Result<Range<usize>, TileDefinitionError> {
-    if operand.chars().any(|c| !matches!(c, '0'..='9' | '.' | '=')) {
+) -> Result<RangeInclusive<usize>, TileDefinitionError> {
+    if operand.chars().any(|c| !matches!(c, '0'..='9' | '-')) {
         return Err(TileDefinitionError::IllegalTileIndexCharacter(index));
     }
-    let tile_index: Range<usize> = if operand.contains(".=") {
-        let values: Vec<&str> = operand.split(".=").collect();
+    let tile_index: RangeInclusive<usize> = if operand.contains('-') {
+        let values: Vec<&str> = operand.split('-').collect();
         if values.len() != 2 {
             return Err(TileDefinitionError::InvalidTileIndexFormat(index));
         }
-        match (
-            values.first().unwrap().parse::<usize>(),
-            values.last().unwrap().parse::<usize>(),
-        ) {
-            (Ok(from), Ok(to)) => from..(to + 1),
-            _ => {
-                return Err(TileDefinitionError::FailedToParseTileIndex(index))
-            }
-        }
+        let first = values.first().unwrap();
+        let last = values.last().unwrap();
+        let from = match first.parse::<usize>() {
+            Ok(from) => from,
+            Err(_) => return Err(TileDefinitionError::FailedToParseTileIndex(index, first.to_string())),
+        };
+        let to = match last.parse::<usize>() {
+            Ok(to) => to,
+            Err(_) => return Err(TileDefinitionError::FailedToParseTileIndex(index, last.to_string())),
+        };
+        from..=to
     } else {
         match operand.parse::<usize>() {
-            Ok(i) => i..i + 1,
+            Ok(i) => i..=i,
             Err(_) => {
-                return Err(TileDefinitionError::FailedToParseTileIndex(index))
+                return Err(TileDefinitionError::FailedToParseTileIndex(index, operand.to_string()))
             }
         }
     };
@@ -349,12 +353,7 @@ pub(super) fn parse_tile_index(
     if first > last || first == 0 {
         return Err(TileDefinitionError::InvalidTileIndexRange(index));
     }
-    let range = if first == last {
-        first.saturating_sub(1)..last
-    } else {
-        first.saturating_sub(1)..last.saturating_sub(1)
-    };
-    Ok(range)
+    Ok(first.saturating_sub(1)..=last.saturating_sub(1))
 }
 
 pub(super) fn parse_number<P: FromStr>(
@@ -380,7 +379,7 @@ pub(super) fn parse_object_type(
         "BLUEGLASS" => Ok(ObjectType::BlueGlass),
 
         _ => {
-            return Err(TileDefinitionError::UnknownObjectType(
+            Err(TileDefinitionError::UnknownObjectType(
                 index,
                 s.to_string(),
             ))

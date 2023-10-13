@@ -6,6 +6,7 @@ pub enum MapParseError {
     Directive(DirectiveError),
     TileDefinition(TileDefinitionError),
     Undefined(usize, String),
+    NotEnoughTiles(usize, usize)
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -37,7 +38,7 @@ pub enum TileDefinitionError {
     InvalidTileIndexFormat(usize),
     IllegalTileIndexCharacter(usize),
     InvalidTileIndexRange(usize),
-    FailedToParseTileIndex(usize),
+    FailedToParseTileIndex(usize, String),
     TileIndexNotContinuous(usize),
 
     InvalidVariableFormat(usize),

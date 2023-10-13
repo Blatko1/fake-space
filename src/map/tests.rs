@@ -101,32 +101,34 @@ fn parse_directive_word_test() {
 fn parse_tile_index_test() {
     let index = 1;
     let operand = "1";
-    assert_eq!(parse_tile_index(index, operand), Ok(0..1));
+    assert_eq!(parse_tile_index(index, operand), Ok(0..=0));
     let operand = "100";
-    assert_eq!(parse_tile_index(index, operand), Ok(99..100));
-    let operand = "100.=101";
-    assert_eq!(parse_tile_index(index, operand), Ok(99..100));
-    let operand = "100.=109";
-    assert_eq!(parse_tile_index(index, operand), Ok(99..108));
-    let operand = "100.=99";
+    assert_eq!(parse_tile_index(index, operand), Ok(99..=99));
+    let operand = "100-101";
+    assert_eq!(parse_tile_index(index, operand), Ok(99..=100));
+    let operand = "100-109";
+    assert_eq!(parse_tile_index(index, operand), Ok(99..=108));
+    let operand = "100-100";
+    assert_eq!(parse_tile_index(index, operand), Ok(99..=99));
+    let operand = "100-99";
     assert_eq!(
         parse_tile_index(index, operand),
         Err(TileDefinitionError::InvalidTileIndexRange(index))
     );
-    let operand = "100.=98";
+    let operand = "100-98";
     assert_eq!(
         parse_tile_index(index, operand),
         Err(TileDefinitionError::InvalidTileIndexRange(index))
     );
-    let operand = "100.=9.=8";
+    let operand = "100-9-8";
     assert_eq!(
         parse_tile_index(index, operand),
         Err(TileDefinitionError::InvalidTileIndexFormat(index))
     );
-    let operand = "1.=9.9.0";
+    let operand = "1-9-9-0";
     assert_eq!(
         parse_tile_index(index, operand),
-        Err(TileDefinitionError::FailedToParseTileIndex(index))
+        Err(TileDefinitionError::InvalidTileIndexFormat(index))
     );
 }
 

@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests;
 
-mod map_parser;
+pub mod map_parser;
 mod parse_error;
 
 use std::str::FromStr;
