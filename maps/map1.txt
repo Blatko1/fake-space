@@ -2,20 +2,24 @@
 // Keys: o->object, t->top, b->bottom, ot->object top, ob->object bottom,
 //       f->floor, c-> ceiling
 
+#textures
+BlueBrick = path:"../res/blue_brick.png" transparent:false
+LightPlank = path:"../res/light_plank.png" transparent:false
+
 #variables
-$grass = o:BLUEBRICK th:1.0 bh:1.0 ot:BLUEBRICK ob:BLUEBRICK f:BLUEBRICK c:BLUEBRICK
-$topBottom = f:LIGHTPLANK c:LIGHTPLANK
-$dada = o:LIGHTPLANK $topBottom
+$grass = o:BlueBrick th:1.0 bh:1.0 ot:BlueBrick ob:BlueBrick f:BlueBrick c:BlueBrick
+$topBottom = f:LightPlank c:LightPlank
+$dada = o:LightPlank $topBottom
 
 #tiles
 // First row
-1 = o:LIGHTPLANK th:1.0 bh:1.0 ot:BLUEBRICK ob:BLUEBRICK f:LIGHTPLANK c:LIGHTPLANK
-2 = o:LIGHTPLANK th:1.0 bh:1.0 ot:BLUEBRICK ob:BLUEBRICK f:LIGHTPLANK c:LIGHTPLANK $topBottom
+1 = o:LightPlank th:1.0 bh:1.0 ot:BlueBrick ob:BlueBrick f:LightPlank c:LightPlank
+2 = o:LightPlank th:1.0 bh:1.0 ot:BlueBrick ob:BlueBrick f:LightPlank c:LightPlank $topBottom
 3 = $grass th:1.5 bh:0.8
 4 = $grass
 5 = $grass //5
 6-8 = $grass
-9 = o:LIGHTPLANK th:1.0 bh:1.0 ot:BLUEBRICK ob:BLUEBRICK $topBottom
+9 = o:LightPlank th:1.0 bh:1.0 ot:BlueBrick ob:BlueBrick $topBottom
 10 = $grass //10
 
 // Second row

@@ -12,7 +12,7 @@ mod voxel;
 use std::time::{Duration, Instant};
 
 use canvas::Canvas;
-use map::map_parser::Map;
+use map::Map;
 use pollster::block_on;
 use state::State;
 use winit::{
@@ -33,11 +33,11 @@ fn main() {
     let winit_window = WinitWindowBuilder::new().build(&event_loop).unwrap();
     winit_window.set_title("False Space");
 
-    let map = Map::from_file_str(include_str!("../maps/map1.txt"));
+    let map = Map::from_file_str(include_str!("../maps/map1.txt")).unwrap();
 
     let canvas = block_on(Canvas::init(&winit_window, 320, 240));
 
-    let mut state = State::new(canvas);
+    let mut state = State::new(canvas, map);
 
     let framerate_delta = Duration::from_secs_f64(1.0 / FPS as f64);
     let mut time_delta = Instant::now();

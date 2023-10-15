@@ -1,32 +1,13 @@
-use std::{ops::{Range, RangeInclusive}, str::FromStr};
+use std::{ops::{Range, RangeInclusive}, str::FromStr, hash::Hash};
 
 use hashbrown::HashMap;
 
-use crate::map::parse_error::TileDefinitionError;
-
 use super::{
-    parse_error::{DimensionsError, DirectiveError, MapParseError},
-    MapTile, ObjectType,
+    parse_error::{DimensionsError, DirectiveError, MapParseError, TextureError, TileError},
+    MapTile, TextureID,
 };
 
-pub struct Map {
-    width: usize,
-    height: usize,
-    tiles: Vec<MapTile>,
-}
-
-impl Map {
-    pub fn from_file_str(data: &str) -> Result<Self, MapParseError> {
-        let ((w, h), tiles) = parse(data)?;
-        Ok(Self {
-            width: w,
-            height: h,
-            tiles,
-        })
-    }
-}
-
-pub(super) fn parse(
+pub(super) fn parse_map(
     data: &str,
 ) -> Result<((usize, usize), Vec<MapTile>), MapParseError> {
     // Split the input data into lines, remove the lines which
@@ -46,8 +27,10 @@ pub(super) fn parse(
     };
 
     let map_size = (dimensions.0 * dimensions.1) as usize;
-    let mut tiles = Vec::with_capacity(map_size);
+    let mut textures = Vec::new();
+    let mut texture_indices = HashMap::new();
     let mut variables = HashMap::new();
+    let mut tiles = Vec::with_capacity(map_size);
 
     match lines
         .clone()
@@ -62,8 +45,7 @@ pub(super) fn parse(
         .map(|(_, l)| l.matches("#tiles").count())
         .sum()
     {
-        1 => (),
-        0 => return Err(DirectiveError::MissingTilesDirective)?,
+        0 | 1 => (),
         _ => return Err(DirectiveError::MultipleSameDirectives)?,
     }
     let mut lines = lines.enumerate();
@@ -73,7 +55,7 @@ pub(super) fn parse(
         }
         let expressions_count = lines.clone()
             .find(|(_, (_, l))| is_directive(l))
-            .map(|(i, (_, _))| i-index-1)
+            .map(|(i, (_, _))| i-(index+1))
             .unwrap_or(content_line_count - (index + 1));
           
         let expressions = lines
@@ -84,17 +66,20 @@ pub(super) fn parse(
 
         let directive = parse_directive(real_index, line)?;
         match directive {
+            Directive::Textures => {
+                (textures, texture_indices) = parse_textures(expressions)?;
+            }
             Directive::Variables => {
-                variables = parse_variables(expressions)?;
+                variables = parse_variables(expressions, &texture_indices)?;
             }
             Directive::Tiles => {
-                tiles = parse_tiles(expressions, map_size, &variables)?;
+                tiles = parse_tiles(expressions, map_size, &variables, &texture_indices)?;
             }
         }
     }
 
     if tiles.len() != map_size {
-        return Err(MapParseError::NotEnoughTiles(tiles.len(), map_size))
+        return Err(MapParseError::DimensionsAndTileCountNotMatching(tiles.len(), map_size))
     }
 
     Ok((dimensions, tiles))
@@ -102,20 +87,17 @@ pub(super) fn parse(
 
 pub(super) fn parse_dimensions(
     index: usize,
-    line: &str,
+    content: &str,
 ) -> Result<(usize, usize), DimensionsError> {
     // There should be only one 'x' separator and only one
     // value to the left and one to the right.
-    let operands: Vec<&str> = line.split('x').collect();
+    let operands: Vec<&str> = content.split('x').collect();
     if operands.len() != 2 {
-        return Err(DimensionsError::InvalidDimensions(index));
+        return Err(DimensionsError::InvalidSeparatorFormat(index));
     }
-    if operands.iter().any(|o| o.split_whitespace().count() != 1) {
-        return Err(DimensionsError::InvalidDimensions(index));
-    }
-    let d1_str = operands.first().unwrap().split_whitespace().next().unwrap();
-    let d2_str = operands.last().unwrap().split_whitespace().next().unwrap();
-    // Check if there are any illegal characters is the line.
+    let d1_str = operands.first().unwrap().trim();
+    let d2_str = operands.last().unwrap().trim();
+    // Check if there are any illegal characters within the line.
     if d1_str.chars().any(|c| !c.is_ascii_digit())
         || d2_str.chars().any(|c| !c.is_ascii_digit())
     {
@@ -123,62 +105,61 @@ pub(super) fn parse_dimensions(
     }
     let (d1, d2) = match (d1_str.parse(), d2_str.parse()) {
         (Ok(d1), Ok(d2)) => (d1, d2),
-        _ => return Err(DimensionsError::InvalidDimensions(index)),
+        _ => return Err(DimensionsError::InvalidDimensionValue(index)),
     };
+    if d1 == 0 || d2 == 0 {
+        return Err(DimensionsError::InvalidDimensionValue(index))
+    }
     Ok((d1, d2))
 }
 
 pub(super) fn parse_directive(
     index: usize,
-    line: &str,
+    content: &str,
 ) -> Result<Directive, DirectiveError> {
-    if !is_directive(line) {
-        return Err(DirectiveError::InvalidDirective(index));
+    if !is_directive(content) {
+        return Err(DirectiveError::InvalidDirective(index, content.to_string()));
     }
-    let directive: Vec<&str> = line[1..].split_whitespace().collect();
+    let directive: Vec<&str> = content[1..].split_whitespace().collect();
     if directive.len() != 1 {
-        return Err(DirectiveError::InvalidDirective(index));
+        return Err(DirectiveError::InvalidDirectiveFormat(index, content.to_string()));
     }
-    let directive = match *directive.first().unwrap() {
-        "variables" => Directive::Variables,
-        "tiles" => Directive::Tiles,
-        _ => return Err(DirectiveError::UnknownDirective(index)),
-    };
+    let directive = Directive::from_str(index, directive.first().unwrap())?;
+
     Ok(directive)
 }
 
 pub(super) fn parse_tiles<'a, I: Iterator<Item = (usize, &'a str)> + Clone>(
     lines: I,
     tile_count: usize,
-    variables: &HashMap<&'a str, MapTileVariable>,
-) -> Result<Vec<MapTile>, TileDefinitionError> {
+    variables: &HashMap<&'a str, MapTile>,
+    textures: &HashMap<&str, TextureID>
+) -> Result<Vec<MapTile>, TileError> {
     let mut tiles = Vec::with_capacity(tile_count);
 
-    for (index, line) in lines {
-        let operands: Vec<&str> = line.split('=').collect();
+    for (index, content) in lines {
+        let operands: Vec<&str> = content.split('=').collect();
         if operands.len() != 2 {
-            return Err(TileDefinitionError::InvalidFormat(index));
+            return Err(TileError::InvalidSeparator(index));
         }
         let left_operand: Vec<&str> =
             operands.first().unwrap().split_whitespace().collect();
         if left_operand.len() != 1 {
-            return Err(TileDefinitionError::InvalidTileIndexFormat(index));
+            return Err(TileError::TileIndexContainsWhiteSpaces(index));
         }
+        let tile_index_str = left_operand.first().unwrap();
         let tile_index =
-            parse_tile_index(index, left_operand.first().unwrap())?;
+            parse_tile_index(index, tile_index_str)?;
         let first_index = tile_index.clone().next().unwrap();
         let expressions = operands.last().unwrap();
 
         if tiles.len() != first_index {
-            return Err(TileDefinitionError::TileIndexNotContinuous(index));
+            return Err(TileError::TileIndexNotContinuous(index, tile_index_str.to_string()));
         }
 
-        let tile = parse_tile(index, expressions, variables)?.to_map_tile();
-        if tile.is_none() {
-            return Err(TileDefinitionError::MissingTileDefinitions(index));
-        }
+        let tile = parse_tile(index, expressions, variables, textures)?;
         for _i in tile_index {
-            tiles.insert(_i, tile.unwrap())
+            tiles.insert(_i, tile)
             //tiles.push(tile);
         }
     }
@@ -190,21 +171,18 @@ pub(super) fn parse_tiles<'a, I: Iterator<Item = (usize, &'a str)> + Clone>(
 //                the last definition will be taken
 pub(super) fn parse_tile(
     index: usize,
-    line: &str,
-    variables: &HashMap<&str, MapTileVariable>,
-) -> Result<MapTileVariable, TileDefinitionError> {
-    let mut tile = MapTileVariable::default();
+    content: &str,
+    variables: &HashMap<&str, MapTile>,
+    textures: &HashMap<&str, TextureID>
+) -> Result<MapTile, TileError> {
+    let mut tile = MapTile::default();
 
-    // Split the line into multiple words separated by whitespaces.
-    for expr in line.split_whitespace() {
-        // Split the expression into operands where as the separator
-        // is considered a ':' sign. (e.g. obj:GRASS)
+    for expr in content.split_whitespace() {
         let operands: Vec<&str> = expr.split(':').collect();
-        match operands.len() {
-            1 => {
-                let key = operands.first().unwrap();
+        match operands[..] {
+            [key] => {
                 match variables.get(key) {
-                    Some(var) => {
+                    Some(var_tile) => {
                         update_if_some(&mut tile.object, var.object);
                         update_if_some(&mut tile.object_top, var.object_top);
                         update_if_some(
@@ -223,7 +201,7 @@ pub(super) fn parse_tile(
                         );
                     }
                     None => {
-                        return Err(TileDefinitionError::UnknownVariable(
+                        return Err(TileError::UnknownVariable(
                             index,
                             key.to_string(),
                         ))
@@ -231,9 +209,9 @@ pub(super) fn parse_tile(
                 }
                 continue;
             }
-            2 => (),
+            [_, _] => (),
             _ => {
-                return Err(TileDefinitionError::InvalidExpression(
+                return Err(TileError::InvalidExpression(
                     index,
                     expr.to_string(),
                 ))?
@@ -266,15 +244,15 @@ pub(super) fn parse_tile(
             }
             // Top object part height value:
             "th" | "top_h" | "top_height" | "t_height" => {
-                tile.obj_top_height = Some(parse_number(index, right)?)
+                tile.obj_top_height = Some(parse_float(index, right)?)
             }
             // Bottom object part height value:
             "bh" | "bot_h" | "bottom_h" | "b_height" | "bot_height"
             | "bottom_height" => {
-                tile.obj_bottom_height = Some(parse_number(index, right)?)
+                tile.obj_bottom_height = Some(parse_float(index, right)?)
             }
             _ => {
-                return Err(TileDefinitionError::UnknownLeftOperand(
+                return Err(TileError::UnknownLeftOperand(
                     index,
                     left.to_string(),
                 ))
@@ -289,22 +267,26 @@ pub(super) fn parse_variables<
     I: Iterator<Item = (usize, &'a str)> + Clone,
 >(
     lines: I,
-) -> Result<HashMap<&'a str, MapTileVariable>, TileDefinitionError> {
+    textures: &HashMap<&str, TextureID>
+) -> Result<HashMap<&'a str, MapTile>, TileError> {
     let mut variables = HashMap::new();
-    for (index, line) in lines {
-        let operands: Vec<&str> = line.split('=').collect();
+    for (index, content) in lines {
+        let operands: Vec<&str> = content.split('=').collect();
         if operands.len() != 2 {
-            return Err(TileDefinitionError::InvalidVariableFormat(index));
+            return Err(TileError::InvalidVariableFormat(index));
         }
         let left_operand: Vec<&str> =
             operands.first().unwrap().split_whitespace().collect();
         if left_operand.len() != 1 {
-            return Err(TileDefinitionError::InvalidVariableFormat(index));
+            return Err(TileError::InvalidVariableFormat(index));
         }
         let key = left_operand.first().unwrap();
+        if variables.contains_key(key) {
+            return Err(TileError::VariableNameAlreadyTaken(index, key.to_string()))
+        }
 
         let expressions = operands.last().unwrap();
-        let parsed_expressions = parse_tile(index, expressions, &variables)?;
+        let parsed_expressions = parse_tile(index, expressions, &variables, textures)?;
         variables.insert(key, parsed_expressions);
     }
 
@@ -314,76 +296,81 @@ pub(super) fn parse_variables<
 pub(super) fn parse_tile_index(
     index: usize,
     operand: &str,
-) -> Result<RangeInclusive<usize>, TileDefinitionError> {
-    if operand.chars().any(|c| !matches!(c, '0'..='9' | '-')) {
-        return Err(TileDefinitionError::IllegalTileIndexCharacter(index));
+) -> Result<RangeInclusive<usize>, TileError> {
+    if let Some(invalid_char) = operand.chars().find(|c| !matches!(c, '0'..='9' | '-')) {
+        return Err(TileError::IllegalTileIndexCharacter(index, invalid_char));
     }
     let tile_index: RangeInclusive<usize> = if operand.contains('-') {
         let values: Vec<&str> = operand.split('-').collect();
         if values.len() != 2 {
-            return Err(TileDefinitionError::InvalidTileIndexFormat(index));
+            return Err(TileError::InvalidTileIndexSeparator(index));
         }
         let first = values.first().unwrap();
         let last = values.last().unwrap();
         let from = match first.parse::<usize>() {
             Ok(from) => from,
-            Err(_) => return Err(TileDefinitionError::FailedToParseTileIndex(index, first.to_string())),
+            Err(_) => return Err(TileError::FailedToParseTileIndex(index, first.to_string())),
         };
         let to = match last.parse::<usize>() {
             Ok(to) => to,
-            Err(_) => return Err(TileDefinitionError::FailedToParseTileIndex(index, last.to_string())),
+            Err(_) => return Err(TileError::FailedToParseTileIndex(index, last.to_string())),
         };
         from..=to
     } else {
         match operand.parse::<usize>() {
             Ok(i) => i..=i,
             Err(_) => {
-                return Err(TileDefinitionError::FailedToParseTileIndex(index, operand.to_string()))
+                return Err(TileError::FailedToParseTileIndex(index, operand.to_string()))
             }
         }
     };
     let first = match tile_index.clone().next() {
         Some(f) => f,
-        None => return Err(TileDefinitionError::InvalidTileIndexRange(index)),
+        None => return Err(TileError::InvalidTileIndexRange(index, operand.to_string())),
     };
     let last = match tile_index.clone().last() {
         Some(l) => l,
-        None => return Err(TileDefinitionError::InvalidTileIndexRange(index)),
+        None => return Err(TileError::InvalidTileIndexRange(index, operand.to_string())),
     };
     if first > last || first == 0 {
-        return Err(TileDefinitionError::InvalidTileIndexRange(index));
+        return Err(TileError::InvalidTileIndexRange(index, operand.to_string()));
     }
     Ok(first.saturating_sub(1)..=last.saturating_sub(1))
 }
 
-pub(super) fn parse_number<P: FromStr>(
-    index: usize,
-    s: &str,
-) -> Result<P, TileDefinitionError> {
-    match s.parse() {
-        Ok(p) => Ok(p),
-        Err(_) => Err(TileDefinitionError::InvalidValueType(index)),
+pub(super) fn parse_textures<'a, I: Iterator<Item = (usize, &'a str)> + Clone>(
+    lines: I,
+) -> Result<(Vec<Texture>, HashMap<&'a str, TextureID>), TextureError> {
+    let textures = Vec::with_capacity(lines.clone().count());
+    let texture_indices = HashMap::new();
+
+    for (texture_index, (real_index, content)) in lines.enumerate() {
+        let operands: Vec<&str> = content.split('=').collect();
+        if operands.len() != 2 {
+            return Err(TextureError::InvalidSeparatorFormat(real_index));
+        }
+        let left_operand: Vec<&str> =
+            operands.first().unwrap().split_whitespace().collect();
+        if left_operand.len() != 1 {
+            return Err(TextureError::TextureSymbolContainsWhiteSpaces(real_index, operands.first().unwrap().to_string()));
+        }
+        let key = left_operand.first().unwrap();
+        if texture_indices.contains_key(key) {
+            return Err(TextureError::TextureNameAlreadyTaken(real_index, key.to_string()))
+        }
+
     }
+
+    Ok((textures, texture_indices))
 }
 
-pub(super) fn parse_object_type(
+pub(super) fn parse_float<P: FromStr>(
     index: usize,
     s: &str,
-) -> Result<ObjectType, TileDefinitionError> {
-    match s {
-        "EMPTY" => Ok(ObjectType::Empty),
-        "MOSSYSTONE" => Ok(ObjectType::MossyStone),
-        "BLUEBRICK" => Ok(ObjectType::BlueBrick),
-        "LIGHTPLANK" => Ok(ObjectType::LightPlank),
-        "FENCE" => Ok(ObjectType::Fence),
-        "BLUEGLASS" => Ok(ObjectType::BlueGlass),
-
-        _ => {
-            Err(TileDefinitionError::UnknownObjectType(
-                index,
-                s.to_string(),
-            ))
-        }
+) -> Result<P, TileError> {
+    match s.parse() {
+        Ok(p) => Ok(p),
+        Err(_) => Err(TileError::InvalidValueType(index)),
     }
 }
 
@@ -400,32 +387,34 @@ pub(super) fn is_directive(line: &str) -> bool {
 
 #[derive(Debug, PartialEq, Eq)]
 pub(super) enum Directive {
+    Textures,
     Variables,
     Tiles,
 }
 
-#[derive(Debug, Clone, Copy, Default)]
-pub(super) struct MapTileVariable {
-    pub object: Option<ObjectType>,
-    pub object_top: Option<ObjectType>,
-    pub object_bottom: Option<ObjectType>,
-    pub floor: Option<ObjectType>,
-    pub ceiling: Option<ObjectType>,
-    pub obj_top_height: Option<f32>,
-    pub obj_bottom_height: Option<f32>,
+impl Directive {
+    fn from_str(index: usize, s: &str) -> Result<Self, DirectiveError> {
+        match s {
+            "textures" => Ok(Self::Textures),
+            "variables" => Ok(Self::Variables),
+            "tiles" => Ok(Self::Tiles),
+            _ => Err(DirectiveError::UnknownDirective(index, s.to_string()))
+        }
+    }
 }
 
-impl MapTileVariable {
-    fn to_map_tile(self) -> Option<MapTile> {
-        let tile = MapTile {
-            object: self.object?,
-            object_top: self.object_top?,
-            object_bottom: self.object_bottom?,
-            floor: self.floor?,
-            ceiling: self.ceiling?,
-            obj_top_height: self.obj_top_height?,
-            obj_bottom_height: self.obj_bottom_height?,
-        };
-        Some(tile)
-    }
+#[derive(Debug)]
+pub struct Texture {
+    rgba: Vec<u8>,
+    width: u32,
+    height: u32,
+    has_transparency: bool
+}
+
+#[derive(Debug)]
+pub struct TextureRef<'a> {
+    rgba: &'a [u8],
+    width: u32,
+    height: u32,
+    has_transparency: bool
 }

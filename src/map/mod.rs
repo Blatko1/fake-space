@@ -8,8 +8,74 @@ use std::str::FromStr;
 
 use crate::voxel::VoxelModelType;
 
-use self::parse_error::TileDefinitionError;
+use self::parse_error::{MapParseError};
 
+pub struct Map {
+    width: usize,
+    height: usize,
+    tiles: Vec<MapTile>,
+}
+
+impl Map {
+    pub fn from_file_str(data: &str) -> Result<Self, MapParseError> {
+        let ((w, h), tiles) = map_parser::parse_map(data)?;
+        Ok(Self {
+            width: w,
+            height: h,
+            tiles,
+        })
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct MapTile {
+    pub object: TextureID,
+    pub object_top: TextureID,
+    pub object_bottom: TextureID,
+    pub floor: TextureID,
+    pub ceiling: TextureID,
+    pub obj_top_height: f32,
+    pub obj_bottom_height: f32,
+}
+
+impl Default for MapTile {
+    fn default() -> Self {
+        Self { obj_top_height: 1.0, obj_bottom_height: 1.0, ..Default::default() }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
+pub enum TextureID {
+    ID(u32),
+    #[default]
+    Default,
+    Empty
+}
+
+const DEFAULT_TEXTURE_WIDTH: usize = 2;
+const DEFAULT_TEXTURE_HEIGHT: usize = 2;
+const DEFAULT_TEXTURE_RGBA: &[u8] = &[
+    200, 0, 200, 255, 0, 0, 0, 255, 200, 0, 200, 255, 0, 0, 0, 255
+];
+const DEFAULT_TEXTURE: (&[u8], usize, usize) = (DEFAULT_TEXTURE_RGBA, DEFAULT_TEXTURE_WIDTH, DEFAULT_TEXTURE_HEIGHT);
+
+/*/// Represents all tiles not including ceiling or floor tiles.
+/// Additionally, contains a non-tile `Void` type.
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum ObjectType {
+    MossyStone,
+    BlueBrick,
+    LightPlank,
+    Fence,
+    BlueGlass,
+    ///// Non-transparent wall tile, possibly with modified height.
+    //FullWall(FullWallType),
+    ///// A wall tile which contains transparent parts or has modified height.
+    //TransparentWall(TransparentWallType),
+    /// Empty tile inside the map bounds.
+    Empty,
+}
+*/
 /*pub struct TestMap {
     map: Map<{ Self::WIDTH as usize }, { Self::DEPTH as usize }>,
 }
@@ -33,32 +99,9 @@ impl TestMap {
     }
 }*/
 
-#[derive(Debug, Clone, Copy)]
-pub struct MapTile {
-    pub object: ObjectType,
-    pub object_top: ObjectType,
-    pub object_bottom: ObjectType,
-    pub floor: ObjectType,
-    pub ceiling: ObjectType,
-    pub obj_top_height: f32,
-    pub obj_bottom_height: f32,
-}
-
-impl MapTile {
-    pub const VOID: Self = MapTile {
-        object: ObjectType::MossyStone,
-        object_top: ObjectType::MossyStone,
-        object_bottom: ObjectType::BlueBrick,
-        floor: ObjectType::BlueBrick,
-        ceiling: ObjectType::MossyStone,
-        obj_top_height: f32::INFINITY,
-        obj_bottom_height: f32::INFINITY,
-    };
-}
-
-/// A map where the player is positioned. Contains all map data.
-/// The (0,0) coordinate is positioned at the bottom-left
-/// and (`width`, `height`) at the top-right.
+//// A map where the player is positioned. Contains all map data.
+//// The (0,0) coordinate is positioned at the bottom-left
+//// and (`width`, `height`) at the top-right.
 /*pub struct Map<const W: usize, const D: usize> {
     data: [[MapTile; W]; D],
 }
@@ -127,23 +170,6 @@ impl<const W: usize, const D: usize> Map<W, D> {
         MapTile::VOID
     }
 }*/
-
-/// Represents all tiles not including ceiling or floor tiles.
-/// Additionally, contains a non-tile `Void` type.
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum ObjectType {
-    MossyStone,
-    BlueBrick,
-    LightPlank,
-    Fence,
-    BlueGlass,
-    ///// Non-transparent wall tile, possibly with modified height.
-    //FullWall(FullWallType),
-    ///// A wall tile which contains transparent parts or has modified height.
-    //TransparentWall(TransparentWallType),
-    /// Empty tile inside the map bounds.
-    Empty,
-}
 
 // A voxel model object tile which possibly contains
 // transparent/hollow parts.

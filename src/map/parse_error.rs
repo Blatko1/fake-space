@@ -3,46 +3,57 @@ use std::{error::Error, fmt::Display};
 #[derive(Debug, PartialEq, Eq)]
 pub enum MapParseError {
     Dimensions(DimensionsError),
+    Texture(TextureError),
     Directive(DirectiveError),
-    TileDefinition(TileDefinitionError),
+    Tile(TileError),
     Undefined(usize, String),
-    NotEnoughTiles(usize, usize)
+    DimensionsAndTileCountNotMatching(usize, usize)
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum DimensionsError {
     IllegalCharacter(usize),
     MissingDimensions,
-    InvalidDimensions(usize),
+    InvalidSeparatorFormat(usize),
+    InvalidDimensionValue(usize)
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum TextureError {
+    InvalidSeparatorFormat(usize),
+    TextureSymbolContainsWhiteSpaces(usize, String),
+    TextureNameAlreadyTaken(usize, String)
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum DirectiveError {
-    MissingTilesDirective,
     MultipleSameDirectives,
-    InvalidDirective(usize),
-    UnknownDirective(usize),
+    InvalidDirective(usize, String),
+    InvalidDirectiveFormat(usize, String),
+    UnknownDirective(usize, String),
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum TileDefinitionError {
+pub enum TileError {
+    InvalidSeparator(usize),
     MissingTileDefinitions(usize),
     InvalidExpression(usize, String),
     UnknownLeftOperand(usize, String),
     InvalidValueType(usize),
     UnknownObjectType(usize, String),
     MissingTileNumber(usize),
-    InvalidFormat(usize),
 
-    InvalidTileIndex(usize),
-    InvalidTileIndexFormat(usize),
-    IllegalTileIndexCharacter(usize),
-    InvalidTileIndexRange(usize),
+    IllegalTileIndexCharacter(usize, char),
+    InvalidTileIndexSeparator(usize),
     FailedToParseTileIndex(usize, String),
-    TileIndexNotContinuous(usize),
+    InvalidTileIndexRange(usize, String),
+    TileIndexNotContinuous(usize, String),
+    InvalidTileIndex(usize),
+    TileIndexContainsWhiteSpaces(usize),
 
     InvalidVariableFormat(usize),
     UnknownVariable(usize, String),
+    VariableNameAlreadyTaken(usize, String)
 }
 
 impl Display for MapParseError {
@@ -59,14 +70,21 @@ impl From<DimensionsError> for MapParseError {
     }
 }
 
+impl From<TextureError> for MapParseError {
+    fn from(value: TextureError) -> Self {
+        Self::Texture(value)
+    }
+}
+
+
 impl From<DirectiveError> for MapParseError {
     fn from(value: DirectiveError) -> Self {
         Self::Directive(value)
     }
 }
 
-impl From<TileDefinitionError> for MapParseError {
-    fn from(value: TileDefinitionError) -> Self {
-        Self::TileDefinition(value)
+impl From<TileError> for MapParseError {
+    fn from(value: TileError) -> Self {
+        Self::Tile(value)
     }
 }

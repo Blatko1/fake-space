@@ -1,7 +1,7 @@
 use crate::{
     canvas::Canvas,
     draw::Raycaster, //textures::TextureManager,
-    voxel::VoxelModelManager,
+    voxel::VoxelModelManager, map::Map,
 };
 use winit::{
     dpi::PhysicalSize,
@@ -12,12 +12,12 @@ pub struct State {
     canvas: Canvas,
     raycaster: Raycaster,
     models: VoxelModelManager,
-    //map: TestMap,
+    map: Map,
     //textures: TextureManager,
 }
 
 impl State {
-    pub fn new(canvas: Canvas) -> Self {
+    pub fn new(canvas: Canvas, map: Map) -> Self {
         let raycaster = Raycaster::new(
             2.0,
             0.5,
@@ -31,7 +31,7 @@ impl State {
             canvas,
             raycaster,
             models: VoxelModelManager::init(),
-            //map: TestMap::new(),
+            map,
             //textures: TextureManager::init(),
         }
     }
