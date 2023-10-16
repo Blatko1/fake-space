@@ -8,7 +8,7 @@ use std::str::FromStr;
 
 use crate::voxel::VoxelModelType;
 
-use self::parse_error::{MapParseError};
+use self::parse_error::MapParseError;
 
 pub struct Map {
     width: usize,
@@ -40,7 +40,11 @@ pub struct MapTile {
 
 impl Default for MapTile {
     fn default() -> Self {
-        Self { obj_top_height: 1.0, obj_bottom_height: 1.0, ..Default::default() }
+        Self {
+            obj_top_height: 1.0,
+            obj_bottom_height: 1.0,
+            ..Default::default()
+        }
     }
 }
 
@@ -49,15 +53,19 @@ pub enum TextureID {
     ID(u32),
     #[default]
     Default,
-    Empty
+    Empty,
 }
 
 const DEFAULT_TEXTURE_WIDTH: usize = 2;
 const DEFAULT_TEXTURE_HEIGHT: usize = 2;
 const DEFAULT_TEXTURE_RGBA: &[u8] = &[
-    200, 0, 200, 255, 0, 0, 0, 255, 200, 0, 200, 255, 0, 0, 0, 255
+    200, 0, 200, 255, 0, 0, 0, 255, 200, 0, 200, 255, 0, 0, 0, 255,
 ];
-const DEFAULT_TEXTURE: (&[u8], usize, usize) = (DEFAULT_TEXTURE_RGBA, DEFAULT_TEXTURE_WIDTH, DEFAULT_TEXTURE_HEIGHT);
+const DEFAULT_TEXTURE: (&[u8], usize, usize) = (
+    DEFAULT_TEXTURE_RGBA,
+    DEFAULT_TEXTURE_WIDTH,
+    DEFAULT_TEXTURE_HEIGHT,
+);
 
 /*/// Represents all tiles not including ceiling or floor tiles.
 /// Additionally, contains a non-tile `Void` type.

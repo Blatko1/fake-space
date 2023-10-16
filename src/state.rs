@@ -1,7 +1,8 @@
 use crate::{
     canvas::Canvas,
     draw::Raycaster, //textures::TextureManager,
-    voxel::VoxelModelManager, map::Map,
+    map::Map,
+    voxel::VoxelModelManager,
 };
 use winit::{
     dpi::PhysicalSize,

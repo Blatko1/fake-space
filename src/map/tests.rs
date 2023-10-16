@@ -64,12 +64,12 @@ fn parse_dimensions_test() {
 }
 
 #[test]
-fn parse_directive_word_test() {
+fn parse_directive_test() {
     let i = 1;
     let line = "#variables";
     assert_eq!(parse_directive(i, line), Ok(Directive::Variables));
     let line = "#          tiles";
-    assert_eq!(parse_directive(i, line), Ok(Directive::Tiles));
+    assert_eq!(parse_directive(i, line), Err(DirectiveError::UnknownDirective(i, "          tiles".to_string())));
     let line = "vars";
     assert_eq!(
         parse_directive(i, line),
@@ -78,7 +78,10 @@ fn parse_directive_word_test() {
     let line = "# vari ables";
     assert_eq!(
         parse_directive(i, line),
-        Err(DirectiveError::InvalidDirective(i, "# vari ables".to_string()))
+        Err(DirectiveError::UnknownDirective(
+            i,
+            " vari ables".to_string()
+        ))
     );
     let line = "varst";
     assert_eq!(
@@ -113,12 +116,18 @@ fn parse_tile_index_test() {
     let operand = "100-99";
     assert_eq!(
         parse_tile_index(index, operand),
-        Err(TileError::InvalidTileIndexRange(index, "100-99".to_string()))
+        Err(TileError::InvalidTileIndexRange(
+            index,
+            "100-99".to_string()
+        ))
     );
     let operand = "100-98";
     assert_eq!(
         parse_tile_index(index, operand),
-        Err(TileError::InvalidTileIndexRange(index, "100-98".to_string()))
+        Err(TileError::InvalidTileIndexRange(
+            index,
+            "100-98".to_string()
+        ))
     );
     let operand = "100-9-8";
     assert_eq!(

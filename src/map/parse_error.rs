@@ -7,7 +7,7 @@ pub enum MapParseError {
     Directive(DirectiveError),
     Tile(TileError),
     Undefined(usize, String),
-    DimensionsAndTileCountNotMatching(usize, usize)
+    DimensionsAndTileCountNotMatching(usize, usize),
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -15,21 +15,20 @@ pub enum DimensionsError {
     IllegalCharacter(usize),
     MissingDimensions,
     InvalidSeparatorFormat(usize),
-    InvalidDimensionValue(usize)
+    InvalidDimensionValue(usize),
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum TextureError {
     InvalidSeparatorFormat(usize),
     TextureSymbolContainsWhiteSpaces(usize, String),
-    TextureNameAlreadyTaken(usize, String)
+    TextureNameAlreadyTaken(usize, String),
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum DirectiveError {
     MultipleSameDirectives,
     InvalidDirective(usize, String),
-    InvalidDirectiveFormat(usize, String),
     UnknownDirective(usize, String),
 }
 
@@ -40,7 +39,7 @@ pub enum TileError {
     InvalidExpression(usize, String),
     UnknownLeftOperand(usize, String),
     InvalidValueType(usize),
-    UnknownObjectType(usize, String),
+    UnknownTextureKey(usize, String),
     MissingTileNumber(usize),
 
     IllegalTileIndexCharacter(usize, char),
@@ -53,7 +52,7 @@ pub enum TileError {
 
     InvalidVariableFormat(usize),
     UnknownVariable(usize, String),
-    VariableNameAlreadyTaken(usize, String)
+    VariableNameAlreadyTaken(usize, String),
 }
 
 impl Display for MapParseError {
@@ -75,7 +74,6 @@ impl From<TextureError> for MapParseError {
         Self::Texture(value)
     }
 }
-
 
 impl From<DirectiveError> for MapParseError {
     fn from(value: DirectiveError) -> Self {

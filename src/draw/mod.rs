@@ -8,10 +8,7 @@ use glam::Vec3;
 use std::f32::consts::{PI, TAU};
 use winit::event::{DeviceEvent, ElementState, KeyboardInput, VirtualKeyCode};
 
-use crate::{
-    map::ObjectType,
-    voxel::{VoxelModelManager, VoxelModelRef},
-};
+use crate::voxel::{VoxelModelManager, VoxelModelRef};
 
 // TODO rotation control with mouse and/or keyboard
 const MOVEMENT_SPEED: f32 = 0.1;
