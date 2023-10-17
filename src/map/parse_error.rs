@@ -1,4 +1,4 @@
-use std::{error::Error, fmt::Display};
+use std::{error::Error, fmt::Display, io};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum MapParseError {
@@ -6,6 +6,8 @@ pub enum MapParseError {
     Texture(TextureError),
     Directive(DirectiveError),
     Tile(TileError),
+
+    FileErr(io::ErrorKind),
     Undefined(usize, String),
     DimensionsAndTileCountNotMatching(usize, usize),
 }
@@ -84,5 +86,11 @@ impl From<DirectiveError> for MapParseError {
 impl From<TileError> for MapParseError {
     fn from(value: TileError) -> Self {
         Self::Tile(value)
+    }
+}
+
+impl From<io::Error> for MapParseError {
+    fn from(value: io::Error) -> Self {
+        Self::FileErr(value.kind())
     }
 }

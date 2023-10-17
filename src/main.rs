@@ -33,7 +33,7 @@ fn main() {
     let winit_window = WinitWindowBuilder::new().build(&event_loop).unwrap();
     winit_window.set_title("False Space");
 
-    let map = Map::from_file_str(include_str!("../maps/map1.txt")).unwrap();
+    let map = todo!();//Map::from_file_str(include_str!("../maps/map1.txt")).unwrap();
 
     let canvas = block_on(Canvas::init(&winit_window, 320, 240));
 

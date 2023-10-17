@@ -16,7 +16,7 @@ pub struct Map {
     tiles: Vec<MapTile>,
 }
 
-impl Map {
+/*impl Map {
     pub fn from_file_str(data: &str) -> Result<Self, MapParseError> {
         let ((w, h), tiles) = map_parser::parse_map(data)?;
         Ok(Self {
@@ -25,7 +25,7 @@ impl Map {
             tiles,
         })
     }
-}
+}*/
 
 #[derive(Debug, Clone, Copy)]
 pub struct MapTile {
