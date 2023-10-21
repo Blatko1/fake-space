@@ -1,6 +1,6 @@
 use std::{error::Error, fmt::Display, io};
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq)]
 pub enum MapParseError {
     Dimensions(DimensionsError),
     Texture(TextureError),
@@ -12,7 +12,7 @@ pub enum MapParseError {
     DimensionsAndTileCountNotMatching(usize, usize),
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq)]
 pub enum DimensionsError {
     IllegalCharacter(usize),
     MissingDimensions,
@@ -20,21 +20,28 @@ pub enum DimensionsError {
     InvalidDimensionValue(usize),
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug)]
 pub enum TextureError {
     InvalidSeparatorFormat(usize),
-    TextureSymbolContainsWhiteSpaces(usize, String),
+    TextureVariableMultipleWords(usize, String),
     TextureNameAlreadyTaken(usize, String),
+
+    InvalidOperandSeparatorFormat(usize),
+    UnknownParameter(usize),
+    InvalidTexturePath(usize),
+    FailedToOpenTexture(io::ErrorKind),
+    FailedToReadTexture(image::ImageError),
+    FailedToParseBoolValue(usize)
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq)]
 pub enum DirectiveError {
     MultipleSameDirectives,
     InvalidDirective(usize, String),
     UnknownDirective(usize, String),
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq)]
 pub enum TileError {
     InvalidSeparator(usize),
     MissingTileDefinitions(usize),
@@ -55,6 +62,22 @@ pub enum TileError {
     InvalidVariableFormat(usize),
     UnknownVariable(usize, String),
     VariableNameAlreadyTaken(usize, String),
+}
+
+impl PartialEq for TextureError {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::InvalidSeparatorFormat(l0), Self::InvalidSeparatorFormat(r0)) => l0 == r0,
+            (Self::TextureVariableMultipleWords(l0, l1), Self::TextureVariableMultipleWords(r0, r1)) => l0 == r0 && l1 == r1,
+            (Self::TextureNameAlreadyTaken(l0, l1), Self::TextureNameAlreadyTaken(r0, r1)) => l0 == r0 && l1 == r1,
+            (Self::InvalidOperandSeparatorFormat(l0), Self::InvalidOperandSeparatorFormat(r0)) => l0 == r0,
+            (Self::UnknownParameter(l0), Self::UnknownParameter(r0)) => l0 == r0,
+            (Self::InvalidTexturePath(l0), Self::InvalidTexturePath(r0)) => l0 == r0,
+            (Self::FailedToOpenTexture(l0), Self::FailedToOpenTexture(r0)) => l0 == r0,
+            (Self::FailedToReadTexture(l0), Self::FailedToReadTexture(r0)) => todo!(),
+            _ => false,
+        }
+    }
 }
 
 impl Display for MapParseError {
@@ -92,5 +115,17 @@ impl From<TileError> for MapParseError {
 impl From<io::Error> for MapParseError {
     fn from(value: io::Error) -> Self {
         Self::FileErr(value.kind())
+    }
+}
+
+impl From<io::Error> for TextureError {
+    fn from(value: io::Error) -> Self {
+        Self::FailedToOpenTexture(value.kind())
+    }
+}
+
+impl From<image::ImageError> for TextureError {
+    fn from(value: image::ImageError) -> Self {
+        Self::FailedToReadTexture(value)
     }
 }

@@ -148,7 +148,7 @@ fn parse_tile_index_test() {
 
 #[test]
 fn map_parser_test() {
-    let parsed = MapParser::from_path(".").unwrap().parse_map(include_str!("../../maps/map1.txt")).unwrap();
+    let parsed = MapParser::from_path("./maps/map1.txt").unwrap().parse().unwrap();
     println!("dimensions: {:?}", parsed.0);
     for t in parsed.1 {
         println!("tile: {:?}", t);

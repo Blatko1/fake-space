@@ -1,12 +1,12 @@
 use std::{
     hash::Hash,
     ops::{Range, RangeInclusive},
-    path::Path,
+    path::{Path, PathBuf},
     str::FromStr,
 };
 
 use hashbrown::HashMap;
-use image::io::Reader as ImageReader;
+use image::{io::Reader as ImageReader, EncodableLayout};
 
 use super::{
     parse_error::{
@@ -16,59 +16,45 @@ use super::{
 };
 
 pub struct MapParser {
-    textures: HashMap<String, (Texture, usize)>,
+    src_path: PathBuf,
+    data: String,
+    textures: HashMap<String, usize>,
     variables: HashMap<String, MapTileVariable>,
 }
 
-impl MapParser {
-    pub(super) fn from_path<P: AsRef<Path>>(
-        path: P,
+impl<'a> MapParser {
+    pub(super) fn from_path<P: Into<PathBuf>>(
+        src_path: P,
     ) -> Result<Self, MapParseError> {
-        let data = std::fs::read_to_string(path);
+        let src_path: PathBuf = src_path.into().canonicalize()?;
+        let data = std::fs::read_to_string(src_path.clone())?;
         Ok(Self {
+            src_path: src_path.parent().unwrap().to_path_buf(),
+            data,
             textures: HashMap::new(),
             variables: HashMap::new(),
         })
     }
 
-    pub(super) fn parse(self) {}
-
-    pub(super) fn parse_map(
-        &mut self,
-        data: &str,
-    ) -> Result<((usize, usize), Vec<MapTile>), MapParseError> {
-        // Split the input data into lines, remove the lines which
-        // only contain comments, remove lines with no text,
-        // remove the commented out parts from lines with content.
-        let mut lines = data
+    pub(super) fn parse(self) -> Result<((usize, usize), Vec<MapTile>), MapParseError> {
+        let mut lines = self.data
             .lines()
             .enumerate()
             .map(|(i, line)| (i, line.split("//").next().unwrap().trim()))
             .filter(|(_, line)| !line.is_empty());
 
-        let content_line_count = lines.clone().count();
-        // Parse dimensions from the first content line:
+        if Self::are_directives_repeating(lines.clone()) {
+            return Err(DirectiveError::MultipleSameDirectives)?
+        }
+        
         let dimensions = match lines.next() {
             Some((i, l)) => Self::parse_dimensions(i, l)?,
             None => return Err(DimensionsError::MissingDimensions)?,
         };
 
         let map_size = (dimensions.0 * dimensions.1) as usize;
+        let content_line_count = lines.clone().count();
         let mut tiles = Vec::with_capacity(map_size);
-
-        match (
-            lines
-                .clone()
-                .map(|(_, l)| l.matches("#variables").count())
-                .sum(),
-            lines
-                .clone()
-                .map(|(_, l)| l.matches("#tiles").count())
-                .sum(),
-        ) {
-            (0 | 1, 0 | 1) => (),
-            _ => return Err(DirectiveError::MultipleSameDirectives)?,
-        }
 
         let mut lines = lines.enumerate();
         while let Some((index, (real_index, line))) = lines.next() {
@@ -92,7 +78,7 @@ impl MapParser {
             let directive = Self::parse_directive(real_index, line)?;
             match directive {
                 Directive::Textures => {
-                    let (textures, texture_indices) = Self::parse_textures(expressions)?;
+                    let (textures, texture_indices) = self.parse_textures(expressions)?;
                 }
                 Directive::Variables => {
                     //let variables = Self::parse_variables(expressions, &texture_indices)?;
@@ -161,7 +147,7 @@ impl MapParser {
         Ok(directive)
     }
 
-    fn parse_tiles<'a, I: Iterator<Item = (usize, &'a str)> + Clone>(
+    fn parse_tiles<I: Iterator<Item = (usize, &'a str)> + Clone>(
         lines: I,
         tile_count: usize,
         variables: &HashMap<&'a str, MapTileVariable>,
@@ -290,7 +276,7 @@ impl MapParser {
         Ok(tile)
     }
 
-    fn parse_variables<'a, I: Iterator<Item = (usize, &'a str)> + Clone>(
+    fn parse_variables<I: Iterator<Item = (usize, &'a str)> + Clone>(
         lines: I,
         textures: &HashMap<&str, TextureID>,
     ) -> Result<HashMap<&'a str, MapTileVariable>, TileError> {
@@ -399,41 +385,71 @@ impl MapParser {
     }
 
     pub(super) fn parse_textures<
-        'a,
         I: Iterator<Item = (usize, &'a str)> + Clone,
     >(
-        lines: I,
+        &self, line: I,
     ) -> Result<(Vec<Texture>, HashMap<&'a str, TextureID>), TextureError> {
-        let textures = Vec::with_capacity(lines.clone().count());
+        let textures = Vec::with_capacity(line.clone().count());
         let texture_indices = HashMap::new();
 
-        for (texture_index, (real_index, content)) in lines.enumerate() {
+        for (texture_index, (real_index, content)) in line.enumerate() {
             let operands: Vec<&str> = content.split('=').collect();
             if operands.len() != 2 {
                 return Err(TextureError::InvalidSeparatorFormat(real_index));
             }
-            let left_operand: Vec<&str> =
-                operands.first().unwrap().split_whitespace().collect();
-            if left_operand.len() != 1 {
-                return Err(TextureError::TextureSymbolContainsWhiteSpaces(
+            let texture_name = operands[0];
+            let expressions = operands[1];
+            if texture_name.split_whitespace().count() != 1 {
+                return Err(TextureError::TextureVariableMultipleWords(
                     real_index,
-                    operands.first().unwrap().to_string(),
+                    texture_name.to_string(),
                 ));
             }
-            let key = left_operand.first().unwrap();
-            if texture_indices.contains_key(key) {
+            if texture_indices.contains_key(texture_name) {
                 return Err(TextureError::TextureNameAlreadyTaken(
                     real_index,
-                    key.to_string(),
+                    texture_name.to_string(),
                 ));
             }
+
+            let expressions_split: Vec<&str> = expressions.split_whitespace().collect();
+            let mut texture_data = None;
+            let mut transparency = None;
+            for expr in expressions_split {
+                let operands: Vec<&str> = expr.split(':').collect();
+                if operands.len() != 2 {
+                    return Err(TextureError::InvalidOperandSeparatorFormat(real_index))
+                }
+                let parameter = operands[0];
+                let value = operands[1];
+
+                match parameter {
+                    "path" => {
+                        if value.chars().next().unwrap() != '"' || value.chars().last().unwrap() != '=' {
+                            return Err(TextureError::InvalidTexturePath(real_index))
+                        }
+                        let path_split: Vec<&str> = value.split('"').collect();
+                        if path_split.len() != 3 {
+                            return Err(TextureError::InvalidTexturePath(real_index))
+                        }
+                        let path = path_split[1];
+                        let full_path = self.src_path.join(path);
+                        let data = ImageReader::open(path)?.decode()?;
+                        texture_data = Some(data.to_rgba8().as_bytes().to_vec())
+                    },
+                    "transparency" => {
+                        let parsed = match value.parse::<bool>() {
+                            Ok(b) => b,
+                            Err(_) => return Err(TextureError::FailedToParseBoolValue(real_index)),
+                        };
+                        transparency = Some( parsed)},
+                    _ => return Err(TextureError::UnknownParameter(real_index))
+                }
+            }
+            
         }
 
         Ok((textures, texture_indices))
-    }
-
-    fn parse_texture(path: &str) {
-        let img = ImageReader::open(path);
     }
 
     pub(super) fn parse_float<P: FromStr>(
@@ -448,6 +464,25 @@ impl MapParser {
 
     pub(super) fn is_directive(line: &str) -> bool {
         line.starts_with('#')
+    }
+
+    fn are_directives_repeating< 
+    I: Iterator<Item = (usize, &'a str)> + Clone,
+>(lines: I) -> bool {
+        match (
+            lines.clone()
+                .map(|(_, l)| l.matches("#variables").count())
+                .sum(),
+            lines.clone()
+                .map(|(_, l)| l.matches("#tiles").count())
+                .sum(),
+            lines
+                .map(|(_, l)| l.matches("#textures").count())
+                .sum(),
+        ) {
+            (0 | 1, 0 | 1, 0 | 1) => false,
+            _ => true,
+        }
     }
 }
 

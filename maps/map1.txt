@@ -3,8 +3,8 @@
 //       f->floor, c-> ceiling
 
 #textures
-BlueBrick = path:"../res/blue_brick.png" transparent:false
-LightPlank = path:"../res/light_plank.png" transparent:false
+BlueBrick = path:"../res/blue_brick.png" transparency:false
+LightPlank = path:"../res/light_plank.png" transparency:false
 
 #variables
 $grass = o:BlueBrick th:1.0 bh:1.0 ot:BlueBrick ob:BlueBrick f:BlueBrick c:BlueBrick
