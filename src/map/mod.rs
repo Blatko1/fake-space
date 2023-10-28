@@ -6,9 +6,12 @@ mod parse_error;
 
 use std::str::FromStr;
 
-use crate::voxel::VoxelModelType;
+use crate::{voxel::VoxelModelType, textures::{TextureData, Texture}};
 
-use self::parse_error::MapParseError;
+use self::{
+    map_parser::{MapParser},
+    parse_error::MapParseError,
+};
 
 pub struct Map {
     width: usize,
@@ -16,24 +19,45 @@ pub struct Map {
     tiles: Vec<MapTile>,
 }
 
-/*impl Map {
-    pub fn from_file_str(data: &str) -> Result<Self, MapParseError> {
-        let ((w, h), tiles) = map_parser::parse_map(data)?;
-        Ok(Self {
-            width: w,
-            height: h,
-            tiles,
-        })
+impl Map {
+    pub fn from_file_str(
+        data: &str,
+    ) -> Result<(Self, Vec<TextureData>), MapParseError> {
+        let ((w, h), tiles, textures) =
+            MapParser::from_path("./maps/map1.txt")?.parse()?;
+        Ok((
+            Self {
+                width: w,
+                height: h,
+                tiles,
+            },
+            textures,
+        ))
     }
-}*/
+
+    /// Returns the value at the provided map coordinates.
+    /// Parsed arguments are assumed to be in map bound and correct.
+    /// This game assumes that the y-axis points upwards, the z-axis forwards
+    /// and the x-axis to the right so `x` represents moving left or right
+    /// and `z` represents moving forward or backward on the map.
+    /// Returns [`Tile::Void`] if coordinates are out of bounds.
+    #[inline]
+    pub fn get_tile(&self, x: i32, z: i32) -> Option<&MapTile> {
+        // TODO do something about i32 arguments
+        if x >= self.width as i32 || x < 0 || z >= self.height as i32 || z < 0 {
+            return None
+        }
+        self.tiles.get(z as usize * self.width + x as usize)
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct MapTile {
-    pub object: TextureID,
-    pub object_top: TextureID,
-    pub object_bottom: TextureID,
-    pub floor: TextureID,
-    pub ceiling: TextureID,
+    pub object: Texture,
+    pub object_top: Texture,
+    pub object_bottom: Texture,
+    pub floor: Texture,
+    pub ceiling: Texture,
     pub obj_top_height: f32,
     pub obj_bottom_height: f32,
 }
@@ -43,29 +67,14 @@ impl Default for MapTile {
         Self {
             obj_top_height: 1.0,
             obj_bottom_height: 1.0,
-            ..Default::default()
+            object: Default::default(),
+            object_top: Default::default(),
+            object_bottom: Default::default(),
+            floor: Default::default(),
+            ceiling: Default::default(),
         }
     }
 }
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
-pub enum TextureID {
-    ID(u32),
-    #[default]
-    Default,
-    Empty,
-}
-
-const DEFAULT_TEXTURE_WIDTH: usize = 2;
-const DEFAULT_TEXTURE_HEIGHT: usize = 2;
-const DEFAULT_TEXTURE_RGBA: &[u8] = &[
-    200, 0, 200, 255, 0, 0, 0, 255, 200, 0, 200, 255, 0, 0, 0, 255,
-];
-const DEFAULT_TEXTURE: (&[u8], usize, usize) = (
-    DEFAULT_TEXTURE_RGBA,
-    DEFAULT_TEXTURE_WIDTH,
-    DEFAULT_TEXTURE_HEIGHT,
-);
 
 /*/// Represents all tiles not including ceiling or floor tiles.
 /// Additionally, contains a non-tile `Void` type.

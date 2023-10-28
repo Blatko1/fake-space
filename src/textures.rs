@@ -1,3 +1,75 @@
+pub struct TextureManager {
+    textures: Vec<TextureData>
+}
+
+impl TextureManager {
+    pub fn new(textures: Vec<TextureData>) -> Self {
+        Self {
+            textures
+        }
+    }
+
+    pub fn get(&self, id: Texture) -> TextureDataRef {
+        match id {
+            Texture::ID(id) => self.textures.get(id).unwrap().as_ref(),
+            Texture::Default => TextureDataRef::DEFAULT,
+            Texture::Empty => TextureDataRef::EMPTY,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
+pub enum Texture {
+    ID(usize),
+    #[default]
+    Default,
+    Empty,
+}
+
+#[derive(Debug)]
+pub struct TextureData {
+    pub data: Vec<u8>,
+    pub width: u32,
+    pub height: u32,
+    pub transparency: bool,
+}
+
+impl TextureData {
+    fn as_ref(&self) -> TextureDataRef {
+        TextureDataRef { data: &self.data, width: self.width, height: self.height, transparency: self.transparency }
+    }
+}
+
+#[derive(Debug)]
+pub struct TextureDataRef<'a> {
+    pub data: &'a [u8],
+    pub width: u32,
+    pub height: u32,
+    pub transparency: bool,
+}
+
+impl<'a> TextureDataRef<'a> {
+    const EMPTY: Self = Self {
+        data: &[],
+        width: 0,
+        height: 0,
+        transparency: true,
+    };
+
+    const DEFAULT_TEXTURE_WIDTH: u32 = 2;
+const DEFAULT_TEXTURE_HEIGHT: u32 = 2;
+const DEFAULT_TEXTURE_RGBA: &[u8] = &[
+    200, 0, 200, 255, 0, 0, 0, 255, 0, 0, 0, 255, 200, 0, 200, 255,
+];
+
+    const DEFAULT: Self = Self {
+        data: Self::DEFAULT_TEXTURE_RGBA,
+        width: Self::DEFAULT_TEXTURE_WIDTH,
+        height: Self::DEFAULT_TEXTURE_HEIGHT,
+        transparency: false,
+    };
+}
+
 /*use crate::map::{BoundType, FullWallType, TransparentWallType};
 
 pub struct TextureManager {

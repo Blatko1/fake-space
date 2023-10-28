@@ -1,8 +1,7 @@
 use crate::map::{
-    map_parser::{MapParser, Directive},
+    map_parser::{Directive, MapParser},
     parse_error::{DimensionsError, DirectiveError, TileError},
 };
-
 
 #[test]
 fn parse_dimensions_test() {
@@ -18,7 +17,7 @@ fn parse_dimensions_test() {
     let line = "    11  x   27   1".trim();
     assert_eq!(
         MapParser::parse_dimensions(i, line),
-        Err(DimensionsError::InvalidDimensionValue(i))
+        Err(DimensionsError::IllegalCharacter(i))
     );
     let line = "x10";
     assert_eq!(
@@ -38,22 +37,22 @@ fn parse_dimensions_test() {
     let line = "1010";
     assert_eq!(
         MapParser::parse_dimensions(i, line),
-        Err(DimensionsError::InvalidDimensionValue(i))
+        Err(DimensionsError::InvalidSeparatorFormat(i))
     );
     let line = "x10x";
     assert_eq!(
         MapParser::parse_dimensions(i, line),
-        Err(DimensionsError::InvalidDimensionValue(i))
+        Err(DimensionsError::InvalidSeparatorFormat(i))
     );
     let line = "xxx";
     assert_eq!(
         MapParser::parse_dimensions(i, line),
-        Err(DimensionsError::InvalidDimensionValue(i))
+        Err(DimensionsError::InvalidSeparatorFormat(i))
     );
     let line = "x1cx";
     assert_eq!(
         MapParser::parse_dimensions(i, line),
-        Err(DimensionsError::InvalidDimensionValue(i))
+        Err(DimensionsError::InvalidSeparatorFormat(i))
     );
     let line = "11cx27";
     assert_eq!(
@@ -66,7 +65,10 @@ fn parse_dimensions_test() {
 fn parse_directive_test() {
     let i = 1;
     let line = "#variables";
-    assert_eq!(MapParser::parse_directive(i, line), Ok(Directive::Variables));
+    assert_eq!(
+        MapParser::parse_directive(i, line),
+        Ok(Directive::Variables)
+    );
     let line = "#          tiles";
     assert_eq!(
         MapParser::parse_directive(i, line),
@@ -148,7 +150,10 @@ fn parse_tile_index_test() {
 
 #[test]
 fn map_parser_test() {
-    let parsed = MapParser::from_path("./maps/map1.txt").unwrap().parse().unwrap();
+    let parsed = MapParser::from_path("./maps/map1.txt")
+        .unwrap()
+        .parse()
+        .unwrap();
     println!("dimensions: {:?}", parsed.0);
     for t in parsed.1 {
         println!("tile: {:?}", t);

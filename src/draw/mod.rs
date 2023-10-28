@@ -8,7 +8,7 @@ use glam::Vec3;
 use std::f32::consts::{PI, TAU};
 use winit::event::{DeviceEvent, ElementState, KeyboardInput, VirtualKeyCode};
 
-use crate::voxel::{VoxelModelManager, VoxelModelRef};
+use crate::{voxel::{VoxelModelManager, VoxelModelRef}, map::Map, textures::{TextureManager, Texture}};
 
 // TODO rotation control with mouse and/or keyboard
 const MOVEMENT_SPEED: f32 = 0.1;
@@ -37,7 +37,6 @@ pub struct RayHit /*<'a>*/ {
     /// If the ray hit the left portion of the tile side (wall), the
     /// x-coordinate would be somewhere in range [0.0, 0.5].
     wall_x: f32,
-    //texture: TextureDataRef<'a>,
     delta_dist_x: f32,
     delta_dist_z: f32,
 }
@@ -172,9 +171,9 @@ impl Raycaster {
     /// Stores all [`RayHit`]s in the internal array.
     pub fn cast_rays(
         &mut self,
-        //tile_map: &TestMap,
+        tile_map: &Map,
         models: &VoxelModelManager,
-        //textures: &TextureManager,
+        textures: &TextureManager,
         data: &mut [u8],
     ) {
         // For each pixel column on the screen
@@ -213,8 +212,10 @@ impl Raycaster {
             // If a transparent tile is hit, continue iterating.
             // If another transparent tile was hit, store it as a final hit.
             let mut last_perp_wall_dist = 0.0;
-            let max_height_on_path = (self.pos.y * self.f_height) as usize;
-            /*loop {
+            let mut max_floor_height = 0;
+            loop {
+                let current_map_x = map_x;
+                let current_map_z = map_z;
                 // Distance to the first hit wall's x/z side if the wall isn't empty
                 let side = if side_dist_x < side_dist_z {
                     map_x += step_x;
@@ -240,9 +241,49 @@ impl Raycaster {
                         (dist.max(0.0), wall_x - wall_x.floor())
                     }
                 };
-                let tile = tile_map.get_tile(map_x as usize, map_z as usize);
+                let tile = match tile_map.get_tile(current_map_x, current_map_z) {
+                    Some(t) => t,
+                    None => {
+                        // draw non moving background 
+                        break},
+                };
+                let mut hit = RayHit {
+                    screen_x: x,
+                    dir: ray_dir,
+                    wall_dist: perp_wall_dist,
+                    last_wall_dist: last_perp_wall_dist,
+                    max_height_on_path: max_floor_height,
+                    side,
+                    wall_x,
+                    delta_dist_x,
+                    delta_dist_z,
+                };
+                let drawn_to = self.draw_floor(
+                    last_perp_wall_dist,
+                    perp_wall_dist,
+                    max_floor_height,
+                    tile.obj_bottom_height,
+                    textures.get(tile.floor),
+                    x,
+                    data,
+                );
+                max_floor_height = drawn_to.max(max_floor_height);
+                /*if current_map_x == 5 && current_map_z == 5 {
+                    self.draw_floor(
+                        last_perp_wall_dist,
+                        perp_wall_dist,
+                        0.4,
+                        textures.get(Texture::Default),
+                        x,
+                        data,
+                    );
+                }*/
+                last_perp_wall_dist = perp_wall_dist;
+                //self.draw
+                
+
                 // If the hit tile is not Tile::Empty (out of bounds != Tile::Empty) store data
-                if tile.object != ObjectType::Empty {
+                /*if tile.object != ObjectType::Empty {
                     let mut hit = RayHit {
                         screen_x: x,
                         dir: ray_dir,
@@ -331,8 +372,8 @@ impl Raycaster {
                         data,
                     );
                     last_perp_wall_dist = perp_wall_dist;
-                }
-            }*/
+                }*/
+            }
         });
         //self.draw_top_bottom(tile_map, textures, data);
     }

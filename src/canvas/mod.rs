@@ -249,11 +249,14 @@ impl Canvas {
                                     b: 0.3,
                                     a: 1.0,
                                 }),
-                                store: true,
+                                // TODO maybe this can be Discard???
+                                store: wgpu::StoreOp::Store,
                             },
                         },
                     )],
                     depth_stencil_attachment: None,
+                    timestamp_writes: None,
+                    occlusion_query_set: None,
                 });
 
             rpass.set_pipeline(&self.pipeline);

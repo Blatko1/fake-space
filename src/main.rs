@@ -33,11 +33,12 @@ fn main() {
     let winit_window = WinitWindowBuilder::new().build(&event_loop).unwrap();
     winit_window.set_title("False Space");
 
-    let map = todo!();//Map::from_file_str(include_str!("../maps/map1.txt")).unwrap();
+    let (map, textures) =
+        Map::from_file_str(include_str!("../maps/map1.txt")).unwrap();
 
     let canvas = block_on(Canvas::init(&winit_window, 320, 240));
 
-    let mut state = State::new(canvas, map);
+    let mut state = State::new(canvas, map, textures);
 
     let framerate_delta = Duration::from_secs_f64(1.0 / FPS as f64);
     let mut time_delta = Instant::now();

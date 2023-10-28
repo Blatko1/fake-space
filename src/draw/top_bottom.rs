@@ -4,7 +4,7 @@
 // is difficult due to existence of transparent walls
 // and their fully transparent parts
 // TODO problem! adding unsafe could improve performance
-use crate::map::MapTile;
+use crate::{map::MapTile, textures::TextureDataRef};
 
 use super::{blend, Raycaster};
 
@@ -13,11 +13,21 @@ impl Raycaster {
         &self,
         from_wall_dist: f32,
         to_wall_dist: f32,
+        max_floor_height: usize,
         floor_height_bottom: f32,
-        //texture_data: TextureDataRef<'_>,
+        texture_data: TextureDataRef<'_>,
         draw_x: u32,
         data: &mut [u8],
-    ) {
+    ) -> usize {
+        let (texture, tex_width, tex_height) = (
+            texture_data.data,
+            texture_data.width as usize,
+            texture_data.height as usize,
+        );
+        if texture.is_empty() {
+            return 0
+        }
+
         let width = self.width as usize;
         let height = self.height as usize;
 
@@ -27,7 +37,7 @@ impl Raycaster {
         let bottom_height = half_wall_height
             * (self.pos.y * 2.0 + (floor_height_bottom - 1.0))
             - self.y_shearing;
-        let draw_from = (self.float_half_height - bottom_height)
+        let mut draw_from = (self.float_half_height - bottom_height)
             .max(0.0)
             .min(self.height as f32 - 1.0) as usize;
 
@@ -37,16 +47,22 @@ impl Raycaster {
         let bottom_height = half_wall_height
             * (self.pos.y * 2.0 + (floor_height_bottom - 1.0))
             - self.y_shearing;
-        let draw_to = ((self.float_half_height - bottom_height)
+        let mut draw_to = ((self.float_half_height - bottom_height)
             .max(0.0)
             .min(self.height as f32 - 1.0) as usize)
             .max(draw_from);
 
+        if max_floor_height > draw_from {
+            if max_floor_height > draw_to {
+                return 0
+            }
+            draw_from = max_floor_height;
+            draw_to = draw_to.max(draw_from);
+        }
+
         //println!("draw_from: {draw_from}, draw_to: {draw_to}");
         let ray_dir = self.dir - self.plane_h;
-        let floor_tex: u32 = todo!(); //texture_data;
         let tile_step_factor = self.plane_h * 2.0 * self.width_recip;
-
         data.chunks_exact_mut(4)
             .skip(draw_x as usize)
             .step_by(width)
@@ -54,7 +70,7 @@ impl Raycaster {
             .skip(height - draw_to)
             .take(draw_to - draw_from)
             .for_each(|(y, rgba)| {
-                let floor_row_dist = (self.pos.y) * self.f_height
+                let floor_row_dist = (self.pos.y - (0.5 - floor_height_bottom*0.5)) * self.f_height
                     / (y as f32 - self.f_height / 2.0 + self.y_shearing)
                     * self.plane_dist;
                 let floor_step = tile_step_factor * floor_row_dist;
@@ -62,19 +78,14 @@ impl Raycaster {
                     + ray_dir * floor_row_dist
                     + floor_step * draw_x as f32;
 
-                let (texture, tex_width, tex_height) = (
-                    todo!(), //floor_tex.texture,
-                    todo!(), //floor_tex.width as usize,
-                    todo!(), //floor_tex.height as usize,
-                );
                 let tx_floor = ((tex_width as f32 * floor_pos.x.fract())
                     as usize)
-                    .min(todo!() /*tex_width - 1*/);
+                    .min(tex_width - 1);
                 let ty_floor = ((tex_height as f32 * floor_pos.z.fract())
                     as usize)
-                    .min(todo!() /*tex_height - 1*/);
-                let i_floor = todo!(); //tex_width * 4 * ty_floor + tx_floor * 4;
-                let color = todo!(); //&texture[i_floor..i_floor + 4];
+                    .min(tex_height - 1);
+                let i_floor = tex_width * 4 * ty_floor + tx_floor * 4;
+                let color = &texture[i_floor..i_floor + 4];
                 rgba.copy_from_slice(color);
             });
         if let Some(first) = data
@@ -97,6 +108,7 @@ impl Raycaster {
         {
             first.copy_from_slice(&[255, 0, 0, 255]);
         };
+        draw_to
     }
     /*pub fn draw_top_bottom(
         &self,

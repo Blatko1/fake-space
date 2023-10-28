@@ -8,7 +8,7 @@ pub enum MapParseError {
     Tile(TileError),
 
     FileErr(io::ErrorKind),
-    Undefined(usize, String),
+    UndefinedExpression(usize, String),
     DimensionsAndTileCountNotMatching(usize, usize),
 }
 
@@ -23,15 +23,17 @@ pub enum DimensionsError {
 #[derive(Debug)]
 pub enum TextureError {
     InvalidSeparatorFormat(usize),
-    TextureVariableMultipleWords(usize, String),
+    TextureNameContainsWhitespace(usize, String),
     TextureNameAlreadyTaken(usize, String),
 
     InvalidOperandSeparatorFormat(usize),
-    UnknownParameter(usize),
-    InvalidTexturePath(usize),
+    UnknownParameter(usize, String),
+    InvalidTexturePath(usize, String),
     FailedToOpenTexture(io::ErrorKind),
     FailedToReadTexture(image::ImageError),
-    FailedToParseBoolValue(usize)
+    FailedToParseBoolValue(usize, String),
+    TextureSrcNotSpecified(usize),
+    TextureTransparencyNotSpecified(usize),
 }
 
 #[derive(Debug, PartialEq)]
@@ -44,12 +46,10 @@ pub enum DirectiveError {
 #[derive(Debug, PartialEq)]
 pub enum TileError {
     InvalidSeparator(usize),
-    MissingTileDefinitions(usize),
     InvalidExpression(usize, String),
-    UnknownLeftOperand(usize, String),
-    InvalidValueType(usize),
-    UnknownTextureKey(usize, String),
-    MissingTileNumber(usize),
+    UnknownParameter(usize, String),
+    FloatParseError(usize, String),
+    UnknownTexture(usize, String),
 
     IllegalTileIndexCharacter(usize, char),
     InvalidTileIndexSeparator(usize),
@@ -57,8 +57,8 @@ pub enum TileError {
     InvalidTileIndexRange(usize, String),
     TileIndexNotContinuous(usize, String),
     InvalidTileIndex(usize),
-    TileIndexContainsWhiteSpaces(usize),
 
+    InvalidVariableSeparatorFormat(usize),
     InvalidVariableFormat(usize),
     UnknownVariable(usize, String),
     VariableNameAlreadyTaken(usize, String),
@@ -67,14 +67,36 @@ pub enum TileError {
 impl PartialEq for TextureError {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Self::InvalidSeparatorFormat(l0), Self::InvalidSeparatorFormat(r0)) => l0 == r0,
-            (Self::TextureVariableMultipleWords(l0, l1), Self::TextureVariableMultipleWords(r0, r1)) => l0 == r0 && l1 == r1,
-            (Self::TextureNameAlreadyTaken(l0, l1), Self::TextureNameAlreadyTaken(r0, r1)) => l0 == r0 && l1 == r1,
-            (Self::InvalidOperandSeparatorFormat(l0), Self::InvalidOperandSeparatorFormat(r0)) => l0 == r0,
-            (Self::UnknownParameter(l0), Self::UnknownParameter(r0)) => l0 == r0,
-            (Self::InvalidTexturePath(l0), Self::InvalidTexturePath(r0)) => l0 == r0,
-            (Self::FailedToOpenTexture(l0), Self::FailedToOpenTexture(r0)) => l0 == r0,
-            (Self::FailedToReadTexture(l0), Self::FailedToReadTexture(r0)) => todo!(),
+            (
+                Self::InvalidSeparatorFormat(l0),
+                Self::InvalidSeparatorFormat(r0),
+            ) => l0 == r0,
+            (
+                Self::TextureNameContainsWhitespace(l0, l1),
+                Self::TextureNameContainsWhitespace(r0, r1),
+            ) => l0 == r0 && l1 == r1,
+            (
+                Self::TextureNameAlreadyTaken(l0, l1),
+                Self::TextureNameAlreadyTaken(r0, r1),
+            ) => l0 == r0 && l1 == r1,
+            (
+                Self::InvalidOperandSeparatorFormat(l0),
+                Self::InvalidOperandSeparatorFormat(r0),
+            ) => l0 == r0,
+            (
+                Self::UnknownParameter(l0, l1),
+                Self::UnknownParameter(r0, r1),
+            ) => l0 == r0 && l1 == r1,
+            (
+                Self::InvalidTexturePath(l0, l1),
+                Self::InvalidTexturePath(r0, r1),
+            ) => l0 == r0 && l1 == r1,
+            (Self::FailedToOpenTexture(l0), Self::FailedToOpenTexture(r0)) => {
+                l0 == r0
+            }
+            (Self::FailedToReadTexture(_), Self::FailedToReadTexture(_)) => {
+                todo!()
+            }
             _ => false,
         }
     }

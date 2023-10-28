@@ -1,11 +1,13 @@
+use crate::textures::TextureManager;
+
 use super::{blend, RayHit, Raycaster, Side};
 
 // TODO write tests for each draw call function to check for overflows
 impl Raycaster {
     // Draws full and transparent walls.
-    /*pub fn draw_wall(&self, hit: RayHit, data: &mut [u8]) {
+    /*pub fn draw_wall(&self, hit: RayHit, textures: &TextureManager, data: &mut [u8]) {
         // Find out what texture to use when drawing
-        let tex = hit.texture;
+        let tex = textures.get(id);
         let (tex_width, tex_height, bottom_height, top_height) = (
             tex.width as usize,
             tex.height as usize,

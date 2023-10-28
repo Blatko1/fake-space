@@ -8,17 +8,19 @@ use std::{
 use hashbrown::HashMap;
 use image::{io::Reader as ImageReader, EncodableLayout};
 
+use crate::textures::{Texture, TextureData};
+
 use super::{
     parse_error::{
         DimensionsError, DirectiveError, MapParseError, TextureError, TileError,
     },
-    MapTile, TextureID,
+    MapTile
 };
 
 pub struct MapParser {
     src_path: PathBuf,
     data: String,
-    textures: HashMap<String, usize>,
+    texture_indices: HashMap<String, Texture>,
     variables: HashMap<String, MapTileVariable>,
 }
 
@@ -31,22 +33,26 @@ impl<'a> MapParser {
         Ok(Self {
             src_path: src_path.parent().unwrap().to_path_buf(),
             data,
-            textures: HashMap::new(),
-            variables: HashMap::new(),
-        })
+            texture_indices: HashMap::new(),
+            variables: HashMap::new()
+        } )
     }
-
-    pub(super) fn parse(self) -> Result<((usize, usize), Vec<MapTile>), MapParseError> {
-        let mut lines = self.data
+            
+    pub(super) fn parse(
+        mut self,
+    ) -> Result<((usize, usize), Vec<MapTile>, Vec<TextureData>), MapParseError>
+    {
+        let mut lines = self
+            .data
             .lines()
             .enumerate()
             .map(|(i, line)| (i, line.split("//").next().unwrap().trim()))
             .filter(|(_, line)| !line.is_empty());
 
-        if Self::are_directives_repeating(lines.clone()) {
-            return Err(DirectiveError::MultipleSameDirectives)?
+        if are_directives_repeating(lines.clone()) {
+            return Err(DirectiveError::MultipleSameDirectives)?;
         }
-        
+
         let dimensions = match lines.next() {
             Some((i, l)) => Self::parse_dimensions(i, l)?,
             None => return Err(DimensionsError::MissingDimensions)?,
@@ -54,19 +60,20 @@ impl<'a> MapParser {
 
         let map_size = (dimensions.0 * dimensions.1) as usize;
         let content_line_count = lines.clone().count();
+        let mut textures = Vec::new();
         let mut tiles = Vec::with_capacity(map_size);
 
         let mut lines = lines.enumerate();
         while let Some((index, (real_index, line))) = lines.next() {
-            if !Self::is_directive(line) {
-                return Err(MapParseError::Undefined(
+            if !is_directive(line) {
+                return Err(MapParseError::UndefinedExpression(
                     real_index,
                     line.to_string(),
                 ));
             }
             let expressions_count = lines
                 .clone()
-                .find(|(_, (_, l))| Self::is_directive(l))
+                .find(|(_, (_, l))| is_directive(l))
                 .map(|(i, (_, _))| i - (index + 1))
                 .unwrap_or(content_line_count - (index + 1));
             let expressions = lines
@@ -78,18 +85,17 @@ impl<'a> MapParser {
             let directive = Self::parse_directive(real_index, line)?;
             match directive {
                 Directive::Textures => {
-                    let (textures, texture_indices) = self.parse_textures(expressions)?;
+                    let (texs, indices) = self.parse_textures(expressions)?;
+                    
+                    textures = texs;
+                    self.texture_indices = indices;
                 }
                 Directive::Variables => {
-                    //let variables = Self::parse_variables(expressions, &texture_indices)?;
+                    let variables = self.parse_variables(expressions)?;
+                    self.variables = variables;
                 }
                 Directive::Tiles => {
-                    //let tiles = Self::parse_tiles(
-                    //    expressions,
-                    //    map_size,
-                    //    &variables,
-                    //    &texture_indices,
-                    //)?;
+                    tiles = self.parse_tiles(expressions, map_size)?;
                 }
             }
         }
@@ -101,7 +107,7 @@ impl<'a> MapParser {
             ));
         }
 
-        Ok((dimensions, tiles))
+        Ok((dimensions, tiles, textures))
     }
 
     pub(super) fn parse_dimensions(
@@ -136,7 +142,7 @@ impl<'a> MapParser {
         index: usize,
         content: &str,
     ) -> Result<Directive, DirectiveError> {
-        if !Self::is_directive(content) {
+        if !is_directive(content) {
             return Err(DirectiveError::InvalidDirective(
                 index,
                 content.to_string(),
@@ -147,11 +153,14 @@ impl<'a> MapParser {
         Ok(directive)
     }
 
+    // TODO get rid of asserts afterwards maybe
+    // TODO make it so index is needed to be given to err only at the main callsite.
+    // TODO remember: if there are multiple same definitions for same tile,
+    //                the last definition will be taken
     fn parse_tiles<I: Iterator<Item = (usize, &'a str)> + Clone>(
+        &self,
         lines: I,
         tile_count: usize,
-        variables: &HashMap<&'a str, MapTileVariable>,
-        textures: &HashMap<&str, TextureID>,
     ) -> Result<Vec<MapTile>, TileError> {
         let mut tiles = Vec::with_capacity(tile_count);
 
@@ -160,15 +169,14 @@ impl<'a> MapParser {
             if operands.len() != 2 {
                 return Err(TileError::InvalidSeparator(index));
             }
-            let left_operand: Vec<&str> =
-                operands.first().unwrap().split_whitespace().collect();
-            if left_operand.len() != 1 {
-                return Err(TileError::TileIndexContainsWhiteSpaces(index));
+            let tile_index = operands[0];
+            let expressions = operands[1];
+            if tile_index.split_whitespace().count() != 1 {
+                return Err(TileError::InvalidTileIndex(index));
             }
-            let tile_index_str = left_operand.first().unwrap();
+            let tile_index_str = tile_index.split_whitespace().next().unwrap();
             let tile_index = Self::parse_tile_index(index, tile_index_str)?;
             let first_index = tile_index.clone().next().unwrap();
-            let expressions = operands.last().unwrap();
 
             if tiles.len() != first_index {
                 return Err(TileError::TileIndexNotContinuous(
@@ -177,9 +185,85 @@ impl<'a> MapParser {
                 ));
             }
 
-            let tile =
-            Self::parse_tile_variable(index, expressions, variables, textures)?
-                    .to_map_tile(index);
+            let mut tile = MapTileVariable::default();
+            for expr in expressions.split_whitespace() {
+                let operands: Vec<&str> = expr.split(':').collect();
+                match operands[..] {
+                    [expr] => {
+                        if expr.starts_with('$') {
+                            let variable = &expr[1..];
+                            match self.variables.get(variable) {
+                                Some(variable) => {
+                                    tile.update(variable);
+                                    continue;
+                                }
+                                None => {
+                                    return Err(TileError::UnknownVariable(
+                                        index,
+                                        variable.to_string(),
+                                    ))
+                                }
+                            }
+                        } else {
+                            return Err(TileError::InvalidExpression(
+                                index,
+                                expr.to_string(),
+                            ));
+                        }
+                    }
+
+                    [_, _] => (),
+                    _ => {
+                        return Err(TileError::InvalidExpression(
+                            index,
+                            expr.to_string(),
+                        ))?
+                    }
+                }
+                let parameter = operands[0];
+                let value = operands[1];
+
+                match parameter.to_lowercase().as_str() {
+                    // Top object part height value:
+                    "toph" => {
+                        tile.obj_top_height = Some(parse_float(index, value)?)
+                    }
+                    // Bottom object part height value:
+                    "both" => {
+                        tile.obj_bottom_height =
+                            Some(parse_float(index, value)?)
+                    }
+                    // Object type definition:
+                    "obj" => {
+                        tile.object = Some(self.get_texture_id(index, value)?)
+                    }
+                    // Object top side type definition:
+                    "top" => {
+                        tile.object_top =
+                            Some(self.get_texture_id(index, value)?)
+                    }
+                    // Object bottom side type definition:
+                    "bot" => {
+                        tile.object_bottom =
+                            Some(self.get_texture_id(index, value)?)
+                    }
+                    // Floor type definition:
+                    "flr" => {
+                        tile.floor = Some(self.get_texture_id(index, value)?)
+                    }
+                    // Ceiling type definition:
+                    "clg" => {
+                        tile.ceiling = Some(self.get_texture_id(index, value)?)
+                    }
+                    _ => {
+                        return Err(TileError::UnknownParameter(
+                            index,
+                            parameter.to_string(),
+                        ))
+                    }
+                }
+            }
+            let tile = tile.to_map_tile(index);
             for _i in tile_index {
                 tiles.insert(_i, tile)
                 //tiles.push(tile);
@@ -187,122 +271,110 @@ impl<'a> MapParser {
         }
         Ok(tiles)
     }
-    // TODO get rid of asserts afterwards maybe
-    // TODO make it so index is needed to be given to err only at the main callsite.
-    // TODO remember: if there are multiple same definitions for same tile,
-    //                the last definition will be taken
-    fn parse_tile_variable(
-        index: usize,
-        content: &str,
-        variables: &HashMap<&str, MapTileVariable>,
-        textures: &HashMap<&str, TextureID>,
-    ) -> Result<MapTileVariable, TileError> {
-        let mut tile = MapTileVariable::default();
-
-        for expr in content.split_whitespace() {
-            let operands: Vec<&str> = expr.split(':').collect();
-            match operands[..] {
-                [key] => {
-                    match variables.get(key) {
-                        Some(variable) => tile.update(variable),
-                        None => {
-                            return Err(TileError::UnknownVariable(
-                                index,
-                                key.to_string(),
-                            ))
-                        }
-                    }
-                    continue;
-                }
-                [_, _] => (),
-                _ => {
-                    return Err(TileError::InvalidExpression(
-                        index,
-                        expr.to_string(),
-                    ))?
-                }
-            }
-            let left = operands.first().unwrap();
-            let right = operands.last().unwrap();
-
-            match *left {
-                // Top object part height value:
-                "th" | "top_h" | "top_height" | "t_height" => {
-                    tile.obj_top_height = Some(Self::parse_float(index, right)?)
-                }
-                // Bottom object part height value:
-                "bh" | "bot_h" | "bottom_h" | "b_height" | "bot_height"
-                | "bottom_height" => {
-                    tile.obj_bottom_height = Some(Self::parse_float(index, right)?)
-                }
-                requires_str => {
-                    let texture_id = match textures.get(right) {
-                        Some(t) => *t,
-                        None => {
-                            return Err(TileError::UnknownTextureKey(
-                                index,
-                                right.to_string(),
-                            ))
-                        }
-                    };
-                    match requires_str {
-                        // Object type definition:
-                        "o" | "obj" | "object" => {
-                            tile.object = Some(texture_id)
-                        }
-                        // Object top side type definition:
-                        "ot" | "o_top" | "obj_top" | "object_top" => {
-                            tile.object_top = Some(texture_id)
-                        }
-                        // Object bottom side type definition:
-                        "ob" | "o_bot" | "o_bottom" | "obj_bot"
-                        | "obj_bottom" | "object_bottom" => {
-                            tile.object_bottom = Some(texture_id)
-                        }
-                        // Floor type definition:
-                        "f" | "floor" => tile.floor = Some(texture_id),
-                        // Ceiling type definition:
-                        "c" | "ceiling" => tile.ceiling = Some(texture_id),
-                        _ => {
-                            return Err(TileError::UnknownLeftOperand(
-                                index,
-                                left.to_string(),
-                            ))
-                        }
-                    }
-                }
-            }
-        }
-        Ok(tile)
-    }
 
     fn parse_variables<I: Iterator<Item = (usize, &'a str)> + Clone>(
+        &self,
         lines: I,
-        textures: &HashMap<&str, TextureID>,
-    ) -> Result<HashMap<&'a str, MapTileVariable>, TileError> {
+    ) -> Result<HashMap<String, MapTileVariable>, TileError> {
         let mut variables = HashMap::new();
         for (index, content) in lines {
             let operands: Vec<&str> = content.split('=').collect();
             if operands.len() != 2 {
+                return Err(TileError::InvalidVariableSeparatorFormat(index));
+            }
+            let variable_name = operands[0];
+            let expressions = operands[1];
+            if variable_name.split_whitespace().count() != 1 {
                 return Err(TileError::InvalidVariableFormat(index));
             }
-            let left_operand: Vec<&str> =
-                operands.first().unwrap().split_whitespace().collect();
-            if left_operand.len() != 1 {
-                return Err(TileError::InvalidVariableFormat(index));
-            }
-            let key = left_operand.first().unwrap();
-            if variables.contains_key(key) {
+            let variable_name =
+                variable_name.split_whitespace().next().unwrap();
+            if variables.contains_key(variable_name) {
                 return Err(TileError::VariableNameAlreadyTaken(
                     index,
-                    key.to_string(),
+                    variable_name.to_string(),
                 ));
             }
 
-            let expressions = operands.last().unwrap();
-            let parsed_expressions =
-            Self::parse_tile_variable(index, expressions, &variables, textures)?;
-            variables.insert(key, parsed_expressions);
+            let mut tile = MapTileVariable::default();
+            for expr in expressions.split_whitespace() {
+                let operands: Vec<&str> = expr.split(':').collect();
+                match operands[..] {
+                    [expr] => {
+                        if expr.starts_with('$') {
+                            let variable = &expr[1..];
+                            match variables.get(variable) {
+                                Some(variable) => {
+                                    tile.update(variable);
+                                    continue;
+                                }
+                                None => {
+                                    return Err(TileError::UnknownVariable(
+                                        index,
+                                        variable.to_string(),
+                                    ))
+                                }
+                            }
+                        } else {
+                            return Err(TileError::InvalidExpression(
+                                index,
+                                expr.to_string(),
+                            ));
+                        }
+                    }
+
+                    [_, _] => (),
+                    _ => {
+                        return Err(TileError::InvalidExpression(
+                            index,
+                            expr.to_string(),
+                        ))?
+                    }
+                }
+                let parameter = operands[0];
+                let value = operands[1];
+
+                match parameter.to_lowercase().as_str() {
+                    // Top object part height value:
+                    "toph" => {
+                        tile.obj_top_height = Some(parse_float(index, value)?)
+                    }
+                    // Bottom object part height value:
+                    "both" => {
+                        tile.obj_bottom_height =
+                            Some(parse_float(index, value)?)
+                    }
+                    // Object type definition:
+                    "obj" => {
+                        tile.object = Some(self.get_texture_id(index, value)?)
+                    }
+                    // Object top side type definition:
+                    "top" => {
+                        tile.object_top =
+                            Some(self.get_texture_id(index, value)?)
+                    }
+                    // Object bottom side type definition:
+                    "bot" => {
+                        tile.object_bottom =
+                            Some(self.get_texture_id(index, value)?)
+                    }
+                    // Floor type definition:
+                    "flr" => {
+                        tile.floor = Some(self.get_texture_id(index, value)?)
+                    }
+                    // Ceiling type definition:
+                    "clg" => {
+                        tile.ceiling = Some(self.get_texture_id(index, value)?)
+                    }
+                    _ => {
+                        return Err(TileError::UnknownParameter(
+                            index,
+                            parameter.to_string(),
+                        ))
+                    }
+                }
+            }
+            variables.insert(variable_name.to_string(), tile);
         }
 
         Ok(variables)
@@ -387,10 +459,11 @@ impl<'a> MapParser {
     pub(super) fn parse_textures<
         I: Iterator<Item = (usize, &'a str)> + Clone,
     >(
-        &self, line: I,
-    ) -> Result<(Vec<Texture>, HashMap<&'a str, TextureID>), TextureError> {
-        let textures = Vec::with_capacity(line.clone().count());
-        let texture_indices = HashMap::new();
+        &self,
+        line: I,
+    ) -> Result<(Vec<TextureData>, HashMap<String, Texture>), TextureError> {
+        let mut textures = Vec::with_capacity(line.clone().count());
+        let mut texture_indices = HashMap::new();
 
         for (texture_index, (real_index, content)) in line.enumerate() {
             let operands: Vec<&str> = content.split('=').collect();
@@ -400,11 +473,12 @@ impl<'a> MapParser {
             let texture_name = operands[0];
             let expressions = operands[1];
             if texture_name.split_whitespace().count() != 1 {
-                return Err(TextureError::TextureVariableMultipleWords(
+                return Err(TextureError::TextureNameContainsWhitespace(
                     real_index,
                     texture_name.to_string(),
                 ));
             }
+            let texture_name = texture_name.split_whitespace().next().unwrap();
             if texture_indices.contains_key(texture_name) {
                 return Err(TextureError::TextureNameAlreadyTaken(
                     real_index,
@@ -412,77 +486,129 @@ impl<'a> MapParser {
                 ));
             }
 
-            let expressions_split: Vec<&str> = expressions.split_whitespace().collect();
             let mut texture_data = None;
             let mut transparency = None;
-            for expr in expressions_split {
+            for expr in expressions.split_whitespace() {
                 let operands: Vec<&str> = expr.split(':').collect();
                 if operands.len() != 2 {
-                    return Err(TextureError::InvalidOperandSeparatorFormat(real_index))
+                    return Err(TextureError::InvalidOperandSeparatorFormat(
+                        real_index,
+                    ));
                 }
                 let parameter = operands[0];
                 let value = operands[1];
 
                 match parameter {
                     "path" => {
-                        if value.chars().next().unwrap() != '"' || value.chars().last().unwrap() != '=' {
-                            return Err(TextureError::InvalidTexturePath(real_index))
+                        if !value.starts_with('\"') || !value.ends_with('\"'){                  
+                            return Err(TextureError::InvalidTexturePath(
+                                real_index,
+                                value.to_string(),
+                            ));
                         }
                         let path_split: Vec<&str> = value.split('"').collect();
                         if path_split.len() != 3 {
-                            return Err(TextureError::InvalidTexturePath(real_index))
+                            return Err(TextureError::InvalidTexturePath(
+                                real_index,
+                                value.to_string(),
+                            ));
                         }
                         let path = path_split[1];
                         let full_path = self.src_path.join(path);
-                        let data = ImageReader::open(path)?.decode()?;
-                        texture_data = Some(data.to_rgba8().as_bytes().to_vec())
-                    },
+                        texture_data =
+                            Some(ImageReader::open(full_path)?.decode()?);
+                    }
                     "transparency" => {
-                        let parsed = match value.parse::<bool>() {
-                            Ok(b) => b,
-                            Err(_) => return Err(TextureError::FailedToParseBoolValue(real_index)),
-                        };
-                        transparency = Some( parsed)},
-                    _ => return Err(TextureError::UnknownParameter(real_index))
+                        transparency = match value.parse::<bool>() {
+                            Ok(b) => Some(b),
+                            Err(_) => {
+                                return Err(
+                                    TextureError::FailedToParseBoolValue(
+                                        real_index,
+                                        value.to_string(),
+                                    ),
+                                )
+                            }
+                        }
+                    }
+                    _ => {
+                        return Err(TextureError::UnknownParameter(
+                            real_index,
+                            parameter.to_string(),
+                        ))
+                    }
                 }
             }
-            
+            let Some(texture_data) = texture_data else {
+                return Err(TextureError::TextureSrcNotSpecified(real_index));
+            };
+            let Some(transparency) = transparency else {
+                return Err(TextureError::TextureTransparencyNotSpecified(
+                    real_index,
+                ));
+            };
+            let texture = TextureData {
+                data: texture_data.to_rgba8().as_bytes().to_vec(),
+                width: texture_data.width(),
+                height: texture_data.height(),
+                transparency,
+            };
+            textures.push(texture);
+            texture_indices
+                .insert(texture_name.to_string(), Texture::ID(texture_index));
         }
-
+        assert_eq!(textures.len(), texture_indices.len());
         Ok((textures, texture_indices))
     }
 
-    pub(super) fn parse_float<P: FromStr>(
+    fn get_texture_id(
+        &self,
         index: usize,
-        s: &str,
-    ) -> Result<P, TileError> {
-        match s.parse() {
-            Ok(p) => Ok(p),
-            Err(_) => Err(TileError::InvalidValueType(index)),
+        tex: &str,
+    ) -> Result<Texture, TileError> {
+        if tex == "0" {
+            return Ok(Texture::Empty)
+        }
+        match self.texture_indices.get(tex) {
+            Some(id) => Ok(*id),
+            None => Err(TileError::UnknownTexture(index, tex.to_string())),
         }
     }
+}
 
-    pub(super) fn is_directive(line: &str) -> bool {
-        line.starts_with('#')
-    }
+fn is_directive(line: &str) -> bool {
+    line.starts_with('#')
+}
 
-    fn are_directives_repeating< 
+fn are_directives_repeating<
+    'a,
     I: Iterator<Item = (usize, &'a str)> + Clone,
->(lines: I) -> bool {
-        match (
-            lines.clone()
-                .map(|(_, l)| l.matches("#variables").count())
-                .sum(),
-            lines.clone()
-                .map(|(_, l)| l.matches("#tiles").count())
-                .sum(),
-            lines
-                .map(|(_, l)| l.matches("#textures").count())
-                .sum(),
-        ) {
-            (0 | 1, 0 | 1, 0 | 1) => false,
-            _ => true,
-        }
+>(
+    lines: I,
+) -> bool {
+    match (
+        lines
+            .clone()
+            .map(|(_, l)| l.matches("#variables").count())
+            .sum(),
+        lines
+            .clone()
+            .map(|(_, l)| l.matches("#tiles").count())
+            .sum(),
+        lines.map(|(_, l)| l.matches("#textures").count()).sum(),
+    ) {
+        (0 | 1, 0 | 1, 0 | 1) => false,
+        _ => true,
+    }
+}
+
+fn parse_float<P: FromStr>(
+    index: usize,
+    s: &str,
+) -> Result<P, TileError> {
+    match s.parse() {
+        Ok(p) => Ok(p),
+        Err(_) => Err(TileError::FloatParseError(index, s.to_string())),
     }
 }
 
@@ -504,29 +630,13 @@ impl Directive {
     }
 }
 
-#[derive(Debug)]
-pub struct Texture {
-    rgba: Vec<u8>,
-    width: u32,
-    height: u32,
-    has_transparency: bool,
-}
-
-#[derive(Debug)]
-pub struct TextureRef<'a> {
-    rgba: &'a [u8],
-    width: u32,
-    height: u32,
-    has_transparency: bool,
-}
-
 #[derive(Debug, Default)]
 struct MapTileVariable {
-    pub object: Option<TextureID>,
-    pub object_top: Option<TextureID>,
-    pub object_bottom: Option<TextureID>,
-    pub floor: Option<TextureID>,
-    pub ceiling: Option<TextureID>,
+    pub object: Option<Texture>,
+    pub object_top: Option<Texture>,
+    pub object_bottom: Option<Texture>,
+    pub floor: Option<Texture>,
+    pub ceiling: Option<Texture>,
     pub obj_top_height: Option<f32>,
     pub obj_bottom_height: Option<f32>,
 }
