@@ -16,7 +16,7 @@ use super::{
     },
     MapTile,
 };
-
+// TODO rename to AssetLoader or AssetParser
 pub struct MapParser {
     src_path: PathBuf,
     data: String,
@@ -555,12 +555,12 @@ impl<'a> MapParser {
                     real_index,
                 ));
             };
-            let texture = TextureData {
-                data: texture_data.to_rgba8().as_bytes().to_vec(),
-                width: texture_data.width(),
-                height: texture_data.height(),
-                transparency,
-            };
+            let texture = TextureData::new(
+                texture_data.to_rgba8().as_bytes().to_vec(),
+                texture_data.width(),
+                texture_data.height(),
+                transparency
+            );
             textures.push(texture);
             texture_indices
                 .insert(texture_name.to_string(), Texture::ID(texture_index));

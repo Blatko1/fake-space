@@ -14,18 +14,18 @@ impl Raycaster {
         obj_bottom_height: f32,
         column: &mut [u8],
     ) -> usize {
-        let (texture, tex_width, tex_height) = (
-            texture_data.data,
+        if texture_data.is_empty() {
+            return 0;
+        }
+        let (tex_width, tex_height) = (
             texture_data.width as usize,
             texture_data.height as usize,
         );
-        if texture.is_empty() {
-            return 0;
-        }
-        //let texture = match hit.side {
-        //    Side::Vertical => tex.texture,
-        //    Side::Horizontal => tex.texture_darkened,
-        //};
+        let texture = match hit.side {
+            Side::Vertical => texture_data.light_shade,
+            Side::Horizontal => texture_data.medium_shade,
+        };
+
 
         // TODO better names
         // Calculate wall pixel height for the parts above and below the middle
