@@ -7,36 +7,37 @@ BlueBrick = path:"../res/blue_brick.png" transparency:false
 LightPlank = path:"../res/light_plank.png" transparency:false
 
 #variables
-grass = obj:BlueBrick topH:1.0 botH:1.0 top:BlueBrick bot:BlueBrick flr:BlueBrick clg:BlueBrick
+grass = obj:BlueBrick topH:-0.8 botH:-1.0 top:BlueBrick bot:BlueBrick flr:BlueBrick clg:BlueBrick
 topBottom = flr:LightPlank clg:LightPlank
 dada = obj:LightPlank $topBottom
 
 #tiles
 // First row
-1 = obj:LightPlank topH:1.0 botH:1.0 top:BlueBrick bot:BlueBrick flr:LightPlank clg:LightPlank
-2 = obj:LightPlank topH:1.0 botH:1.0 top:BlueBrick bot:BlueBrick flr:LightPlank clg:LightPlank $topBottom
-3 = $grass topH:1.5 botH:0.8
+1 = obj:LightPlank topH:-1.3 botH:-1.5 top:BlueBrick bot:BlueBrick flr:LightPlank clg:LightPlank
+2 = obj:LightPlank topH:0.0 botH:-1.0 top:BlueBrick bot:BlueBrick flr:LightPlank clg:LightPlank $topBottom
+3 = $grass topH:1.5 botH:-0.8
 4 = $grass
 5 = $grass //5
 6-8 = $grass
-9 = obj:LightPlank toph:1.0 botH:1.0 top:BlueBrick bot:BlueBrick $topBottom
+9 = obj:LightPlank toph:0.0 botH:-1.0 top:BlueBrick bot:BlueBrick $topBottom
 10 = //10
 
 // Second row
 11 = $grass $dada
 12-49 = 
-50 = botH:0.0
-51 = botH:0.1
-52 = botH:0.2
-53 = botH:0.3
-54 = botH:0.4
-55 = botH:0.5
-56 = botH:0.6
-57 = botH:0.7
-58 = botH:0.8
+50 = topH:-1.0
+51 = topH:-0.9
+52 = topH:-0.8
+53 = topH:-0.7
+54 = topH:-0.6
+55 = topH:-0.5
+56 = topH:-0.4
+57 = topH:-0.3
+58 = topH:-0.2
 59-62 = 
-63 = botH:0.9
-64 = botH:1.0
-65 = botH:1.1
-66 = botH:1.2
-67-100 = $dada
+63 = topH:-0.1
+64 = topH:0.0
+65 = topH:0.1
+66 = topH:0.2
+67 = topH:5.0
+68-100 = $dada

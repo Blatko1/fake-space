@@ -8,7 +8,11 @@ use glam::Vec3;
 use std::f32::consts::{PI, TAU};
 use winit::event::{DeviceEvent, ElementState, KeyboardInput, VirtualKeyCode};
 
-use crate::{voxel::{VoxelModelManager, VoxelModelRef}, map::Map, textures::{TextureManager, Texture}};
+use crate::{
+    map::Map,
+    textures::{Texture, TextureManager},
+    voxel::{VoxelModelManager, VoxelModelRef},
+};
 
 // TODO rotation control with mouse and/or keyboard
 const MOVEMENT_SPEED: f32 = 0.1;
@@ -28,7 +32,6 @@ pub struct RayHit /*<'a>*/ {
     dir: Vec3,
     /// Perpetual distance from the raycaster to the hit point on tile (wall).
     wall_dist: f32,
-    last_wall_dist: f32,
     max_height_on_path: usize,
     /// Which side of tile was hit.
     side: Side,
@@ -177,7 +180,117 @@ impl Raycaster {
         data: &mut [u8],
     ) {
         // For each pixel column on the screen
-        (0..self.width).for_each(|x| {
+        data.chunks_exact_mut(self.height as usize * 4)
+            .enumerate()
+            .for_each(|(x, column)| {
+                assert!(x < self.width as usize);
+                // X-coordinate on the horizontal camera plane (range [-1.0, 1.0])
+                let plane_x = 2.0 * (x as f32 * self.width_recip) - 1.0;
+                // Ray direction for current pixel column
+                let ray_dir = self.dir + self.plane_h * plane_x;
+                // Length of ray from one x/z side to next x/z side on the tile_map
+                let delta_dist_x = 1.0 / ray_dir.x.abs();
+                let delta_dist_z = 1.0 / ray_dir.z.abs();
+
+                // Distance to nearest x side
+                let mut side_dist_x = delta_dist_x
+                    * if ray_dir.x < 0.0 {
+                        self.pos.x.fract()
+                    } else {
+                        1.0 - self.pos.x.fract()
+                    };
+                // Distance to nearest z side
+                let mut side_dist_z = delta_dist_z
+                    * if ray_dir.z < 0.0 {
+                        self.pos.z.fract()
+                    } else {
+                        1.0 - self.pos.z.fract()
+                    };
+
+                // Coordinates of the map tile the raycaster is in
+                let mut map_x = self.pos.x as i32;
+                let mut map_z = self.pos.z as i32;
+                let (step_x, step_z) =
+                    (ray_dir.x.signum() as i32, ray_dir.z.signum() as i32);
+
+                // DDA loop
+                // Iterates over all hit sides until it hits a non empty tile.
+                // If a transparent tile is hit, continue iterating.
+                // If another transparent tile was hit, store it as a final hit.
+                let mut previous_perp_wall_dist = 0.0;
+                let mut max_top_height = 0;
+                loop {
+                    let current_map_x = map_x;
+                    let current_map_z = map_z;
+                    // Distance to the first hit wall's x/z side if the wall isn't empty
+                    let side = if side_dist_x < side_dist_z {
+                        map_x += step_x;
+                        side_dist_x += delta_dist_x;
+                        Side::Vertical
+                    } else {
+                        map_z += step_z;
+                        side_dist_z += delta_dist_z;
+                        Side::Horizontal
+                    };
+                    // Calculate perpetual wall distance from the camera and wall_x.
+                    // wall_x represents which part of wall was hit from the left border (0.0)
+                    // to the right border (0.99999) and everything in between in range <0.0, 1.0>
+                    let (perp_wall_dist, wall_x) = match side {
+                        Side::Vertical => {
+                            let dist = side_dist_x - delta_dist_x;
+                            let wall_x = self.pos.z + dist * ray_dir.z;
+                            (dist.max(0.0), wall_x - wall_x.floor())
+                        }
+                        Side::Horizontal => {
+                            let dist = side_dist_z - delta_dist_z;
+                            let wall_x = self.pos.x + dist * ray_dir.x;
+                            (dist.max(0.0), wall_x - wall_x.floor())
+                        }
+                    };
+                    let tile =
+                        match tile_map.get_tile(current_map_x, current_map_z) {
+                            Some(t) => t,
+                            None => {
+                                // draw non moving background
+                                break;
+                            }
+                        };
+                    // Draw top part of cube
+                    let drawn_to = self.draw_floor(
+                        previous_perp_wall_dist,
+                        perp_wall_dist,
+                        max_top_height,
+                        tile.obj_top_height,
+                        textures.get(tile.object_top),
+                        x as u32,
+                        current_map_x as f32,
+                        current_map_z as f32,
+                        column,
+                    );
+                    max_top_height = drawn_to.max(max_top_height);
+                    let tile = match tile_map.get_tile(map_x, map_z) {
+                        Some(t) => t,
+                        None => {
+                            // draw non moving background
+                            break},
+                    };
+                    let hit = RayHit {
+                        screen_x: x as u32,
+                        dir: ray_dir,
+                        wall_dist: perp_wall_dist,
+                        max_height_on_path: max_top_height,
+                        side,
+                        wall_x,
+                        delta_dist_x,
+                        delta_dist_z,
+                    };
+                    let drawn_to = self.draw_wall(hit, textures.get(tile.object), max_top_height, tile.obj_top_height, tile.obj_bottom_height ,column);
+                    max_top_height = drawn_to.max(max_top_height);
+
+                    previous_perp_wall_dist = perp_wall_dist;
+                }
+            });
+        /*(0..self.width).for_each(|x| {
             // X-coordinate on the horizontal camera plane (range [-1.0, 1.0])
             let plane_x = 2.0 * (x as f32 * self.width_recip) - 1.0;
             // Ray direction for current pixel column
@@ -211,8 +324,8 @@ impl Raycaster {
             // Iterates over all hit sides until it hits a non empty tile.
             // If a transparent tile is hit, continue iterating.
             // If another transparent tile was hit, store it as a final hit.
-            let mut last_perp_wall_dist = 0.0;
-            let mut max_floor_height = 0;
+            let mut previous_perp_wall_dist = 0.0;
+            let mut max_top_height = 0;
             loop {
                 let current_map_x = map_x;
                 let current_map_z = map_z;
@@ -244,43 +357,42 @@ impl Raycaster {
                 let tile = match tile_map.get_tile(current_map_x, current_map_z) {
                     Some(t) => t,
                     None => {
-                        // draw non moving background 
+                        // draw non moving background
                         break},
                 };
-                let mut hit = RayHit {
+                // Draw top part of cube
+                let drawn_to = self.draw_floor(
+                    previous_perp_wall_dist,
+                    perp_wall_dist,
+                    max_top_height,
+                    tile.obj_top_height,
+                    textures.get(tile.object_top),
+                    x,
+                    data,
+                );
+                max_top_height = drawn_to.max(max_top_height);
+                let tile = match tile_map.get_tile(map_x, map_z) {
+                    Some(t) => t,
+                    None => {
+                        // draw non moving background
+                        break},
+                };
+                let hit = RayHit {
                     screen_x: x,
                     dir: ray_dir,
                     wall_dist: perp_wall_dist,
-                    last_wall_dist: last_perp_wall_dist,
-                    max_height_on_path: max_floor_height,
+                    max_height_on_path: max_top_height,
                     side,
                     wall_x,
                     delta_dist_x,
                     delta_dist_z,
                 };
-                let drawn_to = self.draw_floor(
-                    last_perp_wall_dist,
-                    perp_wall_dist,
-                    max_floor_height,
-                    tile.obj_bottom_height,
-                    textures.get(tile.floor),
-                    x,
-                    data,
-                );
-                max_floor_height = drawn_to.max(max_floor_height);
-                /*if current_map_x == 5 && current_map_z == 5 {
-                    self.draw_floor(
-                        last_perp_wall_dist,
-                        perp_wall_dist,
-                        0.4,
-                        textures.get(Texture::Default),
-                        x,
-                        data,
-                    );
-                }*/
-                last_perp_wall_dist = perp_wall_dist;
+                let drawn_to = self.draw_wall(hit, textures.get(tile.object), max_top_height, tile.obj_top_height, tile.obj_bottom_height ,data);
+                max_top_height = drawn_to.max(max_top_height);
+
+                previous_perp_wall_dist = perp_wall_dist;
                 //self.draw
-                
+
 
                 // If the hit tile is not Tile::Empty (out of bounds != Tile::Empty) store data
                 /*if tile.object != ObjectType::Empty {
@@ -375,22 +487,20 @@ impl Raycaster {
                 }*/
             }
         });
-        //self.draw_top_bottom(tile_map, textures, data);
+        //self.draw_top_bottom(tile_map, textures, data);*/
     }
 
     pub fn update(&mut self) {
         // Change FOV and vertical FOV
         self.fov = (self.fov
             + (self.increase_fov - self.decrease_fov) * ONE_DEGREE_RAD)
-            .min(MAX_FOV_RAD)
-            .max(ONE_DEGREE_RAD);
+            .clamp(ONE_DEGREE_RAD, MAX_FOV_RAD);
         self.plane_dist = 1.0 / f32::tan(self.fov * 0.5);
 
         // Change y_shearing (look up/down)
         self.y_shearing = (self.y_shearing
             + (self.decrease_y_shearing - self.increase_y_shearing) * 2.5)
-            .min(self.float_half_height - 1.0)
-            .max(-self.float_half_height + 1.0);
+            .clamp(-self.float_half_height + 1.0, self.float_half_height - 1.0);
 
         // Update rotation and direction
         self.angle = normalize_rad(
@@ -413,8 +523,8 @@ impl Raycaster {
             * MOVEMENT_SPEED;
         self.pos.y = (self.pos.y
             + (self.fly_up - self.fly_down) * FLY_UP_DOWN_SPEED)
-            .min(1.0 - f32::EPSILON)
-            .max(0.01);
+            .min(5.999999)
+            .max(-0.999999);
     }
 
     pub fn process_mouse_input(&mut self, event: DeviceEvent) {

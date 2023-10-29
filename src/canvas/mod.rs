@@ -12,7 +12,8 @@ const TRIANGLE_VERTICES: [[f32; 2]; 3] = [
 
 // TODO better explanation
 pub struct Canvas {
-    data: Vec<u8>,
+    buffer: Vec<u8>,
+    frame: Vec<u8>,
     width: u32,
     height: u32,
 
@@ -178,11 +179,12 @@ impl Canvas {
                 multiview: None,
             });
 
-        let data_len = (canvas_width * canvas_height * 4) as usize;
+        let buffer_len = (canvas_width * canvas_height * 4) as usize;
 
         Self {
             // RGBA - 4 bytes per pixel
-            data: vec![0; data_len],
+            buffer: vec![0; buffer_len],
+            frame: vec![0; buffer_len],
             width: canvas_width,
             height: canvas_height,
 
@@ -198,16 +200,32 @@ impl Canvas {
         }
     }
 
-    pub fn clear_data(&mut self) {
-        self.data.fill(0);
+    pub fn clear_buffer(&mut self) {
+        self.buffer.fill(0);
     }
     // TODO check out try_fill(rand) for cool effects!
 
-    pub fn data_mut(&mut self) -> &mut [u8] {
-        &mut self.data
+    pub fn buffer_mut(&mut self) -> &mut [u8] {
+        &mut self.buffer
     }
 
-    pub fn render(&self) -> Result<(), wgpu::SurfaceError> {
+    pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+        // Flip the buffer texture to correct position (90 degrees to left)
+        self.frame
+            .chunks_exact_mut(self.width as usize * 4)
+            .rev()
+            .enumerate()
+            .for_each(|(x, row)| {
+                self.buffer
+                    .chunks_exact(4)
+                    .skip(x)
+                    .step_by(self.height as usize)
+                    .zip(row.chunks_exact_mut(4))
+                    .for_each(|(src, dest)| {
+                        dest.copy_from_slice(src);
+                    })
+            });
+
         self.gfx.queue().write_texture(
             wgpu::ImageCopyTexture {
                 texture: &self.texture,
@@ -215,7 +233,7 @@ impl Canvas {
                 origin: wgpu::Origin3d::ZERO,
                 aspect: wgpu::TextureAspect::All,
             },
-            bytemuck::cast_slice(&self.data),
+            bytemuck::cast_slice(&self.frame),
             wgpu::ImageDataLayout {
                 offset: 0,
                 bytes_per_row: Some(self.width * 4),

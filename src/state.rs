@@ -1,9 +1,9 @@
 use crate::{
     canvas::Canvas,
     draw::Raycaster, //textures::TextureManager,
-    map::{Map},
+    map::Map,
+    textures::{Texture, TextureData, TextureManager},
     voxel::VoxelModelManager,
-    textures::{Texture, TextureData, TextureManager}
 };
 use winit::{
     dpi::PhysicalSize,
@@ -22,7 +22,7 @@ impl State {
     pub fn new(canvas: Canvas, map: Map, textures: Vec<TextureData>) -> Self {
         let raycaster = Raycaster::new(
             2.0,
-            0.5,
+            0.0,
             2.0,
             90f32.to_radians(),
             canvas.width(),
@@ -39,17 +39,17 @@ impl State {
     }
 
     pub fn update(&mut self) {
-        self.canvas.clear_data();
+        self.canvas.clear_buffer();
         self.raycaster.update();
         self.raycaster.cast_rays(
             &self.map,
             &self.models,
             &self.textures,
-            self.canvas.data_mut(),
+            self.canvas.buffer_mut(),
         );
     }
 
-    pub fn render(&self) -> Result<(), wgpu::SurfaceError> {
+    pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         self.canvas.render()
     }
 

@@ -57,6 +57,7 @@ pub enum TileError {
     InvalidTileIndexRange(usize, String),
     TileIndexNotContinuous(usize, String),
     InvalidTileIndex(usize),
+    TopHeightLowerThanBottomHeight(usize, f32, f32),
 
     InvalidVariableSeparatorFormat(usize),
     InvalidVariableFormat(usize),

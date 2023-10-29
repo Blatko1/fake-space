@@ -6,12 +6,12 @@ mod parse_error;
 
 use std::str::FromStr;
 
-use crate::{voxel::VoxelModelType, textures::{TextureData, Texture}};
-
-use self::{
-    map_parser::{MapParser},
-    parse_error::MapParseError,
+use crate::{
+    textures::{Texture, TextureData},
+    voxel::VoxelModelType,
 };
+
+use self::{map_parser::MapParser, parse_error::MapParseError};
 
 pub struct Map {
     width: usize,
@@ -45,7 +45,7 @@ impl Map {
     pub fn get_tile(&self, x: i32, z: i32) -> Option<&MapTile> {
         // TODO do something about i32 arguments
         if x >= self.width as i32 || x < 0 || z >= self.height as i32 || z < 0 {
-            return None
+            return None;
         }
         self.tiles.get(z as usize * self.width + x as usize)
     }

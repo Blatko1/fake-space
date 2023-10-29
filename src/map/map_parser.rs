@@ -14,7 +14,7 @@ use super::{
     parse_error::{
         DimensionsError, DirectiveError, MapParseError, TextureError, TileError,
     },
-    MapTile
+    MapTile,
 };
 
 pub struct MapParser {
@@ -34,10 +34,10 @@ impl<'a> MapParser {
             src_path: src_path.parent().unwrap().to_path_buf(),
             data,
             texture_indices: HashMap::new(),
-            variables: HashMap::new()
-        } )
+            variables: HashMap::new(),
+        })
     }
-            
+
     pub(super) fn parse(
         mut self,
     ) -> Result<((usize, usize), Vec<MapTile>, Vec<TextureData>), MapParseError>
@@ -86,7 +86,7 @@ impl<'a> MapParser {
             match directive {
                 Directive::Textures => {
                     let (texs, indices) = self.parse_textures(expressions)?;
-                    
+
                     textures = texs;
                     self.texture_indices = indices;
                 }
@@ -264,6 +264,13 @@ impl<'a> MapParser {
                 }
             }
             let tile = tile.to_map_tile(index);
+            if tile.obj_top_height < tile.obj_bottom_height {
+                return Err(TileError::TopHeightLowerThanBottomHeight(
+                    index,
+                    tile.obj_top_height,
+                    tile.obj_bottom_height,
+                ));
+            }
             for _i in tile_index {
                 tiles.insert(_i, tile)
                 //tiles.push(tile);
@@ -461,7 +468,8 @@ impl<'a> MapParser {
     >(
         &self,
         line: I,
-    ) -> Result<(Vec<TextureData>, HashMap<String, Texture>), TextureError> {
+    ) -> Result<(Vec<TextureData>, HashMap<String, Texture>), TextureError>
+    {
         let mut textures = Vec::with_capacity(line.clone().count());
         let mut texture_indices = HashMap::new();
 
@@ -500,7 +508,7 @@ impl<'a> MapParser {
 
                 match parameter {
                     "path" => {
-                        if !value.starts_with('\"') || !value.ends_with('\"'){                  
+                        if !value.starts_with('\"') || !value.ends_with('\"') {
                             return Err(TextureError::InvalidTexturePath(
                                 real_index,
                                 value.to_string(),
@@ -567,7 +575,7 @@ impl<'a> MapParser {
         tex: &str,
     ) -> Result<Texture, TileError> {
         if tex == "0" {
-            return Ok(Texture::Empty)
+            return Ok(Texture::Empty);
         }
         match self.texture_indices.get(tex) {
             Some(id) => Ok(*id),
@@ -602,10 +610,7 @@ fn are_directives_repeating<
     }
 }
 
-fn parse_float<P: FromStr>(
-    index: usize,
-    s: &str,
-) -> Result<P, TileError> {
+fn parse_float<P: FromStr>(index: usize, s: &str) -> Result<P, TileError> {
     match s.parse() {
         Ok(p) => Ok(p),
         Err(_) => Err(TileError::FloatParseError(index, s.to_string())),
@@ -640,7 +645,7 @@ struct MapTileVariable {
     pub obj_top_height: Option<f32>,
     pub obj_bottom_height: Option<f32>,
 }
-
+// TODO rename floor top height and bottom heigth to top_y and bot_y
 impl MapTileVariable {
     fn to_map_tile(self, index: usize) -> MapTile {
         MapTile {
@@ -649,8 +654,8 @@ impl MapTileVariable {
             object_bottom: self.object_bottom.unwrap_or_default(),
             floor: self.floor.unwrap_or_default(),
             ceiling: self.ceiling.unwrap_or_default(),
-            obj_top_height: self.obj_top_height.unwrap_or(1.0),
-            obj_bottom_height: self.obj_bottom_height.unwrap_or(1.0),
+            obj_top_height: self.obj_top_height.unwrap_or(-1.0),
+            obj_bottom_height: self.obj_bottom_height.unwrap_or(-1.0),
         }
     }
 

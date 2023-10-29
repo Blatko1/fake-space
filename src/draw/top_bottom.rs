@@ -1,3 +1,5 @@
+use glam::Vec3;
+
 // TODO problem! some textures below the walls
 // are bleeding out when further away
 // TODO problem! trying to implement sprite entities
@@ -14,10 +16,12 @@ impl Raycaster {
         from_wall_dist: f32,
         to_wall_dist: f32,
         max_floor_height: usize,
-        floor_height_bottom: f32,
+        floor_height_top: f32,
         texture_data: TextureDataRef<'_>,
         draw_x: u32,
-        data: &mut [u8],
+        position_x: f32,
+        position_z: f32,
+        column: &mut [u8],
     ) -> usize {
         let (texture, tex_width, tex_height) = (
             texture_data.data,
@@ -25,89 +29,67 @@ impl Raycaster {
             texture_data.height as usize,
         );
         if texture.is_empty() {
-            return 0
+            return 0;
         }
 
         let width = self.width as usize;
         let height = self.height as usize;
 
+        // Draw from:
         let wall_pixel_height =
-            (self.f_height / from_wall_dist * self.plane_dist) as i32;
-        let half_wall_height = (wall_pixel_height / 2) as f32;
-        let bottom_height = half_wall_height
-            * (self.pos.y * 2.0 + (floor_height_bottom - 1.0))
-            - self.y_shearing;
-        let mut draw_from = (self.float_half_height - bottom_height)
-            .max(0.0)
-            .min(self.height as f32 - 1.0) as usize;
+            self.f_height / from_wall_dist * self.plane_dist;
+        let half_wall_height = (wall_pixel_height / 2.0) as f32;
+        let top_height = half_wall_height * (floor_height_top - self.pos.y)
+            + self.y_shearing;
+        let draw_from = (self.float_half_height + top_height)
+            .clamp(max_floor_height as f32, self.height as f32 - 1.0)
+            as usize;
 
+        // Draw to:
         let wall_pixel_height =
-            (self.f_height / to_wall_dist * self.plane_dist) as i32;
-        let half_wall_height = (wall_pixel_height / 2) as f32;
-        let bottom_height = half_wall_height
-            * (self.pos.y * 2.0 + (floor_height_bottom - 1.0))
-            - self.y_shearing;
-        let mut draw_to = ((self.float_half_height - bottom_height)
-            .max(0.0)
-            .min(self.height as f32 - 1.0) as usize)
-            .max(draw_from);
-
-        if max_floor_height > draw_from {
-            if max_floor_height > draw_to {
-                return 0
-            }
-            draw_from = max_floor_height;
-            draw_to = draw_to.max(draw_from);
-        }
+            self.f_height / to_wall_dist * self.plane_dist;
+        let half_wall_height = (wall_pixel_height / 2.0) as f32;
+        let top_height = half_wall_height * (floor_height_top - self.pos.y)
+            + self.y_shearing;
+        let draw_to = (self.float_half_height + top_height)
+            .clamp(draw_from as f32, self.height as f32 - 1.0)
+            as usize;
 
         //println!("draw_from: {draw_from}, draw_to: {draw_to}");
         let ray_dir = self.dir - self.plane_h;
         let tile_step_factor = self.plane_h * 2.0 * self.width_recip;
-        data.chunks_exact_mut(4)
-            .skip(draw_x as usize)
-            .step_by(width)
+        column
+            .chunks_exact_mut(4)
+            .rev()
             .enumerate()
             .skip(height - draw_to)
             .take(draw_to - draw_from)
             .for_each(|(y, rgba)| {
-                let floor_row_dist = (self.pos.y - (0.5 - floor_height_bottom*0.5)) * self.f_height
+                let floor_row_dist = ((self.pos.y - floor_height_top) / 2.0)
+                    * self.f_height
                     / (y as f32 - self.f_height / 2.0 + self.y_shearing)
                     * self.plane_dist;
                 let floor_step = tile_step_factor * floor_row_dist;
                 let floor_pos = self.pos
                     + ray_dir * floor_row_dist
                     + floor_step * draw_x as f32;
-
-                let tx_floor = ((tex_width as f32 * floor_pos.x.fract())
+                let tx_floor = ((tex_width as f32 * (floor_pos.x - position_x))
                     as usize)
                     .min(tex_width - 1);
-                let ty_floor = ((tex_height as f32 * floor_pos.z.fract())
-                    as usize)
-                    .min(tex_height - 1);
+                let ty_floor =
+                    ((tex_height as f32 * (floor_pos.z - position_z)) as usize)
+                        .min(tex_height - 1);
                 let i_floor = tex_width * 4 * ty_floor + tx_floor * 4;
                 let color = &texture[i_floor..i_floor + 4];
                 rgba.copy_from_slice(color);
             });
-        if let Some(first) = data
-            .chunks_exact_mut(4)
-            .skip(draw_x as usize)
-            .skip((height - draw_to) * width)
-            .step_by(width)
-            .take(draw_to - draw_from)
-            .nth(0)
-        {
+        /*if let Some(first) = column.chunks_exact_mut(4).nth(draw_to) {
             first.copy_from_slice(&[255, 255, 255, 255]);
         };
-        if let Some(first) = data
-            .chunks_exact_mut(4)
-            .skip(draw_x as usize)
-            .skip((height - draw_to) * width)
-            .step_by(width)
-            .take(draw_to - draw_from)
-            .last()
-        {
+        if let Some(first) = column.chunks_exact_mut(4).nth(draw_from) {
             first.copy_from_slice(&[255, 0, 0, 255]);
-        };
+        };*/
+
         draw_to
     }
     /*pub fn draw_top_bottom(

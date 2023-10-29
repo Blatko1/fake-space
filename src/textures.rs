@@ -1,12 +1,10 @@
 pub struct TextureManager {
-    textures: Vec<TextureData>
+    textures: Vec<TextureData>,
 }
 
 impl TextureManager {
     pub fn new(textures: Vec<TextureData>) -> Self {
-        Self {
-            textures
-        }
+        Self { textures }
     }
 
     pub fn get(&self, id: Texture) -> TextureDataRef {
@@ -36,7 +34,12 @@ pub struct TextureData {
 
 impl TextureData {
     fn as_ref(&self) -> TextureDataRef {
-        TextureDataRef { data: &self.data, width: self.width, height: self.height, transparency: self.transparency }
+        TextureDataRef {
+            data: &self.data,
+            width: self.width,
+            height: self.height,
+            transparency: self.transparency,
+        }
     }
 }
 
@@ -57,10 +60,10 @@ impl<'a> TextureDataRef<'a> {
     };
 
     const DEFAULT_TEXTURE_WIDTH: u32 = 2;
-const DEFAULT_TEXTURE_HEIGHT: u32 = 2;
-const DEFAULT_TEXTURE_RGBA: &[u8] = &[
-    200, 0, 200, 255, 0, 0, 0, 255, 0, 0, 0, 255, 200, 0, 200, 255,
-];
+    const DEFAULT_TEXTURE_HEIGHT: u32 = 2;
+    const DEFAULT_TEXTURE_RGBA: &[u8] = &[
+        200, 0, 200, 255, 0, 0, 0, 255, 0, 0, 0, 255, 200, 0, 200, 255,
+    ];
 
     const DEFAULT: Self = Self {
         data: Self::DEFAULT_TEXTURE_RGBA,
