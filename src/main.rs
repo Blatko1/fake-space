@@ -36,7 +36,7 @@ fn main() {
     let (map, textures) =
         Map::from_file_str(include_str!("../maps/map1.txt")).unwrap();
 
-    let canvas = block_on(Canvas::init(&winit_window, 320, 240));
+    let canvas = block_on(Canvas::init(&winit_window, 240, 180));
 
     let mut state = State::new(canvas, map, textures);
 

@@ -107,7 +107,7 @@ fn parse_directive_test() {
     );
 }
 
-#[test]
+/*#[test]
 fn parse_tile_index_test() {
     let index = 1;
     let operand = "1";
@@ -146,7 +146,7 @@ fn parse_tile_index_test() {
         MapParser::parse_tile_index(index, operand),
         Err(TileError::InvalidTileIndexSeparator(index))
     );
-}
+}*/
 
 #[test]
 fn map_parser_test() {

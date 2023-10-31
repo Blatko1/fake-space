@@ -51,29 +51,27 @@ impl Map {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MapTile {
-    pub object: Texture,
-    pub object_top: Texture,
-    pub object_bottom: Texture,
-    pub floor: Texture,
-    pub ceiling: Texture,
-    pub obj_top_height: f32,
-    pub obj_bottom_height: f32,
-}
-
-impl Default for MapTile {
-    fn default() -> Self {
-        Self {
-            obj_top_height: 1.0,
-            obj_bottom_height: 1.0,
-            object: Default::default(),
-            object_top: Default::default(),
-            object_bottom: Default::default(),
-            floor: Default::default(),
-            ceiling: Default::default(),
-        }
-    }
+    /// Texture of the lower pillar walls.
+    pub pillar1_tex: Texture,
+    /// Texture of the upper pillar walls.
+    pub pillar2_tex: Texture,
+    /// Texture of the bottom platform.
+    pub bottom_platform: Texture,
+    /// Texture of the top platform.
+    pub top_platform: Texture,
+    /// `Y-level` - starting lower bound of the bottom pillar;
+    /// level from which the bottom pillar stretches.
+    pub level1: f32,
+    /// `Y-level` - ending upper bound of the bottom pillar;
+    /// area/platform on which the player is walking.
+    pub level2: f32,
+    /// `Y-level` - starting lower bound of the top pillar; the ceiling.
+    pub level3: f32,
+    /// `Y-level` - ending upper bound of the top pillar;
+    /// level to which the top pillar stretches.
+    pub level4: f32,
 }
 
 /*/// Represents all tiles not including ceiling or floor tiles.

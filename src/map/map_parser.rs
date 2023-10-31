@@ -16,6 +16,12 @@ use super::{
     },
     MapTile,
 };
+
+const MAP_TILE_LEVEL1_DEFAULT: f32 = -100.0;
+const MAP_TILE_LEVEL2_DEFAULT: f32 = -1.0;
+const MAP_TILE_LEVEL3_DEFAULT: f32 = f32::MAX;
+const MAP_TILE_LEVEL4_DEFAULT: f32 = f32::MAX;
+
 // TODO rename to AssetLoader or AssetParser
 pub struct MapParser {
     src_path: PathBuf,
@@ -61,7 +67,7 @@ impl<'a> MapParser {
         let map_size = (dimensions.0 * dimensions.1) as usize;
         let content_line_count = lines.clone().count();
         let mut textures = Vec::new();
-        let mut tiles = Vec::with_capacity(map_size);
+        let mut tiles = vec![MapTileInput::Undefined; map_size];
 
         let mut lines = lines.enumerate();
         while let Some((index, (real_index, line))) = lines.next() {
@@ -95,17 +101,22 @@ impl<'a> MapParser {
                     self.variables = variables;
                 }
                 Directive::Tiles => {
-                    tiles = self.parse_tiles(expressions, map_size)?;
+                    self.parse_tiles(&mut tiles, expressions)?;
                 }
             }
         }
-
-        if tiles.len() != map_size {
-            return Err(MapParseError::DimensionsAndTileCountNotMatching(
-                tiles.len(),
-                map_size,
+        if let Some(undefined_tile_index) = tiles.iter().position(|t| match t {
+            MapTileInput::Undefined => true,
+            MapTileInput::Tile(_) => false,
+        } ) {
+            return Err(MapParseError::UndefinedTileIndex(
+                undefined_tile_index+1,
             ));
         }
+        let tiles = tiles.into_iter().map(|tile| match tile {
+            MapTileInput::Tile(t) => t,
+            _ => unreachable!()
+        }).collect();
 
         Ok((dimensions, tiles, textures))
     }
@@ -159,11 +170,9 @@ impl<'a> MapParser {
     //                the last definition will be taken
     fn parse_tiles<I: Iterator<Item = (usize, &'a str)> + Clone>(
         &self,
+        tiles: &mut Vec<MapTileInput>,
         lines: I,
-        tile_count: usize,
-    ) -> Result<Vec<MapTile>, TileError> {
-        let mut tiles = Vec::with_capacity(tile_count);
-
+    ) -> Result<(), TileError> {
         for (index, content) in lines {
             let operands: Vec<&str> = content.split('=').collect();
             if operands.len() != 2 {
@@ -171,19 +180,6 @@ impl<'a> MapParser {
             }
             let tile_index = operands[0];
             let expressions = operands[1];
-            if tile_index.split_whitespace().count() != 1 {
-                return Err(TileError::InvalidTileIndex(index));
-            }
-            let tile_index_str = tile_index.split_whitespace().next().unwrap();
-            let tile_index = Self::parse_tile_index(index, tile_index_str)?;
-            let first_index = tile_index.clone().next().unwrap();
-
-            if tiles.len() != first_index {
-                return Err(TileError::TileIndexNotContinuous(
-                    index,
-                    tile_index_str.to_string(),
-                ));
-            }
 
             let mut tile = MapTileVariable::default();
             for expr in expressions.split_whitespace() {
@@ -224,37 +220,26 @@ impl<'a> MapParser {
                 let value = operands[1];
 
                 match parameter.to_lowercase().as_str() {
-                    // Top object part height value:
-                    "toph" => {
-                        tile.obj_top_height = Some(parse_float(index, value)?)
+                    "pillar1" => {
+                        tile.pillar1_tex =
+                            Some(self.get_texture_id(index, value)?)
                     }
-                    // Bottom object part height value:
-                    "both" => {
-                        tile.obj_bottom_height =
-                            Some(parse_float(index, value)?)
+                    "pillar2" => {
+                        tile.pillar2_tex =
+                            Some(self.get_texture_id(index, value)?)
                     }
-                    // Object type definition:
-                    "obj" => {
-                        tile.object = Some(self.get_texture_id(index, value)?)
+                    "bottom" => {
+                        tile.bottom_platform =
+                            Some(self.get_texture_id(index, value)?)
                     }
-                    // Object top side type definition:
                     "top" => {
-                        tile.object_top =
+                        tile.top_platform =
                             Some(self.get_texture_id(index, value)?)
                     }
-                    // Object bottom side type definition:
-                    "bot" => {
-                        tile.object_bottom =
-                            Some(self.get_texture_id(index, value)?)
-                    }
-                    // Floor type definition:
-                    "flr" => {
-                        tile.floor = Some(self.get_texture_id(index, value)?)
-                    }
-                    // Ceiling type definition:
-                    "clg" => {
-                        tile.ceiling = Some(self.get_texture_id(index, value)?)
-                    }
+                    "lvl1" => tile.level1 = Some(parse_float(index, value)?),
+                    "lvl2" => tile.level2 = Some(parse_float(index, value)?),
+                    "lvl3" => tile.level3 = Some(parse_float(index, value)?),
+                    "lvl4" => tile.level4 = Some(parse_float(index, value)?),
                     _ => {
                         return Err(TileError::UnknownParameter(
                             index,
@@ -264,19 +249,68 @@ impl<'a> MapParser {
                 }
             }
             let tile = tile.to_map_tile(index);
-            if tile.obj_top_height < tile.obj_bottom_height {
-                return Err(TileError::TopHeightLowerThanBottomHeight(
+            if tile.level1 > tile.level2
+                || tile.level2 > tile.level3
+                || tile.level3 > tile.level4
+            {
+                return Err(TileError::InvalidLevels(
                     index,
-                    tile.obj_top_height,
-                    tile.obj_bottom_height,
+                    tile.level1,
+                    tile.level2,
+                    tile.level3,
                 ));
             }
-            for _i in tile_index {
-                tiles.insert(_i, tile)
-                //tiles.push(tile);
+            if tile_index.split_whitespace().count() != 1 {
+                return Err(TileError::InvalidTileIndex(index));
+            }
+            let tile_index_str = tile_index.split_whitespace().next().unwrap();
+            if tile_index_str == "_" {
+                tiles.iter_mut().filter(|t| match t {
+                    MapTileInput::Undefined => true,
+                    _ => false,
+                }).for_each(|t| *t=MapTileInput::Tile(tile));
+                return Ok(());
+            }
+            let tile_index: RangeInclusive<usize> = if tile_index_str.contains('-') {
+                let values: Vec<&str> = tile_index_str.split('-').collect();
+                if values.len() != 2 {
+                    return Err(TileError::InvalidTileIndexSeparator(index));
+                }
+                let first = values.first().unwrap();
+                let last = values.last().unwrap();
+                let Ok(from) = first.parse::<usize>() else {
+                        return Err(TileError::FailedToParseTileIndex(
+                            index,
+                            first.to_string(),
+                        ))
+                };
+                let Ok(to) = last.parse::<usize>() else {
+                        return Err(TileError::FailedToParseTileIndex(
+                            index,
+                            last.to_string(),
+                        ))
+                };
+                from..=to
+            } else {
+                match tile_index_str.parse::<usize>() {
+                    Ok(i) => i..=i,
+                    Err(_) => {
+                        return Err(TileError::FailedToParseTileIndex(
+                            index,
+                            tile_index_str.to_string(),
+                        ))
+                    }
+                }
+            };
+            for i in tile_index {
+                match tiles.get_mut(i-1) {
+                    Some(t) => *t =MapTileInput::Tile(tile) ,
+                    None => return Err(TileError::TileIndexExceedsLimits(index)),
             }
         }
-        Ok(tiles)
+        
+        }
+        Ok(())
     }
 
     fn parse_variables<I: Iterator<Item = (usize, &'a str)> + Clone>(
@@ -342,37 +376,26 @@ impl<'a> MapParser {
                 let value = operands[1];
 
                 match parameter.to_lowercase().as_str() {
-                    // Top object part height value:
-                    "toph" => {
-                        tile.obj_top_height = Some(parse_float(index, value)?)
+                    "pillar1" => {
+                        tile.pillar1_tex =
+                            Some(self.get_texture_id(index, value)?)
                     }
-                    // Bottom object part height value:
-                    "both" => {
-                        tile.obj_bottom_height =
-                            Some(parse_float(index, value)?)
+                    "pillar2" => {
+                        tile.pillar2_tex =
+                            Some(self.get_texture_id(index, value)?)
                     }
-                    // Object type definition:
-                    "obj" => {
-                        tile.object = Some(self.get_texture_id(index, value)?)
+                    "bottom" => {
+                        tile.bottom_platform =
+                            Some(self.get_texture_id(index, value)?)
                     }
-                    // Object top side type definition:
                     "top" => {
-                        tile.object_top =
+                        tile.top_platform =
                             Some(self.get_texture_id(index, value)?)
                     }
-                    // Object bottom side type definition:
-                    "bot" => {
-                        tile.object_bottom =
-                            Some(self.get_texture_id(index, value)?)
-                    }
-                    // Floor type definition:
-                    "flr" => {
-                        tile.floor = Some(self.get_texture_id(index, value)?)
-                    }
-                    // Ceiling type definition:
-                    "clg" => {
-                        tile.ceiling = Some(self.get_texture_id(index, value)?)
-                    }
+                    "lvl1" => tile.level1 = Some(parse_float(index, value)?),
+                    "lvl2" => tile.level2 = Some(parse_float(index, value)?),
+                    "lvl3" => tile.level3 = Some(parse_float(index, value)?),
+                    "lvl4" => tile.level4 = Some(parse_float(index, value)?),
                     _ => {
                         return Err(TileError::UnknownParameter(
                             index,
@@ -380,6 +403,18 @@ impl<'a> MapParser {
                         ))
                     }
                 }
+            }
+            let test = tile.to_map_tile(index);
+            if test.level1 > test.level2
+                || test.level2 > test.level3
+                || test.level3 > test.level4
+            {
+                return Err(TileError::InvalidLevels(
+                    index,
+                    test.level1,
+                    test.level2,
+                    test.level3,
+                ));
             }
             variables.insert(variable_name.to_string(), tile);
         }
@@ -390,14 +425,10 @@ impl<'a> MapParser {
     pub(super) fn parse_tile_index(
         index: usize,
         operand: &str,
+        max_index: usize
     ) -> Result<RangeInclusive<usize>, TileError> {
-        if let Some(invalid_char) =
-            operand.chars().find(|c| !matches!(c, '0'..='9' | '-'))
-        {
-            return Err(TileError::IllegalTileIndexCharacter(
-                index,
-                invalid_char,
-            ));
+        if operand == "_" {
+            return Ok(0..=max_index)
         }
         let tile_index: RangeInclusive<usize> = if operand.contains('-') {
             let values: Vec<&str> = operand.split('-').collect();
@@ -406,23 +437,17 @@ impl<'a> MapParser {
             }
             let first = values.first().unwrap();
             let last = values.last().unwrap();
-            let from = match first.parse::<usize>() {
-                Ok(from) => from,
-                Err(_) => {
+            let Ok(from) = first.parse::<usize>() else {
                     return Err(TileError::FailedToParseTileIndex(
                         index,
                         first.to_string(),
                     ))
-                }
             };
-            let to = match last.parse::<usize>() {
-                Ok(to) => to,
-                Err(_) => {
+            let Ok(to) = last.parse::<usize>() else {
                     return Err(TileError::FailedToParseTileIndex(
                         index,
                         last.to_string(),
                     ))
-                }
             };
             from..=to
         } else {
@@ -496,6 +521,7 @@ impl<'a> MapParser {
 
             let mut texture_data = None;
             let mut transparency = None;
+            let mut repeating = None;
             for expr in expressions.split_whitespace() {
                 let operands: Vec<&str> = expr.split(':').collect();
                 if operands.len() != 2 {
@@ -539,6 +565,19 @@ impl<'a> MapParser {
                             }
                         }
                     }
+                    "repeating" => {
+                        repeating = match value.parse::<bool>() {
+                            Ok(b) => Some(b),
+                            Err(_) => {
+                                return Err(
+                                    TextureError::FailedToParseBoolValue(
+                                        real_index,
+                                        value.to_string(),
+                                    ),
+                                )
+                            }
+                        }
+                    }
                     _ => {
                         return Err(TextureError::UnknownParameter(
                             real_index,
@@ -555,11 +594,17 @@ impl<'a> MapParser {
                     real_index,
                 ));
             };
+            let Some(repeating) = repeating else {
+                return Err(TextureError::TextureRepetitionNotSpecified(
+                    real_index,
+                ));
+            };
             let texture = TextureData::new(
                 texture_data.to_rgba8().as_bytes().to_vec(),
                 texture_data.width(),
                 texture_data.height(),
-                transparency
+                transparency,
+                repeating
             );
             textures.push(texture);
             texture_indices
@@ -635,51 +680,62 @@ impl Directive {
     }
 }
 
-#[derive(Debug, Default)]
-struct MapTileVariable {
-    pub object: Option<Texture>,
-    pub object_top: Option<Texture>,
-    pub object_bottom: Option<Texture>,
-    pub floor: Option<Texture>,
-    pub ceiling: Option<Texture>,
-    pub obj_top_height: Option<f32>,
-    pub obj_bottom_height: Option<f32>,
+#[derive(Debug, Clone, Copy)]
+enum MapTileInput {
+    Undefined,
+    Tile(MapTile)
 }
-// TODO rename floor top height and bottom heigth to top_y and bot_y
+
+#[derive(Debug, Default, Clone, Copy)]
+struct MapTileVariable {
+    pub pillar1_tex: Option<Texture>,
+    pub pillar2_tex: Option<Texture>,
+    pub bottom_platform: Option<Texture>,
+    pub top_platform: Option<Texture>,
+    pub level1: Option<f32>,
+    pub level2: Option<f32>,
+    pub level3: Option<f32>,
+    pub level4: Option<f32>,
+}
+// TODO rename top height and bottom height to top_y and bot_y
 impl MapTileVariable {
     fn to_map_tile(self, index: usize) -> MapTile {
         MapTile {
-            object: self.object.unwrap_or_default(),
-            object_top: self.object_top.unwrap_or_default(),
-            object_bottom: self.object_bottom.unwrap_or_default(),
-            floor: self.floor.unwrap_or_default(),
-            ceiling: self.ceiling.unwrap_or_default(),
-            obj_top_height: self.obj_top_height.unwrap_or(-1.0),
-            obj_bottom_height: self.obj_bottom_height.unwrap_or(-1.0),
+            pillar1_tex: self.pillar1_tex.unwrap_or_default(),
+            pillar2_tex: self.pillar2_tex.unwrap_or_default(),
+            bottom_platform: self.bottom_platform.unwrap_or_default(),
+            top_platform: self.top_platform.unwrap_or_default(),
+            level1: self.level1.unwrap_or(MAP_TILE_LEVEL1_DEFAULT),
+            level2: self.level2.unwrap_or(MAP_TILE_LEVEL2_DEFAULT),
+            level3: self.level3.unwrap_or(MAP_TILE_LEVEL3_DEFAULT),
+            level4: self.level4.unwrap_or(MAP_TILE_LEVEL4_DEFAULT),
         }
     }
 
     fn update(&mut self, var: &MapTileVariable) {
-        if let Some(i) = var.object {
-            self.object.replace(i);
+        if let Some(i) = var.pillar1_tex {
+            self.pillar1_tex.replace(i);
         }
-        if let Some(i) = var.object_top {
-            self.object_top.replace(i);
+        if let Some(i) = var.pillar2_tex {
+            self.pillar2_tex.replace(i);
         }
-        if let Some(i) = var.object_bottom {
-            self.object_bottom.replace(i);
+        if let Some(i) = var.bottom_platform {
+            self.bottom_platform.replace(i);
         }
-        if let Some(i) = var.floor {
-            self.floor.replace(i);
+        if let Some(i) = var.top_platform {
+            self.top_platform.replace(i);
         }
-        if let Some(i) = var.ceiling {
-            self.ceiling.replace(i);
+        if let Some(i) = var.level1 {
+            self.level1.replace(i);
         }
-        if let Some(i) = var.obj_top_height {
-            self.obj_top_height.replace(i);
+        if let Some(i) = var.level2 {
+            self.level2.replace(i);
         }
-        if let Some(i) = var.obj_bottom_height {
-            self.obj_bottom_height.replace(i);
+        if let Some(i) = var.level3 {
+            self.level3.replace(i);
+        }
+        if let Some(i) = var.level4 {
+            self.level4.replace(i);
         }
     }
 }

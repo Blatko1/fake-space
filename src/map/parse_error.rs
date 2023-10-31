@@ -9,7 +9,7 @@ pub enum MapParseError {
 
     FileErr(io::ErrorKind),
     UndefinedExpression(usize, String),
-    DimensionsAndTileCountNotMatching(usize, usize),
+    UndefinedTileIndex(usize),
 }
 
 #[derive(Debug, PartialEq)]
@@ -34,6 +34,7 @@ pub enum TextureError {
     FailedToParseBoolValue(usize, String),
     TextureSrcNotSpecified(usize),
     TextureTransparencyNotSpecified(usize),
+    TextureRepetitionNotSpecified(usize)
 }
 
 #[derive(Debug, PartialEq)]
@@ -57,7 +58,8 @@ pub enum TileError {
     InvalidTileIndexRange(usize, String),
     TileIndexNotContinuous(usize, String),
     InvalidTileIndex(usize),
-    TopHeightLowerThanBottomHeight(usize, f32, f32),
+    InvalidLevels(usize, f32, f32, f32),
+    TileIndexExceedsLimits(usize),
 
     InvalidVariableSeparatorFormat(usize),
     InvalidVariableFormat(usize),

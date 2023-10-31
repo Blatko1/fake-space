@@ -5,7 +5,10 @@ mod voxel_model;
 mod wall;
 
 use glam::Vec3;
-use std::f32::consts::{PI, TAU};
+use std::{
+    borrow::BorrowMut,
+    f32::consts::{PI, TAU},
+};
 use winit::event::{DeviceEvent, ElementState, KeyboardInput, VirtualKeyCode};
 
 use crate::{
@@ -23,8 +26,10 @@ const MAX_FOV_RAD: f32 = 119.0 * ONE_DEGREE_RAD;
 const DEFAULT_PLANE_V: Vec3 = Vec3::new(0.0, 0.5, 0.0);
 const Y_SHEARING_SENSITIVITY: f32 = 0.8;
 const MOUSE_ROTATION_SPEED: f32 = 0.08;
+const MAX_Y: f32 = 50.0;
+const MIN_Y: f32 = -50.0;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct RayHit /*<'a>*/ {
     /// X-coordinate of a pixel column out of which the ray was casted.
     screen_x: u32,
@@ -32,7 +37,6 @@ pub struct RayHit /*<'a>*/ {
     dir: Vec3,
     /// Perpetual distance from the raycaster to the hit point on tile (wall).
     wall_dist: f32,
-    max_height_on_path: usize,
     /// Which side of tile was hit.
     side: Side,
     /// Number in range [0.0, 1.0) which represents the x-coordinate of
@@ -218,7 +222,8 @@ impl Raycaster {
                 // If a transparent tile is hit, continue iterating.
                 // If another transparent tile was hit, store it as a final hit.
                 let mut previous_perp_wall_dist = 0.0;
-                let mut max_top_height = 0;
+                let mut bottom_draw_bound = 0usize;
+                let mut top_draw_bound = self.height as usize;
                 loop {
                     let current_map_x = map_x;
                     let current_map_z = map_z;
@@ -256,36 +261,74 @@ impl Raycaster {
                             }
                         };
                     // Draw top part of cube
-                    let drawn_to = self.draw_floor(
+                    let drawn_to = self.draw_bottom_platform(
                         previous_perp_wall_dist,
                         perp_wall_dist,
-                        max_top_height,
-                        tile.obj_top_height,
-                        textures.get(tile.object_top),
+                        bottom_draw_bound,
+                        top_draw_bound,
+                        tile.level2,
+                        textures.get(tile.bottom_platform),
                         x as u32,
                         current_map_x as f32,
                         current_map_z as f32,
                         column,
                     );
-                    max_top_height = drawn_to.max(max_top_height);
+                    bottom_draw_bound = drawn_to;
+                    // Draw top part of cube
+                    let drawn_from = self.draw_top_platform(
+                        previous_perp_wall_dist,
+                        perp_wall_dist,
+                        bottom_draw_bound,
+                        top_draw_bound,
+                        tile.level3,
+                        textures.get(tile.top_platform),
+                        x as u32,
+                        current_map_x as f32,
+                        current_map_z as f32,
+                        column,
+                    );
+                    top_draw_bound = drawn_from;
+
+                    //let (drawn_from, drawn_to) = self.draw_bottom(previous_perp_wall_dist, perp_wall_dist, max_drawn_to, min_drawn_from, tile.le, textures.get(tile.object_bottom), x as u32, current_map_x as f32, current_map_z as f32, column);
+                    //max_drawn_to = drawn_to.max(max_drawn_to);
+                    //min_drawn_from = drawn_from.min(min_drawn_from);
                     let tile = match tile_map.get_tile(map_x, map_z) {
                         Some(t) => t,
                         None => {
                             // draw non moving background
-                            break},
+                            break;
+                        }
                     };
                     let hit = RayHit {
                         screen_x: x as u32,
                         dir: ray_dir,
                         wall_dist: perp_wall_dist,
-                        max_height_on_path: max_top_height,
                         side,
                         wall_x,
                         delta_dist_x,
                         delta_dist_z,
                     };
-                    let drawn_to = self.draw_wall(hit, textures.get(tile.object), max_top_height, tile.obj_top_height, tile.obj_bottom_height ,column);
-                    max_top_height = drawn_to.max(max_top_height);
+                    let (_, drawn_to) = self.draw_wall(
+                        hit,
+                        textures.get(tile.pillar1_tex),
+                        bottom_draw_bound,
+                        top_draw_bound,
+                        tile.level1,
+                        tile.level2,
+                        column,
+                    );
+                    //assert_eq!(drawn_to, drawn_to2);
+                    bottom_draw_bound = drawn_to.max(bottom_draw_bound);
+                    let (drawn_from, _) = self.draw_wall(
+                        hit,
+                        textures.get(tile.pillar1_tex),
+                        bottom_draw_bound,
+                        top_draw_bound,
+                        tile.level3,
+                        tile.level4,
+                        column,
+                    );
+                    top_draw_bound = drawn_from.min(top_draw_bound);
 
                     previous_perp_wall_dist = perp_wall_dist;
                 }
@@ -500,7 +543,7 @@ impl Raycaster {
         // Change y_shearing (look up/down)
         self.y_shearing = (self.y_shearing
             + (self.decrease_y_shearing - self.increase_y_shearing) * 2.5)
-            .clamp(-self.float_half_height + 1.0, self.float_half_height - 1.0);
+            .clamp(-self.f_height, self.f_height);
 
         // Update rotation and direction
         self.angle = normalize_rad(
@@ -523,8 +566,7 @@ impl Raycaster {
             * MOVEMENT_SPEED;
         self.pos.y = (self.pos.y
             + (self.fly_up - self.fly_down) * FLY_UP_DOWN_SPEED)
-            .min(5.999999)
-            .max(-0.999999);
+            .clamp(MIN_Y, MAX_Y);
     }
 
     pub fn process_mouse_input(&mut self, event: DeviceEvent) {

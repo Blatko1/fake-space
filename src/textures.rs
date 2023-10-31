@@ -30,13 +30,20 @@ pub struct TextureData {
     width: u32,
     height: u32,
     transparency: bool,
+    repeating: bool,
 
     light_shade: Vec<u8>,
     medium_shade: Vec<u8>,
 }
 
 impl TextureData {
-    pub fn new(data: Vec<u8>, width: u32, height: u32, transparency: bool) -> Self {
+    pub fn new(
+        data: Vec<u8>,
+        width: u32,
+        height: u32,
+        transparency: bool,
+        repeating: bool
+    ) -> Self {
         let mut light_shade = data.clone();
         let mut medium_shade = data.clone();
 
@@ -55,6 +62,7 @@ impl TextureData {
             width,
             height,
             transparency,
+            repeating,
             light_shade,
             medium_shade,
         }
@@ -68,6 +76,7 @@ impl TextureData {
             width: self.width,
             height: self.height,
             transparency: self.transparency,
+            repeating: self.repeating,
             light_shade: &self.light_shade,
             medium_shade: &self.medium_shade,
         }
@@ -80,6 +89,7 @@ pub struct TextureDataRef<'a> {
     pub width: u32,
     pub height: u32,
     pub transparency: bool,
+    pub repeating: bool,
 
     pub light_shade: &'a [u8],
     pub medium_shade: &'a [u8],
@@ -91,8 +101,9 @@ impl<'a> TextureDataRef<'a> {
         width: 0,
         height: 0,
         transparency: true,
+        repeating: false,
         light_shade: &[],
-        medium_shade: &[]
+        medium_shade: &[],
     };
 
     const DEFAULT_TEXTURE_WIDTH: u32 = 2;
@@ -112,6 +123,7 @@ impl<'a> TextureDataRef<'a> {
         width: Self::DEFAULT_TEXTURE_WIDTH,
         height: Self::DEFAULT_TEXTURE_HEIGHT,
         transparency: false,
+        repeating: false,
         light_shade: Self::DEFAULT_TEXTURE_RGBA_LIGHT_SHADE,
         medium_shade: Self::DEFAULT_TEXTURE_RGBA_MEDIUM_SHADE,
     };
