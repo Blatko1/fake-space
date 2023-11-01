@@ -34,7 +34,7 @@ pub enum TextureError {
     FailedToParseBoolValue(usize, String),
     TextureSrcNotSpecified(usize),
     TextureTransparencyNotSpecified(usize),
-    TextureRepetitionNotSpecified(usize)
+    TextureRepetitionNotSpecified(usize),
 }
 
 #[derive(Debug, PartialEq)]

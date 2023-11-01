@@ -1,4 +1,7 @@
-use crate::{textures::{TextureDataRef, TextureManager}, draw::top_bottom};
+use crate::{
+    draw::top_bottom,
+    textures::{TextureDataRef, TextureManager},
+};
 
 use super::{blend, RayHit, Raycaster, Side};
 
@@ -37,9 +40,9 @@ impl Raycaster {
         let wall_full_height = top_height + bottom_height;
 
         // From which pixel to begin drawing and on which to end
-        let draw_from = ((self.float_half_height - bottom_height) as usize)
+        let draw_from = ((self.f_half_height - bottom_height) as usize)
             .clamp(bottom_draw_bound, top_draw_bound);
-        let draw_to = ((self.float_half_height + top_height) as usize)
+        let draw_to = ((self.f_half_height + top_height) as usize)
             .clamp(bottom_draw_bound, top_draw_bound);
         //let wall_full_height = (draw_to - draw_from) as f32;
         // Texture mapping variables
@@ -56,15 +59,13 @@ impl Raycaster {
         let tex_y_step = tex_height as f32
             / wall_full_height
             / (2.0 / (top_y_bound - bottom_y_bound));
-        let mut tex_y = (draw_from as f32 + bottom_height
-            - self.float_half_height)
+        let mut tex_y = (draw_from as f32 + bottom_height - self.f_half_height)
             * tex_y_step;
         //  println!("tex_y {}", draw_from as f32 + bottom_height - self.float_half_height);
-        let draw_fn =
-            match texture_data.transparency {
-                true => draw_transparent_wall_pixel,
-                false => draw_full_wall_pixel,
-            }; 
+        let draw_fn = match texture_data.transparency {
+            true => draw_transparent_wall_pixel,
+            false => draw_full_wall_pixel,
+        };
 
         // Precomputed variables for performance increase
         let width = self.width as usize;

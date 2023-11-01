@@ -5,15 +5,16 @@
 // top->texture of top platform
 
 #textures
-BlueBrick = path:"../res/blue_brick.png" transparency:false repeating:true
-LightPlank = path:"../res/light_plank.png" transparency:false repeating:true
-Mossy = path:"../res/mossy_stone.png" transparency:false repeating:true
-Glass = path:"../res/blue_glass.png" transparency:true repeating:true
+BlueBrick = path:../res/blue_brick.png transparency:false repeating:true
+LightPlank = path:../res/light_plank.png transparency:false repeating:true
+Mossy = path:../res/mossy_stone.png transparency:false repeating:true
+Glass = path:../res/blue_glass.png transparency:true repeating:true
 
 #variables
 groundLevel = lvl1:-1.0
-border = pillar1:BlueBrick lvl2:2.0 top:Mossy $groundLevel
-grass = pillar1:BlueBrick lvl2:-5.0 bottom:BlueBrick top:BlueBrick lvl3:5.0 lvl4:8.0
+border = pillar1:BlueBrick lvl2:2.0 top:LightPlank $groundLevel
+pillars = $border pillar2:Mossy lvl3:3.0 lvl4:100
+grass = pillar1:BlueBrick $groundLevel lvl2:0.0 bottom:BlueBrick top:BlueBrick
 
 #tiles
 // Borders
@@ -36,6 +37,14 @@ grass = pillar1:BlueBrick lvl2:-5.0 bottom:BlueBrick top:BlueBrick lvl3:5.0 lvl4
 340-341 = $border
 360-361 = $border
 380-400 = $border
+
+250 = $pillars lvl2:2.5 lvl3:3.5
+251 = $pillars lvl2:3.0 lvl3:4.0
+252 = $pillars lvl2:3.5 lvl3:4.5
+253 = $pillars lvl2:4.0 lvl3:5.0
+254 = $pillars lvl2:4.5 lvl3:5.5
+275 = $pillars lvl2:6.0 lvl3:100
+276 = $pillars lvl2:0.5 lvl3:3.0
 _ = $grass
 
 // Second row

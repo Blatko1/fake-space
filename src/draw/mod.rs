@@ -66,7 +66,7 @@ pub enum Side {
 /// Uses a coordinate system where y-axis points upwards,
 /// z-axis forwards and x-axis to the right.
 pub struct Raycaster {
-    /// Field of view in degrees.
+    /// Field of view in radians.
     fov: f32,
     /// Distance from the raycaster position to the camera plane.
     plane_dist: f32,
@@ -100,7 +100,7 @@ pub struct Raycaster {
     f_height: f32,
     width_recip: f32,
     height_recip: f32,
-    float_half_height: f32,
+    f_half_height: f32,
 
     // Variables for controlling and moving the scene.
     turn_left: f32,
@@ -157,7 +157,7 @@ impl Raycaster {
             f_height,
             width_recip: f_width.recip(),
             height_recip: f_height.recip(),
-            float_half_height: height as f32 * 0.5,
+            f_half_height: height as f32 * 0.5,
 
             turn_left: 0.0,
             turn_right: 0.0,
@@ -252,7 +252,7 @@ impl Raycaster {
                             (dist.max(0.0), wall_x - wall_x.floor())
                         }
                     };
-                    let tile =
+                    let current_tile =
                         match tile_map.get_tile(current_map_x, current_map_z) {
                             Some(t) => t,
                             None => {
@@ -266,8 +266,8 @@ impl Raycaster {
                         perp_wall_dist,
                         bottom_draw_bound,
                         top_draw_bound,
-                        tile.level2,
-                        textures.get(tile.bottom_platform),
+                        current_tile.level2,
+                        textures.get(current_tile.bottom_platform),
                         x as u32,
                         current_map_x as f32,
                         current_map_z as f32,
@@ -280,8 +280,8 @@ impl Raycaster {
                         perp_wall_dist,
                         bottom_draw_bound,
                         top_draw_bound,
-                        tile.level3,
-                        textures.get(tile.top_platform),
+                        current_tile.level3,
+                        textures.get(current_tile.top_platform),
                         x as u32,
                         current_map_x as f32,
                         current_map_z as f32,
@@ -292,7 +292,7 @@ impl Raycaster {
                     //let (drawn_from, drawn_to) = self.draw_bottom(previous_perp_wall_dist, perp_wall_dist, max_drawn_to, min_drawn_from, tile.le, textures.get(tile.object_bottom), x as u32, current_map_x as f32, current_map_z as f32, column);
                     //max_drawn_to = drawn_to.max(max_drawn_to);
                     //min_drawn_from = drawn_from.min(min_drawn_from);
-                    let tile = match tile_map.get_tile(map_x, map_z) {
+                    let next_tile = match tile_map.get_tile(map_x, map_z) {
                         Some(t) => t,
                         None => {
                             // draw non moving background
@@ -310,22 +310,22 @@ impl Raycaster {
                     };
                     let (_, drawn_to) = self.draw_wall(
                         hit,
-                        textures.get(tile.pillar1_tex),
+                        textures.get(next_tile.pillar1_tex),
                         bottom_draw_bound,
                         top_draw_bound,
-                        tile.level1,
-                        tile.level2,
+                        next_tile.level1,
+                        next_tile.level2,
                         column,
                     );
                     //assert_eq!(drawn_to, drawn_to2);
                     bottom_draw_bound = drawn_to.max(bottom_draw_bound);
                     let (drawn_from, _) = self.draw_wall(
                         hit,
-                        textures.get(tile.pillar1_tex),
+                        textures.get(next_tile.pillar2_tex),
                         bottom_draw_bound,
                         top_draw_bound,
-                        tile.level3,
-                        tile.level4,
+                        next_tile.level3,
+                        next_tile.level4,
                         column,
                     );
                     top_draw_bound = drawn_from.min(top_draw_bound);
@@ -572,7 +572,12 @@ impl Raycaster {
     pub fn process_mouse_input(&mut self, event: DeviceEvent) {
         match event {
             DeviceEvent::MouseMotion { delta } => {
-                self.y_shearing += delta.1 as f32 * Y_SHEARING_SENSITIVITY;
+                let last_y_shearing = self.y_shearing;
+                self.y_shearing = (self.y_shearing + delta.1 as f32 * Y_SHEARING_SENSITIVITY).clamp(-self.f_height, self.f_height);
+                let y_shearing_delta = self.y_shearing - last_y_shearing;
+                self.fov = self.fov
+                + (y_shearing_delta * (self.y_shearing/self.f_height).sin() * 0.1).to_radians();
+
                 self.angle -=
                     delta.0 as f32 * ONE_DEGREE_RAD * MOUSE_ROTATION_SPEED;
             }

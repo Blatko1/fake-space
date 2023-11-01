@@ -108,15 +108,18 @@ impl<'a> MapParser {
         if let Some(undefined_tile_index) = tiles.iter().position(|t| match t {
             MapTileInput::Undefined => true,
             MapTileInput::Tile(_) => false,
-        } ) {
+        }) {
             return Err(MapParseError::UndefinedTileIndex(
-                undefined_tile_index+1,
+                undefined_tile_index + 1,
             ));
         }
-        let tiles = tiles.into_iter().map(|tile| match tile {
-            MapTileInput::Tile(t) => t,
-            _ => unreachable!()
-        }).collect();
+        let tiles = tiles
+            .into_iter()
+            .map(|tile| match tile {
+                MapTileInput::Tile(t) => t,
+                _ => unreachable!(),
+            })
+            .collect();
 
         Ok((dimensions, tiles, textures))
     }
@@ -133,12 +136,7 @@ impl<'a> MapParser {
         }
         let d1_str = operands.first().unwrap().trim();
         let d2_str = operands.last().unwrap().trim();
-        // Check if there are any illegal characters within the line.
-        if d1_str.chars().any(|c| !c.is_ascii_digit())
-            || d2_str.chars().any(|c| !c.is_ascii_digit())
-        {
-            return Err(DimensionsError::IllegalCharacter(index));
-        }
+
         let (d1, d2) = match (d1_str.parse(), d2_str.parse()) {
             (Ok(d1), Ok(d2)) => (d1, d2),
             _ => return Err(DimensionsError::InvalidDimensionValue(index)),
@@ -159,9 +157,7 @@ impl<'a> MapParser {
                 content.to_string(),
             ));
         }
-        let directive = Directive::from_str(index, &content[1..])?;
-
-        Ok(directive)
+        Ok(Directive::from_str(index, &content[1..])?)
     }
 
     // TODO get rid of asserts afterwards maybe
@@ -265,13 +261,18 @@ impl<'a> MapParser {
             }
             let tile_index_str = tile_index.split_whitespace().next().unwrap();
             if tile_index_str == "_" {
-                tiles.iter_mut().filter(|t| match t {
-                    MapTileInput::Undefined => true,
-                    _ => false,
-                }).for_each(|t| *t=MapTileInput::Tile(tile));
+                tiles
+                    .iter_mut()
+                    .filter(|t| match t {
+                        MapTileInput::Undefined => true,
+                        _ => false,
+                    })
+                    .for_each(|t| *t = MapTileInput::Tile(tile));
                 return Ok(());
             }
-            let tile_index: RangeInclusive<usize> = if tile_index_str.contains('-') {
+            let tile_index: RangeInclusive<usize> = if tile_index_str
+                .contains('-')
+            {
                 let values: Vec<&str> = tile_index_str.split('-').collect();
                 if values.len() != 2 {
                     return Err(TileError::InvalidTileIndexSeparator(index));
@@ -279,16 +280,16 @@ impl<'a> MapParser {
                 let first = values.first().unwrap();
                 let last = values.last().unwrap();
                 let Ok(from) = first.parse::<usize>() else {
-                        return Err(TileError::FailedToParseTileIndex(
-                            index,
-                            first.to_string(),
-                        ))
+                    return Err(TileError::FailedToParseTileIndex(
+                        index,
+                        first.to_string(),
+                    ));
                 };
                 let Ok(to) = last.parse::<usize>() else {
-                        return Err(TileError::FailedToParseTileIndex(
-                            index,
-                            last.to_string(),
-                        ))
+                    return Err(TileError::FailedToParseTileIndex(
+                        index,
+                        last.to_string(),
+                    ));
                 };
                 from..=to
             } else {
@@ -303,12 +304,13 @@ impl<'a> MapParser {
                 }
             };
             for i in tile_index {
-                match tiles.get_mut(i-1) {
-                    Some(t) => *t =MapTileInput::Tile(tile) ,
-                    None => return Err(TileError::TileIndexExceedsLimits(index)),
+                match tiles.get_mut(i - 1) {
+                    Some(t) => *t = MapTileInput::Tile(tile),
+                    None => {
+                        return Err(TileError::TileIndexExceedsLimits(index))
+                    }
+                }
             }
-        }
-        
         }
         Ok(())
     }
@@ -422,72 +424,6 @@ impl<'a> MapParser {
         Ok(variables)
     }
 
-    pub(super) fn parse_tile_index(
-        index: usize,
-        operand: &str,
-        max_index: usize
-    ) -> Result<RangeInclusive<usize>, TileError> {
-        if operand == "_" {
-            return Ok(0..=max_index)
-        }
-        let tile_index: RangeInclusive<usize> = if operand.contains('-') {
-            let values: Vec<&str> = operand.split('-').collect();
-            if values.len() != 2 {
-                return Err(TileError::InvalidTileIndexSeparator(index));
-            }
-            let first = values.first().unwrap();
-            let last = values.last().unwrap();
-            let Ok(from) = first.parse::<usize>() else {
-                    return Err(TileError::FailedToParseTileIndex(
-                        index,
-                        first.to_string(),
-                    ))
-            };
-            let Ok(to) = last.parse::<usize>() else {
-                    return Err(TileError::FailedToParseTileIndex(
-                        index,
-                        last.to_string(),
-                    ))
-            };
-            from..=to
-        } else {
-            match operand.parse::<usize>() {
-                Ok(i) => i..=i,
-                Err(_) => {
-                    return Err(TileError::FailedToParseTileIndex(
-                        index,
-                        operand.to_string(),
-                    ))
-                }
-            }
-        };
-        let first = match tile_index.clone().next() {
-            Some(f) => f,
-            None => {
-                return Err(TileError::InvalidTileIndexRange(
-                    index,
-                    operand.to_string(),
-                ))
-            }
-        };
-        let last = match tile_index.clone().last() {
-            Some(l) => l,
-            None => {
-                return Err(TileError::InvalidTileIndexRange(
-                    index,
-                    operand.to_string(),
-                ))
-            }
-        };
-        if first > last || first == 0 {
-            return Err(TileError::InvalidTileIndexRange(
-                index,
-                operand.to_string(),
-            ));
-        }
-        Ok(first.saturating_sub(1)..=last.saturating_sub(1))
-    }
-
     pub(super) fn parse_textures<
         I: Iterator<Item = (usize, &'a str)> + Clone,
     >(
@@ -534,21 +470,7 @@ impl<'a> MapParser {
 
                 match parameter {
                     "path" => {
-                        if !value.starts_with('\"') || !value.ends_with('\"') {
-                            return Err(TextureError::InvalidTexturePath(
-                                real_index,
-                                value.to_string(),
-                            ));
-                        }
-                        let path_split: Vec<&str> = value.split('"').collect();
-                        if path_split.len() != 3 {
-                            return Err(TextureError::InvalidTexturePath(
-                                real_index,
-                                value.to_string(),
-                            ));
-                        }
-                        let path = path_split[1];
-                        let full_path = self.src_path.join(path);
+                        let full_path = self.src_path.join(value);
                         texture_data =
                             Some(ImageReader::open(full_path)?.decode()?);
                     }
@@ -604,7 +526,7 @@ impl<'a> MapParser {
                 texture_data.width(),
                 texture_data.height(),
                 transparency,
-                repeating
+                repeating,
             );
             textures.push(texture);
             texture_indices
@@ -683,7 +605,7 @@ impl Directive {
 #[derive(Debug, Clone, Copy)]
 enum MapTileInput {
     Undefined,
-    Tile(MapTile)
+    Tile(MapTile),
 }
 
 #[derive(Debug, Default, Clone, Copy)]

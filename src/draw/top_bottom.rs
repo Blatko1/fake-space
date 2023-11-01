@@ -13,8 +13,8 @@ use super::{blend, Raycaster};
 impl Raycaster {
     pub fn draw_bottom_platform(
         &self,
-        from_wall_dist: f32,
-        to_wall_dist: f32,
+        draw_from_wall_dist: f32,
+        draw_to_wall_dist: f32,
         bottom_draw_bound: usize,
         top_draw_bound: usize,
         y_level: f32,
@@ -33,24 +33,21 @@ impl Raycaster {
             return bottom_draw_bound;
         }
 
-        let width = self.width as usize;
-        let height = self.height as usize;
-
-        // Draw from:
-        let wall_pixel_height =
-            self.f_height / from_wall_dist * self.plane_dist;
-        let half_wall_height = (wall_pixel_height / 2.0) as f32;
-        let top_height =
-            half_wall_height * (y_level - self.pos.y) + self.y_shearing;
-        let draw_from = ((self.float_half_height + top_height) as usize)
+        // Draw from (alway drawing from bottom to top):
+        let half_wall_pixel_height =
+            self.f_half_height / draw_from_wall_dist * self.plane_dist;
+        let pixels_to_top =
+            half_wall_pixel_height * (y_level - self.pos.y) + self.y_shearing;
+        let draw_from = ((self.f_half_height + pixels_to_top) as usize)
             .clamp(bottom_draw_bound, top_draw_bound);
 
         // Draw to:
-        let wall_pixel_height = self.f_height / to_wall_dist * self.plane_dist;
-        let half_wall_height = (wall_pixel_height / 2.0) as f32;
-        let top_height =
-            half_wall_height * (y_level - self.pos.y) + self.y_shearing;
-        let draw_to = ((self.float_half_height + top_height) as usize)
+        let half_wall_pixel_height =
+            self.f_half_height / draw_to_wall_dist * self.plane_dist;
+
+        let pixels_to_top =
+            half_wall_pixel_height * (y_level - self.pos.y) + self.y_shearing;
+        let draw_to = ((self.f_half_height + pixels_to_top) as usize)
             .clamp(draw_from, top_draw_bound);
 
         let ray_dir = self.dir - self.plane_h;
@@ -59,7 +56,7 @@ impl Raycaster {
             .chunks_exact_mut(4)
             .rev()
             .enumerate()
-            .skip(height - draw_to)
+            .skip(self.height as usize - draw_to)
             .take(draw_to - draw_from)
             .for_each(|(y, rgba)| {
                 let row_dist = ((self.pos.y - y_level) / 2.0) * self.f_height
@@ -89,8 +86,8 @@ impl Raycaster {
 
     pub fn draw_top_platform(
         &self,
-        from_wall_dist: f32,
-        to_wall_dist: f32,
+        draw_from_wall_dist: f32,
+        draw_to_wall_dist: f32,
         bottom_draw_bound: usize,
         top_draw_bound: usize,
         y_level: f32,
@@ -109,27 +106,22 @@ impl Raycaster {
             return top_draw_bound;
         }
 
-        let width = self.width as usize;
-        let height = self.height as usize;
-
         // Draw from:
-        let wall_pixel_height = self.f_height / to_wall_dist * self.plane_dist;
-        let half_wall_height = (wall_pixel_height / 2.0) as f32;
-        let bottom_height = half_wall_height * (-y_level + self.pos.y)
-            - self.y_shearing;
-        let draw_from = ((self.float_half_height - bottom_height) as usize)
+        let half_wall_pixel_height =
+            self.f_half_height / draw_to_wall_dist * self.plane_dist;
+        let pixels_to_bottom =
+            half_wall_pixel_height * (-y_level + self.pos.y) - self.y_shearing;
+        let draw_from = ((self.f_half_height - pixels_to_bottom) as usize)
             .clamp(bottom_draw_bound, top_draw_bound);
 
         // Draw to:
-        let wall_pixel_height =
-            self.f_height / from_wall_dist * self.plane_dist;
-        let half_wall_height = (wall_pixel_height / 2.0) as f32;
-        let bottom_height = half_wall_height * (-y_level + self.pos.y)
-            - self.y_shearing;
-        let draw_to = ((self.float_half_height - bottom_height) as usize)
+        let half_wall_pixel_height =
+            self.f_half_height / draw_from_wall_dist * self.plane_dist;
+        let pixels_to_bottom =
+            half_wall_pixel_height * (-y_level + self.pos.y) - self.y_shearing;
+        let draw_to = ((self.f_half_height - pixels_to_bottom) as usize)
             .clamp(draw_from, top_draw_bound);
 
-        //println!("draw_from: {draw_from}, draw_to: {draw_to}");
         let ray_dir = self.dir - self.plane_h;
         let tile_step_factor = self.plane_h * 2.0 * self.width_recip;
         column
@@ -138,8 +130,7 @@ impl Raycaster {
             .skip(draw_from)
             .take(draw_to - draw_from)
             .for_each(|(y, rgba)| {
-                let row_dist = ((-self.pos.y + y_level) / 2.0)
-                    * self.f_height
+                let row_dist = ((-self.pos.y + y_level) / 2.0) * self.f_height
                     / (y as f32 - self.f_height / 2.0 - self.y_shearing)
                     * self.plane_dist;
                 let step = tile_step_factor * row_dist;

@@ -42,7 +42,7 @@ impl TextureData {
         width: u32,
         height: u32,
         transparency: bool,
-        repeating: bool
+        repeating: bool,
     ) -> Self {
         let mut light_shade = data.clone();
         let mut medium_shade = data.clone();
