@@ -24,14 +24,14 @@ impl Raycaster {
         position_z: f32,
         column: &mut [u8],
     ) -> usize {
+        if texture_data.is_empty() {
+            return bottom_draw_bound;
+        }
         let (texture, tex_width, tex_height) = (
             texture_data.data,
             texture_data.width as usize,
             texture_data.height as usize,
         );
-        if texture.is_empty() {
-            return bottom_draw_bound;
-        }
 
         // Draw from (alway drawing from bottom to top):
         let half_wall_pixel_height =
@@ -97,14 +97,15 @@ impl Raycaster {
         position_z: f32,
         column: &mut [u8],
     ) -> usize {
+        if texture_data.is_empty() {
+            return top_draw_bound;
+        }
+
         let (texture, tex_width, tex_height) = (
             texture_data.data,
             texture_data.width as usize,
             texture_data.height as usize,
         );
-        if texture.is_empty() {
-            return top_draw_bound;
-        }
 
         // Draw from:
         let half_wall_pixel_height =

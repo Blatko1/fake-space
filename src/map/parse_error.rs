@@ -14,7 +14,6 @@ pub enum MapParseError {
 
 #[derive(Debug, PartialEq)]
 pub enum DimensionsError {
-    IllegalCharacter(usize),
     MissingDimensions,
     InvalidSeparatorFormat(usize),
     InvalidDimensionValue(usize),
@@ -28,7 +27,6 @@ pub enum TextureError {
 
     InvalidOperandSeparatorFormat(usize),
     UnknownParameter(usize, String),
-    InvalidTexturePath(usize, String),
     FailedToOpenTexture(io::ErrorKind),
     FailedToReadTexture(image::ImageError),
     FailedToParseBoolValue(usize, String),
@@ -52,11 +50,8 @@ pub enum TileError {
     FloatParseError(usize, String),
     UnknownTexture(usize, String),
 
-    IllegalTileIndexCharacter(usize, char),
     InvalidTileIndexSeparator(usize),
     FailedToParseTileIndex(usize, String),
-    InvalidTileIndexRange(usize, String),
-    TileIndexNotContinuous(usize, String),
     InvalidTileIndex(usize),
     InvalidLevels(usize, f32, f32, f32),
     TileIndexExceedsLimits(usize),
@@ -89,10 +84,6 @@ impl PartialEq for TextureError {
             (
                 Self::UnknownParameter(l0, l1),
                 Self::UnknownParameter(r0, r1),
-            ) => l0 == r0 && l1 == r1,
-            (
-                Self::InvalidTexturePath(l0, l1),
-                Self::InvalidTexturePath(r0, r1),
             ) => l0 == r0 && l1 == r1,
             (Self::FailedToOpenTexture(l0), Self::FailedToOpenTexture(r0)) => {
                 l0 == r0

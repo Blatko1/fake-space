@@ -17,7 +17,7 @@ fn parse_dimensions_test() {
     let line = "    11  x   27   1".trim();
     assert_eq!(
         MapParser::parse_dimensions(i, line),
-        Err(DimensionsError::IllegalCharacter(i))
+        Err(DimensionsError::InvalidDimensionValue(i))
     );
     let line = "x10";
     assert_eq!(
@@ -57,7 +57,7 @@ fn parse_dimensions_test() {
     let line = "11cx27";
     assert_eq!(
         MapParser::parse_dimensions(i, line),
-        Err(DimensionsError::IllegalCharacter(i))
+        Err(DimensionsError::InvalidDimensionValue(i))
     );
 }
 

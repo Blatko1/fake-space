@@ -30,17 +30,21 @@ const MAX_Y: f32 = 50.0;
 const MIN_Y: f32 = -50.0;
 
 #[derive(Debug, Clone, Copy)]
-pub struct RayHit /*<'a>*/ {
-    /// X-coordinate of a pixel column out of which the ray was casted.
+pub struct RayHit {
+    /// X-coordinate of a pixel column out of which the ray was cast.
     screen_x: u32,
-    /// Direction of the ray which hit the tile (wall).
+    /// Direction of the ray which hit the tile.
     dir: Vec3,
-    /// Perpetual distance from the raycaster to the hit point on tile (wall).
+    /// Perpetual distance from the raycaster to the hit point.
     wall_dist: f32,
     /// Which side of tile was hit.
     side: Side,
-    /// Number in range [0.0, 1.0) which represents the x-coordinate of
-    /// the hit tile side (wall).
+    /// Current bottom bound for drawing.
+    bottom_draw_bound: usize,
+    /// Current top bound for drawing.
+    top_draw_bound: usize,
+    /// Number in range [0.0, 1.0) which represents the offset of
+    /// the hit tile wall from the left.
     /// If the ray hit the left portion of the tile side (wall), the
     /// x-coordinate would be somewhere in range [0.0, 0.5].
     wall_x: f32,
@@ -288,10 +292,6 @@ impl Raycaster {
                         column,
                     );
                     top_draw_bound = drawn_from;
-
-                    //let (drawn_from, drawn_to) = self.draw_bottom(previous_perp_wall_dist, perp_wall_dist, max_drawn_to, min_drawn_from, tile.le, textures.get(tile.object_bottom), x as u32, current_map_x as f32, current_map_z as f32, column);
-                    //max_drawn_to = drawn_to.max(max_drawn_to);
-                    //min_drawn_from = drawn_from.min(min_drawn_from);
                     let next_tile = match tile_map.get_tile(map_x, map_z) {
                         Some(t) => t,
                         None => {
@@ -305,10 +305,12 @@ impl Raycaster {
                         wall_dist: perp_wall_dist,
                         side,
                         wall_x,
+                        bottom_draw_bound,
+                        top_draw_bound,
                         delta_dist_x,
                         delta_dist_z,
                     };
-                    let (_, drawn_to) = self.draw_wall(
+                    let drawn_to = self.draw_bottom_wall(
                         hit,
                         textures.get(next_tile.pillar1_tex),
                         bottom_draw_bound,
@@ -317,9 +319,8 @@ impl Raycaster {
                         next_tile.level2,
                         column,
                     );
-                    //assert_eq!(drawn_to, drawn_to2);
                     bottom_draw_bound = drawn_to.max(bottom_draw_bound);
-                    let (drawn_from, _) = self.draw_wall(
+                    let drawn_from = self.draw_top_wall(
                         hit,
                         textures.get(next_tile.pillar2_tex),
                         bottom_draw_bound,
@@ -572,7 +573,7 @@ impl Raycaster {
     pub fn process_mouse_input(&mut self, event: DeviceEvent) {
         match event {
             DeviceEvent::MouseMotion { delta } => {
-                self.y_shearing = self.y_shearing + delta.1 as f32 * Y_SHEARING_SENSITIVITY;
+                self.y_shearing += delta.1 as f32 * Y_SHEARING_SENSITIVITY;
 
                 self.angle -=
                     delta.0 as f32 * ONE_DEGREE_RAD * MOUSE_ROTATION_SPEED;

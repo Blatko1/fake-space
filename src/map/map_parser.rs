@@ -64,7 +64,7 @@ impl<'a> MapParser {
             None => return Err(DimensionsError::MissingDimensions)?,
         };
 
-        let map_size = (dimensions.0 * dimensions.1) as usize;
+        let map_size = dimensions.0 * dimensions.1;
         let content_line_count = lines.clone().count();
         let mut textures = Vec::new();
         let mut tiles = vec![MapTileInput::Undefined; map_size];
@@ -157,7 +157,7 @@ impl<'a> MapParser {
                 content.to_string(),
             ));
         }
-        Ok(Directive::from_str(index, &content[1..])?)
+        Directive::from_str(index, &content[1..])
     }
 
     // TODO get rid of asserts afterwards maybe
@@ -166,7 +166,7 @@ impl<'a> MapParser {
     //                the last definition will be taken
     fn parse_tiles<I: Iterator<Item = (usize, &'a str)> + Clone>(
         &self,
-        tiles: &mut Vec<MapTileInput>,
+        tiles: &mut [MapTileInput],
         lines: I,
     ) -> Result<(), TileError> {
         for (index, content) in lines {
@@ -182,17 +182,16 @@ impl<'a> MapParser {
                 let operands: Vec<&str> = expr.split(':').collect();
                 match operands[..] {
                     [expr] => {
-                        if expr.starts_with('$') {
-                            let variable = &expr[1..];
-                            match self.variables.get(variable) {
-                                Some(variable) => {
-                                    tile.update(variable);
+                        if let Some(var_str) = expr.strip_prefix('$') {
+                            match self.variables.get(var_str) {
+                                Some(var) => {
+                                    tile.update(var);
                                     continue;
                                 }
                                 None => {
                                     return Err(TileError::UnknownVariable(
                                         index,
-                                        variable.to_string(),
+                                        var_str.to_string(),
                                     ))
                                 }
                             }
@@ -263,10 +262,7 @@ impl<'a> MapParser {
             if tile_index_str == "_" {
                 tiles
                     .iter_mut()
-                    .filter(|t| match t {
-                        MapTileInput::Undefined => true,
-                        _ => false,
-                    })
+                    .filter(|t| matches!(t, MapTileInput::Undefined))
                     .for_each(|t| *t = MapTileInput::Tile(tile));
                 return Ok(());
             }
@@ -344,17 +340,16 @@ impl<'a> MapParser {
                 let operands: Vec<&str> = expr.split(':').collect();
                 match operands[..] {
                     [expr] => {
-                        if expr.starts_with('$') {
-                            let variable = &expr[1..];
-                            match variables.get(variable) {
-                                Some(variable) => {
-                                    tile.update(variable);
+                        if let Some(var_str) = expr.strip_prefix('$') {
+                            match variables.get(var_str) {
+                                Some(var) => {
+                                    tile.update(var);
                                     continue;
                                 }
                                 None => {
                                     return Err(TileError::UnknownVariable(
                                         index,
-                                        variable.to_string(),
+                                        var_str.to_string(),
                                     ))
                                 }
                             }
