@@ -572,11 +572,7 @@ impl Raycaster {
     pub fn process_mouse_input(&mut self, event: DeviceEvent) {
         match event {
             DeviceEvent::MouseMotion { delta } => {
-                let last_y_shearing = self.y_shearing;
-                self.y_shearing = (self.y_shearing + delta.1 as f32 * Y_SHEARING_SENSITIVITY).clamp(-self.f_height, self.f_height);
-                let y_shearing_delta = self.y_shearing - last_y_shearing;
-                self.fov = self.fov
-                + (y_shearing_delta * (self.y_shearing/self.f_height).sin() * 0.1).to_radians();
+                self.y_shearing = self.y_shearing + delta.1 as f32 * Y_SHEARING_SENSITIVITY;
 
                 self.angle -=
                     delta.0 as f32 * ONE_DEGREE_RAD * MOUSE_ROTATION_SPEED;
