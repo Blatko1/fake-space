@@ -141,7 +141,7 @@ impl Canvas {
             });
 
         let shader: wgpu::ShaderModule =
-            device.create_shader_module(wgpu::include_wgsl!("shader.wgsl"));
+            device.create_shader_module(wgpu::include_wgsl!("../shaders/shader.wgsl"));
 
         let pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
