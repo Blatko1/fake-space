@@ -1,4 +1,4 @@
-use glam::Vec3;
+/*use glam::Vec3;
 
 // TODO problem! some textures below the walls
 // are bleeding out when further away
@@ -8,9 +8,10 @@ use glam::Vec3;
 // TODO problem! adding unsafe could improve performance
 use crate::{map::MapTile, textures::TextureDataRef};
 
-use super::{blend, Raycaster};
-
-impl Raycaster {
+impl RayCaster {
+    //pub fn draw_top_bottom_platforms() -> (DrawnFromY, DrawnToY) {
+    //
+    //}
     pub fn draw_bottom_platform(
         &self,
         draw_from_wall_dist: f32,
@@ -297,3 +298,4 @@ impl Raycaster {
             });
     }*/
 }
+*/

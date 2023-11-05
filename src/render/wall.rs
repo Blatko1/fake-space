@@ -1,4 +1,4 @@
-use crate::textures::TextureDataRef;
+/*use crate::textures::TextureDataRef;
 
 use super::{blend, RayHit, Raycaster, Side};
 
@@ -16,7 +16,7 @@ impl Raycaster {
         column: &mut [u8],
     ) -> usize {
         if texture_data.is_empty() {
-            return top_draw_bound
+            return top_draw_bound;
         }
         let texture = match hit.side {
             Side::Vertical => texture_data.light_shade,
@@ -42,7 +42,7 @@ impl Raycaster {
             .clamp(bottom_draw_bound, top_draw_bound);
 
         if draw_from == draw_to {
-            return draw_to
+            return draw_to;
         }
 
         let tex_x = match hit.side {
@@ -113,7 +113,7 @@ impl Raycaster {
         column: &mut [u8],
     ) -> usize {
         if texture_data.is_empty() {
-            return bottom_draw_bound
+            return bottom_draw_bound;
         }
         let texture = match hit.side {
             Side::Vertical => texture_data.light_shade,
@@ -139,7 +139,7 @@ impl Raycaster {
             .clamp(bottom_draw_bound, top_draw_bound);
 
         if draw_from == draw_to {
-            return draw_from
+            return draw_from;
         }
 
         let tex_x = match hit.side {
@@ -221,3 +221,4 @@ fn draw_transparent_wall_pixel(dest: &mut [u8], color: &[u8]) {
         dest.copy_from_slice(&blend(color, dest));
     }
 }
+*/

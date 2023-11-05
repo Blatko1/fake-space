@@ -620,8 +620,8 @@ impl MapTileVariable {
         MapTile {
             pillar1_tex: self.pillar1_tex.unwrap_or_default(),
             pillar2_tex: self.pillar2_tex.unwrap_or_default(),
-            bottom_platform: self.bottom_platform.unwrap_or_default(),
-            top_platform: self.top_platform.unwrap_or_default(),
+            bottom_platform_tex: self.bottom_platform.unwrap_or_default(),
+            top_platform_tex: self.top_platform.unwrap_or_default(),
             level1: self.level1.unwrap_or(MAP_TILE_LEVEL1_DEFAULT),
             level2: self.level2.unwrap_or(MAP_TILE_LEVEL2_DEFAULT),
             level3: self.level3.unwrap_or(MAP_TILE_LEVEL3_DEFAULT),

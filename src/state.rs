@@ -1,7 +1,7 @@
 use crate::{
     canvas::Canvas,
-    draw::Raycaster, //textures::TextureManager,
     map::Map,
+    render::RayCaster,
     textures::{Texture, TextureData, TextureManager},
     voxel::VoxelModelManager,
 };
@@ -12,7 +12,7 @@ use winit::{
 
 pub struct State {
     canvas: Canvas,
-    raycaster: Raycaster,
+    raycaster: RayCaster,
     models: VoxelModelManager,
     map: Map,
     textures: TextureManager,
@@ -20,7 +20,7 @@ pub struct State {
 
 impl State {
     pub fn new(canvas: Canvas, map: Map, textures: Vec<TextureData>) -> Self {
-        let raycaster = Raycaster::new(
+        let raycaster = RayCaster::new(
             2.0,
             0.0,
             2.0,
@@ -41,7 +41,7 @@ impl State {
     pub fn update(&mut self) {
         self.canvas.clear_buffer();
         self.raycaster.update();
-        self.raycaster.cast_rays(
+        self.raycaster.cast_and_draw(
             &self.map,
             &self.models,
             &self.textures,

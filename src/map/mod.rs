@@ -58,9 +58,9 @@ pub struct MapTile {
     /// Texture of the upper pillar walls.
     pub pillar2_tex: Texture,
     /// Texture of the bottom platform.
-    pub bottom_platform: Texture,
+    pub bottom_platform_tex: Texture,
     /// Texture of the top platform.
-    pub top_platform: Texture,
+    pub top_platform_tex: Texture,
     /// `Y-level` - starting lower bound of the bottom pillar;
     /// level from which the bottom pillar stretches.
     pub level1: f32,
