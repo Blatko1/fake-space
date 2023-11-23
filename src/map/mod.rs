@@ -4,12 +4,7 @@ mod tests;
 pub mod map_parser;
 mod parse_error;
 
-use std::str::FromStr;
-
-use crate::{
-    textures::{Texture, TextureData},
-    voxel::VoxelModelType,
-};
+use crate::textures::{Texture, TextureData};
 
 use self::{map_parser::MapParser, parse_error::MapParseError};
 

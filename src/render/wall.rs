@@ -1,18 +1,14 @@
-/*use crate::textures::TextureDataRef;
+use crate::textures::{TextureDataRef, TextureManager};
 
-use super::{blend, RayHit, Raycaster, Side};
+use super::{blend, RayCaster, Side, DrawParams};
 
 // TODO write tests for each draw call function to check for overflows
-impl Raycaster {
+impl RayCaster {
     // Draws full and transparent walls.
     pub fn draw_bottom_wall(
         &self,
-        hit: RayHit,
-        texture_data: TextureDataRef,
-        bottom_draw_bound: usize,
-        top_draw_bound: usize,
-        bottom_y_bound: f32,
-        top_y_bound: f32,
+        draw_params: DrawParams,
+        texture_manager: &TextureManager,
         column: &mut [u8],
     ) -> usize {
         if texture_data.is_empty() {
@@ -221,4 +217,3 @@ fn draw_transparent_wall_pixel(dest: &mut [u8], color: &[u8]) {
         dest.copy_from_slice(&blend(color, dest));
     }
 }
-*/

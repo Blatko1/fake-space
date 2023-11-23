@@ -30,6 +30,18 @@ const MAX_Y: f32 = 50.0;
 const MIN_Y: f32 = -50.0;
 
 #[derive(Debug, Clone, Copy)]
+struct DrawParams {
+    pub closer_wall_dist: f32,
+    pub further_wall_dist: f32,
+    pub bottom_draw_bound: usize,
+    pub top_draw_bound: usize,
+    pub draw_x: u32,
+    pub tile: MapTile,
+    pub tile_x: f32,
+    pub tile_z: f32,
+}
+
+#[derive(Debug, Clone, Copy)]
 pub enum Side {
     Vertical,
     Horizontal,
@@ -152,16 +164,15 @@ impl RayCaster {
         &self,
         tile_map: &Map,
         models: &VoxelModelManager,
-        textures: &TextureManager,
+        texture_manager: &TextureManager,
         data: &mut [u8],
     ) {
         let mut canvas_column_iterator =
             data.chunks_exact_mut(self.height as usize * 4).enumerate();
         canvas_column_iterator.for_each(|(x, column)| {
-            // =======================================================
-            //    | CALCULATE RAY FOR CURRENT COLUMN, DISTANCES   |
-            //    | TO THE FIRST SIDE ON PATH AND DELTA DISTANCES |
-            // =======================================================
+            // ========================================================
+            //           | CALCULATE RAY DISTANCES AND INFO |
+            // ========================================================
             // X-coordinate on the horizontal camera plane (range [-1.0, 1.0])
             let plane_x = 2.0 * (x as f32 * self.width_recip) - 1.0;
             // Ray direction for current pixel column
@@ -184,10 +195,9 @@ impl RayCaster {
                     1.0 - self.pos.z.fract()
                 };
             // Coordinates of the map tile the raycaster is in
-            let mut next_map_x = self.pos.x as i32;
-            let mut next_map_z = self.pos.z as i32;
-            let (step_x, step_z) =
-                (ray_dir.x.signum() as i32, ray_dir.z.signum() as i32);
+            let mut next_tile_x = self.pos.x.trunc();
+            let mut next_tile_z = self.pos.z.trunc();
+            let (step_x, step_z) = (ray_dir.x.signum(), ray_dir.z.signum());
 
             // ====================================================
             //    | LOOP OVER THE RAY PATH AND DRAW HORIZONTAL |
@@ -197,14 +207,14 @@ impl RayCaster {
             let mut bottom_draw_bound = 0usize;
             let mut top_draw_bound = self.height as usize;
             loop {
-                let current_map_x = next_map_x;
-                let current_map_z = next_map_z;
+                let current_tile_x = next_tile_x;
+                let current_tile_z = next_tile_z;
                 // DDA loop
                 let (side, perp_wall_dist, wall_offset) =
                     if side_dist_x < side_dist_z {
                         let dist_to_wall = side_dist_x.max(0.0);
                         let wall_offset = self.pos.z + dist_to_wall * ray_dir.z;
-                        next_map_x += step_x;
+                        next_tile_x += step_x;
                         side_dist_x += delta_dist_x;
                         (
                             Side::Vertical,
@@ -214,7 +224,7 @@ impl RayCaster {
                     } else {
                         let dist_to_wall = side_dist_z.max(0.0);
                         let wall_offset = self.pos.x + dist_to_wall * ray_dir.x;
-                        next_map_z += step_z;
+                        next_tile_z += step_z;
                         side_dist_z += delta_dist_z;
                         (
                             Side::Horizontal,
@@ -222,14 +232,88 @@ impl RayCaster {
                             wall_offset - wall_offset.floor(),
                         )
                     };
-                let current_tile =
-                    match tile_map.get_tile(current_map_x, current_map_z) {
-                        Some(t) => t,
-                        None => {
-                            // draw non moving background
-                            break;
-                        }
-                    };
+
+                // ====================================================
+                //  | DRAW TOP AND BOTTOM PLATFORMS OF CURRENT TILE |
+                // ====================================================
+                let current_tile = match tile_map
+                    .get_tile(current_tile_x as i32, current_tile_z as i32)
+                {
+                    Some(t) => *t,
+                    None => {
+                        break;
+                    }
+                };
+                let mut params = DrawParams {
+                    closer_wall_dist: previous_perp_wall_dist,
+                    further_wall_dist: perp_wall_dist,
+                    bottom_draw_bound,
+                    top_draw_bound,
+                    draw_x: x as u32,
+                    tile: current_tile,
+                    tile_x: current_tile_x as f32,
+                    tile_z: current_tile_z as f32,
+                };
+
+                let drawn_to =
+                    self.draw_bottom_platform(params, texture_manager, column);
+                bottom_draw_bound = drawn_to;
+                params.bottom_draw_bound = bottom_draw_bound;
+                
+                let drawn_from =
+                    self.draw_top_platform(params, texture_manager, column);
+                top_draw_bound = drawn_from;
+
+                let next_tile = match tile_map
+                    .get_tile(next_tile_x as i32, next_tile_z as i32)
+                {
+                    Some(t) => *t,
+                    None => {
+                        break;
+                    }
+                };
+                let params = DrawParams {
+                    closer_wall_dist: perp_wall_dist,
+                    further_wall_dist: params.dra,
+                    bottom_draw_bound,
+                    top_draw_bound,
+                    draw_x: x as u32,
+                    tile: next_tile,
+                    tile_x: next_tile_x,
+                    tile_z: next_tile_z
+                };
+
+                /*let hit = RayHit {
+                    dir: ray_dir,
+                    side,
+                    wall_x,
+                    delta_dist_x,
+                    delta_dist_z,
+                };
+                let drawn_to = self.draw_bottom_wall(
+                    hit,
+                    textures.get(next_tile.pillar1_tex),
+                    bottom_draw_bound,
+                    top_draw_bound,
+                    next_tile.level1,
+                    next_tile.level2,
+                    column,
+                );
+                bottom_draw_bound = drawn_to.max(bottom_draw_bound);
+                let drawn_from = self.draw_top_wall(
+                    hit,
+                    textures.get(next_tile.pillar2_tex),
+                    bottom_draw_bound,
+                    top_draw_bound,
+                    next_tile.level3,
+                    next_tile.level4,
+                    column,
+                );
+                top_draw_bound = drawn_from.min(top_draw_bound);*/
+
+                previous_perp_wall_dist = perp_wall_dist;
+
+                /*
                 // ======================================================
                 //    | DRAW BOTTOM PLATFORM OF THE CURRENT TILE |
                 // ======================================================
@@ -359,74 +443,80 @@ impl RayCaster {
                     top_draw_bound = draw_from;
                 }
 
-                // Draw top part of cube
-                /*let drawn_to = self.draw_bottom_platform(
-                    previous_perp_wall_dist,
-                    perp_wall_dist,
-                    bottom_draw_bound,
-                    top_draw_bound,
-                    current_tile.level2,
-                    textures.get(current_tile.bottom_platform),
-                    x as u32,
-                    current_map_x as f32,
-                    current_map_z as f32,
-                    column,
-                );
-                bottom_draw_bound = drawn_to;
-                // Draw top part of cube
-                let drawn_from = self.draw_top_platform(
-                    previous_perp_wall_dist,
-                    perp_wall_dist,
-                    bottom_draw_bound,
-                    top_draw_bound,
-                    current_tile.level3,
-                    textures.get(current_tile.top_platform),
-                    x as u32,
-                    current_map_x as f32,
-                    current_map_z as f32,
-                    column,
-                );
-                top_draw_bound = drawn_from;
-                let next_tile = match tile_map.get_tile(map_x, map_z) {
-                    Some(t) => t,
-                    None => {
-                        // draw non moving background
-                        break;
-                    }
-                };
-                let hit = RayHit {
-                    screen_x: x as u32,
-                    dir: ray_dir,
-                    wall_dist: perp_wall_dist,
-                    side,
-                    wall_x,
-                    bottom_draw_bound,
-                    top_draw_bound,
-                    delta_dist_x,
-                    delta_dist_z,
-                };
-                let drawn_to = self.draw_bottom_wall(
-                    hit,
-                    textures.get(next_tile.pillar1_tex),
-                    bottom_draw_bound,
-                    top_draw_bound,
-                    next_tile.level1,
-                    next_tile.level2,
-                    column,
-                );
-                bottom_draw_bound = drawn_to.max(bottom_draw_bound);
-                let drawn_from = self.draw_top_wall(
-                    hit,
-                    textures.get(next_tile.pillar2_tex),
-                    bottom_draw_bound,
-                    top_draw_bound,
-                    next_tile.level3,
-                    next_tile.level4,
-                    column,
-                );
-                top_draw_bound = drawn_from.min(top_draw_bound);*/
+                // ===============================================
+                //    | DRAW BOTTOM WALL OF THE CURRENT TILE |
+                // ===============================================
+                let bottom_wall_texture =
+                    textures.get(current_tile.pillar1_tex);
+                if !bottom_wall_texture.is_empty() {
+                    let texture = match hit.side {
+                        Side::Vertical => bottom_wall_texture.light_shade,
+                        Side::Horizontal => bottom_wall_texture.medium_shade,
+                    };
+                    let (tex_width, tex_height) =
+                        (texture_data.width as usize, texture_data.height as usize);
 
-                previous_perp_wall_dist = perp_wall_dist;
+                    // Calculate wall pixel height for the parts above and below the middle
+                    let half_wall_pixel_height =
+                        self.f_half_height / hit.wall_dist * self.plane_dist;
+                    let pixels_to_bottom = half_wall_pixel_height
+                        * (-bottom_y_bound + self.pos.y)
+                        - self.y_shearing;
+                    let pixels_to_top = half_wall_pixel_height * (top_y_bound - self.pos.y)
+                        + self.y_shearing;
+                    let full_wall_pixel_height = pixels_to_top + pixels_to_bottom;
+
+                    // From which pixel to begin drawing and on which to end
+                    let draw_from = ((self.f_half_height - pixels_to_bottom) as usize)
+                        .clamp(bottom_draw_bound, top_draw_bound);
+                    let draw_to = ((self.f_half_height + pixels_to_top) as usize)
+                        .clamp(bottom_draw_bound, top_draw_bound);
+
+                    if draw_from == draw_to {
+                        return draw_to;
+                    }
+
+                    let tex_x = match hit.side {
+                        Side::Vertical if hit.dir.x > 0.0 => {
+                            tex_width - (hit.wall_x * tex_width as f32) as usize - 1
+                        }
+                        Side::Horizontal if hit.dir.z < 0.0 => {
+                            tex_width - (hit.wall_x * tex_width as f32) as usize - 1
+                        }
+                        _ => (hit.wall_x * tex_width as f32) as usize,
+                    };
+                    let tex_y_step = tex_height as f32
+                        / full_wall_pixel_height
+                        / (2.0 / (top_y_bound - bottom_y_bound));
+                    let mut tex_y = (draw_from as f32 + pixels_to_bottom
+                        - self.f_half_height)
+                        * tex_y_step;
+                    let draw_fn = match texture_data.transparency {
+                        true => draw_transparent_wall_pixel,
+                        false => draw_full_wall_pixel,
+                    };
+
+                    // Precomputed variables for performance increase
+                    let four_tex_width = tex_width * 4;
+                    let four_tex_x = tex_x * 4;
+                    column
+                        .chunks_exact_mut(4)
+                        .skip(draw_from)
+                        .take(draw_to - draw_from)
+                        .for_each(|dest| {
+                            //if dest[3] != 255 {
+                            let tex_y_pos = tex_y.round() as usize % tex_height;
+                            let i =
+                                (tex_height - tex_y_pos - 1) * four_tex_width + four_tex_x;
+                            let src = &texture[i..i + 4];
+
+                            // Draw the pixel:
+                            draw_fn(dest, src);
+                            //}
+                            // TODO maybe make it so `tex_y_step` is being subtracted.
+                            tex_y += tex_y_step;
+                        });
+                }*/
             }
         });
     }

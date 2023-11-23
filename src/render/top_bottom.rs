@@ -1,4 +1,4 @@
-/*use glam::Vec3;
+use crate::textures::TextureManager;
 
 // TODO problem! some textures below the walls
 // are bleeding out when further away
@@ -6,37 +6,43 @@
 // is difficult due to existence of transparent walls
 // and their fully transparent parts
 // TODO problem! adding unsafe could improve performance
-use crate::{map::MapTile, textures::TextureDataRef};
+use super::{DrawParams, RayCaster};
 
 impl RayCaster {
     //pub fn draw_top_bottom_platforms() -> (DrawnFromY, DrawnToY) {
     //
     //}
-    pub fn draw_bottom_platform(
+    pub(super) fn draw_bottom_platform(
         &self,
-        draw_from_wall_dist: f32,
-        draw_to_wall_dist: f32,
-        bottom_draw_bound: usize,
-        top_draw_bound: usize,
-        y_level: f32,
-        texture_data: TextureDataRef<'_>,
-        draw_x: u32,
-        position_x: f32,
-        position_z: f32,
+        draw_params: DrawParams,
+        texture_manager: &TextureManager,
         column: &mut [u8],
     ) -> usize {
-        if texture_data.is_empty() {
+        let tile = draw_params.tile;
+        let bottom_draw_bound = draw_params.bottom_draw_bound;
+        let top_draw_bound = draw_params.top_draw_bound;
+        let closer_wall_dist = draw_params.closer_wall_dist;
+        let further_wall_dist = draw_params.further_wall_dist;
+        let draw_x = draw_params.draw_x;
+        let tile_x = draw_params.tile_x;
+        let tile_z = draw_params.tile_z;
+
+        let y_level = tile.level2;
+
+        let bottom_platform_texture =
+            texture_manager.get(tile.bottom_platform_tex);
+        if bottom_platform_texture.is_empty() {
             return bottom_draw_bound;
         }
         let (texture, tex_width, tex_height) = (
-            texture_data.data,
-            texture_data.width as usize,
-            texture_data.height as usize,
+            bottom_platform_texture.data,
+            bottom_platform_texture.width as usize,
+            bottom_platform_texture.height as usize,
         );
 
         // Draw from (alway drawing from bottom to top):
         let half_wall_pixel_height =
-            self.f_half_height / draw_from_wall_dist * self.plane_dist;
+            self.f_half_height / closer_wall_dist * self.plane_dist;
         let pixels_to_top =
             half_wall_pixel_height * (y_level - self.pos.y) + self.y_shearing;
         let draw_from = ((self.f_half_height + pixels_to_top) as usize)
@@ -44,7 +50,7 @@ impl RayCaster {
 
         // Draw to:
         let half_wall_pixel_height =
-            self.f_half_height / draw_to_wall_dist * self.plane_dist;
+            self.f_half_height / further_wall_dist * self.plane_dist;
 
         let pixels_to_top =
             half_wall_pixel_height * (y_level - self.pos.y) + self.y_shearing;
@@ -65,11 +71,9 @@ impl RayCaster {
                     * self.plane_dist;
                 let step = tile_step_factor * row_dist;
                 let pos = self.pos + ray_dir * row_dist + step * draw_x as f32;
-                let tex_x = ((tex_width as f32 * (pos.x - position_x))
-                    as usize)
+                let tex_x = ((tex_width as f32 * (pos.x - tile_x)) as usize)
                     .min(tex_width - 1);
-                let tex_y = ((tex_height as f32 * (pos.z - position_z))
-                    as usize)
+                let tex_y = ((tex_height as f32 * (pos.z - tile_z)) as usize)
                     .min(tex_height - 1);
                 let i = tex_width * 4 * tex_y + tex_x * 4;
                 let color = &texture[i..i + 4];
@@ -85,32 +89,36 @@ impl RayCaster {
         draw_to
     }
 
-    pub fn draw_top_platform(
+    pub(super) fn draw_top_platform(
         &self,
-        draw_from_wall_dist: f32,
-        draw_to_wall_dist: f32,
-        bottom_draw_bound: usize,
-        top_draw_bound: usize,
-        y_level: f32,
-        texture_data: TextureDataRef<'_>,
-        draw_x: u32,
-        position_x: f32,
-        position_z: f32,
+        draw_params: DrawParams,
+        texture_manager: &TextureManager,
         column: &mut [u8],
     ) -> usize {
-        if texture_data.is_empty() {
+        let tile = draw_params.tile;
+        let bottom_draw_bound = draw_params.bottom_draw_bound;
+        let top_draw_bound = draw_params.top_draw_bound;
+        let closer_wall_dist = draw_params.closer_wall_dist;
+        let further_wall_dist = draw_params.further_wall_dist;
+        let draw_x = draw_params.draw_x;
+        let tile_x = draw_params.tile_x;
+        let tile_z = draw_params.tile_z;
+
+        let y_level = tile.level3;
+
+        let top_platform_texture = texture_manager.get(tile.top_platform_tex);
+        if top_platform_texture.is_empty() {
             return top_draw_bound;
         }
-
         let (texture, tex_width, tex_height) = (
-            texture_data.data,
-            texture_data.width as usize,
-            texture_data.height as usize,
+            top_platform_texture.data,
+            top_platform_texture.width as usize,
+            top_platform_texture.height as usize,
         );
 
         // Draw from:
         let half_wall_pixel_height =
-            self.f_half_height / draw_to_wall_dist * self.plane_dist;
+            self.f_half_height / further_wall_dist * self.plane_dist;
         let pixels_to_bottom =
             half_wall_pixel_height * (-y_level + self.pos.y) - self.y_shearing;
         let draw_from = ((self.f_half_height - pixels_to_bottom) as usize)
@@ -118,7 +126,7 @@ impl RayCaster {
 
         // Draw to:
         let half_wall_pixel_height =
-            self.f_half_height / draw_from_wall_dist * self.plane_dist;
+            self.f_half_height / closer_wall_dist * self.plane_dist;
         let pixels_to_bottom =
             half_wall_pixel_height * (-y_level + self.pos.y) - self.y_shearing;
         let draw_to = ((self.f_half_height - pixels_to_bottom) as usize)
@@ -137,11 +145,9 @@ impl RayCaster {
                     * self.plane_dist;
                 let step = tile_step_factor * row_dist;
                 let pos = self.pos + ray_dir * row_dist + step * draw_x as f32;
-                let tex_x = ((tex_width as f32 * (pos.x - position_x))
-                    as usize)
+                let tex_x = ((tex_width as f32 * (pos.x - tile_x)) as usize)
                     .min(tex_width - 1);
-                let tex_y = ((tex_height as f32 * (pos.z - position_z))
-                    as usize)
+                let tex_y = ((tex_height as f32 * (pos.z - tile_z)) as usize)
                     .min(tex_height - 1);
                 let i = tex_width * 4 * tex_y + tex_x * 4;
                 let color = &texture[i..i + 4];
@@ -298,4 +304,3 @@ impl RayCaster {
             });
     }*/
 }
-*/
