@@ -1,20 +1,18 @@
-use std::{
-    hash::Hash,
-    ops::{Range, RangeInclusive},
-    path::{Path, PathBuf},
-    str::FromStr,
-};
+#[cfg(test)]
+mod tests;
+
+pub mod parse_error;
+
+use std::{ops::RangeInclusive, path::PathBuf, str::FromStr};
 
 use hashbrown::HashMap;
 use image::{io::Reader as ImageReader, EncodableLayout};
 
 use crate::textures::{Texture, TextureData};
+use crate::world::map::MapTile;
 
-use super::{
-    parse_error::{
-        DimensionsError, DirectiveError, MapParseError, TextureError, TileError,
-    },
-    MapTile,
+use parse_error::{
+    DimensionsError, DirectiveError, MapParseError, TextureError, TileError,
 };
 
 const MAP_TILE_LEVEL1_DEFAULT: f32 = -100.0;
@@ -31,7 +29,7 @@ pub struct MapParser {
 }
 
 impl<'a> MapParser {
-    pub(super) fn from_path<P: Into<PathBuf>>(
+    pub fn from_path<P: Into<PathBuf>>(
         src_path: P,
     ) -> Result<Self, MapParseError> {
         let src_path: PathBuf = src_path.into().canonicalize()?;
@@ -44,7 +42,7 @@ impl<'a> MapParser {
         })
     }
 
-    pub(super) fn parse(
+    pub fn parse(
         mut self,
     ) -> Result<((usize, usize), Vec<MapTile>, Vec<TextureData>), MapParseError>
     {
@@ -243,7 +241,7 @@ impl<'a> MapParser {
                     }
                 }
             }
-            let tile = tile.to_map_tile(index);
+            let tile = tile.to_map_tile();
             if tile.level1 > tile.level2
                 || tile.level2 > tile.level3
                 || tile.level3 > tile.level4
@@ -401,7 +399,7 @@ impl<'a> MapParser {
                     }
                 }
             }
-            let test = tile.to_map_tile(index);
+            let test = tile.to_map_tile();
             if test.level1 > test.level2
                 || test.level2 > test.level3
                 || test.level3 > test.level4
@@ -616,7 +614,7 @@ struct MapTileVariable {
 }
 // TODO rename top height and bottom height to top_y and bot_y
 impl MapTileVariable {
-    fn to_map_tile(self, index: usize) -> MapTile {
+    fn to_map_tile(self) -> MapTile {
         MapTile {
             pillar1_tex: self.pillar1_tex.unwrap_or_default(),
             pillar2_tex: self.pillar2_tex.unwrap_or_default(),

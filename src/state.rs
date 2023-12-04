@@ -1,9 +1,6 @@
 use crate::{
-    canvas::Canvas,
-    map::Map,
-    render::RayCaster,
-    textures::{Texture, TextureData, TextureManager},
-    voxel::VoxelModelManager,
+    backend::Canvas, render::RayCaster, voxel::VoxelModelManager,
+    world::map::Map,
 };
 use winit::{
     dpi::PhysicalSize,
@@ -15,11 +12,10 @@ pub struct State {
     raycaster: RayCaster,
     models: VoxelModelManager,
     map: Map,
-    textures: TextureManager,
 }
 
 impl State {
-    pub fn new(canvas: Canvas, map: Map, textures: Vec<TextureData>) -> Self {
+    pub fn new(canvas: Canvas, map: Map) -> Self {
         let raycaster = RayCaster::new(
             2.0,
             0.0,
@@ -34,7 +30,6 @@ impl State {
             raycaster,
             models: VoxelModelManager::init(),
             map,
-            textures: TextureManager::new(textures),
         }
     }
 
@@ -44,7 +39,6 @@ impl State {
         self.raycaster.cast_and_draw(
             &self.map,
             &self.models,
-            &self.textures,
             self.canvas.buffer_mut(),
         );
     }

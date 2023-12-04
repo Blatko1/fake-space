@@ -2,17 +2,17 @@
 /// I have tried adding FXAA in the fragment shader, which ended up in a weird
 /// output, have tried MSAA but it doesn't work on textures, have tried applying
 /// bilinear texture filtering but unnoticeable.
-mod canvas;
-mod map;
+mod backend;
+mod parser;
 mod render;
 mod state;
 mod textures;
 mod voxel;
+mod world;
 
 use std::time::{Duration, Instant};
 
-use canvas::Canvas;
-use map::Map;
+use backend::Canvas;
 use pollster::block_on;
 use state::State;
 use winit::{
@@ -20,6 +20,7 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder as WinitWindowBuilder,
 };
+use world::map::Map;
 
 const FPS: u32 = 60;
 
@@ -33,12 +34,11 @@ fn main() {
     let winit_window = WinitWindowBuilder::new().build(&event_loop).unwrap();
     winit_window.set_title("False Space");
 
-    let (map, textures) =
-        Map::from_file_str(include_str!("../maps/map1.txt")).unwrap();
+    let map = Map::from_path(include_str!("../maps/map1.txt")).unwrap();
 
     let canvas = block_on(Canvas::init(&winit_window, 240, 180));
 
-    let mut state = State::new(canvas, map, textures);
+    let mut state = State::new(canvas, map);
 
     let framerate_delta = Duration::from_secs_f64(1.0 / FPS as f64);
     let mut time_delta = Instant::now();
@@ -110,15 +110,6 @@ fn main() {
                         Instant::now() + framerate_delta - elapsed,
                     );
                 }
-                //if fps_update_delta.elapsed().as_millis() >= 1000 {
-                //    println!("avg frame time: {}, FPS: {}", fps_avg as f64 / framerate as f64, framerate);
-                //    fps_update_delta = Instant::now();
-                //    framerate = 0;
-                //    fps_avg = 0;
-                //}
-                //framerate += 1;
-                //fps_avg += time_delta.elapsed().as_micros();
-                //time_delta = Instant::now();
             }
             Event::LoopDestroyed => println!("Exited!"),
             _ => (),

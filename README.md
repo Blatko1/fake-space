@@ -4,6 +4,8 @@
 
 Excellent explanations about the raycaster [here](https://lodev.org/cgtutor/raycasting.html#The_Basic_Idea_) and [here](https://permadi.com/1996/05/ray-casting-tutorial-table-of-contents/).
 
+> NOTE to me: all walls and platforms are being drawn from bottom to top! 
+
 ## Roadmap
 
 - [x] Implement a working 2D raycaster with a specific FOV 
@@ -18,7 +20,7 @@ Excellent explanations about the raycaster [here](https://lodev.org/cgtutor/rayc
 - [x] Add different floor and ceiling textures for different map tiles
 - [x] Add an ability to look freely up and down, moving up and down
 - [x] Improve how map tiles are stored, split the map into three maps, one for regular wall tiles, one for ceiling tiles and one for floor tiles
-- [ ] Rotate the canvas by 90 degrees so drawing is more efficient
+- [x] Rotate the canvas by 90 degrees so drawing is more efficient
 - [ ] Add multiple shading effects
 - [ ] Add removable object walls (cool opening or moving animation with voxels)
 - [ ] Add collision detection (circle-rectangle collision detection)

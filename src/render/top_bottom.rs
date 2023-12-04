@@ -18,7 +18,7 @@ impl RayCaster {
         texture_manager: &TextureManager,
         column: &mut [u8],
     ) -> usize {
-        let tile = draw_params.tile;
+        let tile = draw_params.current_tile;
         let bottom_draw_bound = draw_params.bottom_draw_bound;
         let top_draw_bound = draw_params.top_draw_bound;
         let closer_wall_dist = draw_params.closer_wall_dist;
@@ -40,7 +40,7 @@ impl RayCaster {
             bottom_platform_texture.height as usize,
         );
 
-        // Draw from (alway drawing from bottom to top):
+        // Draw from (always drawing from bottom to top):
         let half_wall_pixel_height =
             self.f_half_height / closer_wall_dist * self.plane_dist;
         let pixels_to_top =
@@ -95,7 +95,7 @@ impl RayCaster {
         texture_manager: &TextureManager,
         column: &mut [u8],
     ) -> usize {
-        let tile = draw_params.tile;
+        let tile = draw_params.current_tile;
         let bottom_draw_bound = draw_params.bottom_draw_bound;
         let top_draw_bound = draw_params.top_draw_bound;
         let closer_wall_dist = draw_params.closer_wall_dist;

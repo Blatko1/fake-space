@@ -1,6 +1,6 @@
-use crate::map::{
-    map_parser::{Directive, MapParser},
-    parse_error::{DimensionsError, DirectiveError, TileError},
+use crate::parser::{
+    parse_error::{DimensionsError, DirectiveError},
+    Directive, MapParser,
 };
 
 #[test]

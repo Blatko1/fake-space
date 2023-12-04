@@ -5,16 +5,12 @@ mod voxel_model;
 mod wall;
 
 use glam::Vec3;
-use std::{
-    borrow::BorrowMut,
-    f32::consts::{PI, TAU},
-};
+use std::f32::consts::{PI, TAU};
 use winit::event::{DeviceEvent, ElementState, KeyboardInput, VirtualKeyCode};
 
 use crate::{
-    map::{Map, MapTile},
-    textures::{Texture, TextureManager},
-    voxel::{VoxelModelManager, VoxelModelRef},
+    voxel::VoxelModelManager,
+    world::map::{Map, MapTile},
 };
 
 // TODO rotation control with mouse and/or keyboard
@@ -36,9 +32,15 @@ struct DrawParams {
     pub bottom_draw_bound: usize,
     pub top_draw_bound: usize,
     pub draw_x: u32,
-    pub tile: MapTile,
+    pub current_tile: MapTile,
+    pub next_tile: MapTile,
     pub tile_x: f32,
     pub tile_z: f32,
+    pub ray_dir: Vec3,
+    pub side: Side,
+    pub wall_offset: f32,
+    pub delta_dist_x: f32,
+    pub delta_dist_z: f32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -164,10 +166,10 @@ impl RayCaster {
         &self,
         tile_map: &Map,
         models: &VoxelModelManager,
-        texture_manager: &TextureManager,
         data: &mut [u8],
     ) {
-        let mut canvas_column_iterator =
+        let texture_manager = tile_map.texture_manager();
+        let canvas_column_iterator =
             data.chunks_exact_mut(self.height as usize * 4).enumerate();
         canvas_column_iterator.for_each(|(x, column)| {
             // ========================================================
@@ -236,8 +238,18 @@ impl RayCaster {
                 // ====================================================
                 //  | DRAW TOP AND BOTTOM PLATFORMS OF CURRENT TILE |
                 // ====================================================
+
+                // Tile which the ray just traveled over before hitting a wall.
                 let current_tile = match tile_map
                     .get_tile(current_tile_x as i32, current_tile_z as i32)
+                {
+                    Some(t) => *t,
+                    None => {
+                        break;
+                    }
+                };
+                let next_tile = match tile_map
+                    .get_tile(next_tile_x as i32, next_tile_z as i32)
                 {
                     Some(t) => *t,
                     None => {
@@ -250,273 +262,38 @@ impl RayCaster {
                     bottom_draw_bound,
                     top_draw_bound,
                     draw_x: x as u32,
-                    tile: current_tile,
-                    tile_x: current_tile_x as f32,
-                    tile_z: current_tile_z as f32,
+                    current_tile,
+                    next_tile,
+                    tile_x: current_tile_x,
+                    tile_z: current_tile_z,
+                    ray_dir,
+                    side,
+                    wall_offset,
+                    delta_dist_x,
+                    delta_dist_z,
                 };
 
+                // Drawing top and bottom platforms
                 let drawn_to =
                     self.draw_bottom_platform(params, texture_manager, column);
                 bottom_draw_bound = drawn_to;
                 params.bottom_draw_bound = bottom_draw_bound;
-                
+
                 let drawn_from =
                     self.draw_top_platform(params, texture_manager, column);
                 top_draw_bound = drawn_from;
+                params.top_draw_bound = top_draw_bound;
 
-                let next_tile = match tile_map
-                    .get_tile(next_tile_x as i32, next_tile_z as i32)
-                {
-                    Some(t) => *t,
-                    None => {
-                        break;
-                    }
-                };
-                let params = DrawParams {
-                    closer_wall_dist: perp_wall_dist,
-                    further_wall_dist: params.dra,
-                    bottom_draw_bound,
-                    top_draw_bound,
-                    draw_x: x as u32,
-                    tile: next_tile,
-                    tile_x: next_tile_x,
-                    tile_z: next_tile_z
-                };
+                // Drawing top and bottom walls
+                let drawn_to =
+                    self.draw_bottom_wall(params, texture_manager, column);
+                bottom_draw_bound = drawn_to;
 
-                /*let hit = RayHit {
-                    dir: ray_dir,
-                    side,
-                    wall_x,
-                    delta_dist_x,
-                    delta_dist_z,
-                };
-                let drawn_to = self.draw_bottom_wall(
-                    hit,
-                    textures.get(next_tile.pillar1_tex),
-                    bottom_draw_bound,
-                    top_draw_bound,
-                    next_tile.level1,
-                    next_tile.level2,
-                    column,
-                );
-                bottom_draw_bound = drawn_to.max(bottom_draw_bound);
-                let drawn_from = self.draw_top_wall(
-                    hit,
-                    textures.get(next_tile.pillar2_tex),
-                    bottom_draw_bound,
-                    top_draw_bound,
-                    next_tile.level3,
-                    next_tile.level4,
-                    column,
-                );
-                top_draw_bound = drawn_from.min(top_draw_bound);*/
+                let drawn_from =
+                    self.draw_top_wall(params, texture_manager, column);
+                top_draw_bound = drawn_from;
 
                 previous_perp_wall_dist = perp_wall_dist;
-
-                /*
-                // ======================================================
-                //    | DRAW BOTTOM PLATFORM OF THE CURRENT TILE |
-                // ======================================================
-                let bottom_platform_texture =
-                    textures.get(current_tile.bottom_platform_tex);
-                if !bottom_platform_texture.is_empty() {
-                    let (texture, tex_width, tex_height) = (
-                        bottom_platform_texture.data,
-                        bottom_platform_texture.width as usize,
-                        bottom_platform_texture.height as usize,
-                    );
-                    let y_level = current_tile.level2;
-                    // Draw from:
-                    let half_wall_pixel_height = self.f_half_height
-                        / previous_perp_wall_dist
-                        * self.plane_dist;
-                    let pixels_to_top = half_wall_pixel_height
-                        * (y_level - self.pos.y)
-                        + self.y_shearing;
-                    let draw_from = ((self.f_half_height + pixels_to_top)
-                        as usize)
-                        .clamp(bottom_draw_bound, top_draw_bound);
-                    // Draw to:
-                    let half_wall_pixel_height =
-                        self.f_half_height / perp_wall_dist * self.plane_dist;
-                    let pixels_to_top = half_wall_pixel_height
-                        * (y_level - self.pos.y)
-                        + self.y_shearing;
-                    let draw_to = ((self.f_half_height + pixels_to_top)
-                        as usize)
-                        .clamp(draw_from, top_draw_bound);
-
-                    let ray_dir = self.dir - self.plane_h;
-                    let tile_step_factor =
-                        self.plane_h * 2.0 * self.width_recip;
-                    column
-                        .chunks_exact_mut(4).rev()
-                        .enumerate()
-                        .skip(self.height as usize - draw_to)
-                        .take(draw_to - draw_from)
-                        .for_each(|(y, rgba)| {
-                            let row_dist = ((self.pos.y - y_level) / 2.0)
-                                * self.f_height
-                                / (y as f32 - self.f_height / 2.0
-                                    + self.y_shearing)
-                                * self.plane_dist;
-                            let step = tile_step_factor * row_dist;
-                            let pos =
-                                self.pos + ray_dir * row_dist + step * x as f32;
-                            let tex_x = ((tex_width as f32
-                                * (pos.x - current_map_x as f32))
-                                as usize)
-                                .min(tex_width - 1);
-                            let tex_y = ((tex_height as f32
-                                * (pos.z - current_map_z as f32))
-                                as usize)
-                                .min(tex_height - 1);
-                            let i = tex_width * 4 * tex_y + tex_x * 4;
-                            let color = &texture[i..i + 4];
-                            rgba.copy_from_slice(color);
-                        });
-
-                    bottom_draw_bound = draw_to;
-                }
-                // ===============================================
-                //    | DRAW TOP PLATFORM OF THE CURRENT TILE |
-                // ===============================================
-                let top_platform_texture =
-                    textures.get(current_tile.top_platform_tex);
-                if !top_platform_texture.is_empty() {
-                    let (texture, tex_width, tex_height) = (
-                        top_platform_texture.data,
-                        top_platform_texture.width as usize,
-                        top_platform_texture.height as usize,
-                    );
-                    let y_level = current_tile.level3;
-                    // Draw from:
-                    let half_wall_pixel_height =
-                        self.f_half_height / perp_wall_dist * self.plane_dist;
-                    let pixels_to_bottom = half_wall_pixel_height
-                        * (-y_level + self.pos.y)
-                        - self.y_shearing;
-                    let draw_from = ((self.f_half_height - pixels_to_bottom)
-                        as usize)
-                        .clamp(bottom_draw_bound, top_draw_bound);
-                    // Draw to:
-                    let half_wall_pixel_height = self.f_half_height
-                        / previous_perp_wall_dist
-                        * self.plane_dist;
-                    let pixels_to_bottom = half_wall_pixel_height
-                        * (-y_level + self.pos.y)
-                        - self.y_shearing;
-                    let draw_to = ((self.f_half_height - pixels_to_bottom)
-                        as usize)
-                        .clamp(draw_from, top_draw_bound);
-
-                    let ray_dir = self.dir - self.plane_h;
-                    let tile_step_factor =
-                        self.plane_h * 2.0 * self.width_recip;
-                    column
-                        .chunks_exact_mut(4)
-                        .enumerate()
-                        .skip(draw_from)
-                        .take(draw_to - draw_from)
-                        .for_each(|(y, rgba)| {
-                            let row_dist = ((-self.pos.y + y_level) / 2.0)
-                                * self.f_height
-                                / (y as f32
-                                    - self.f_height / 2.0
-                                    - self.y_shearing)
-                                * self.plane_dist;
-                            let step = tile_step_factor * row_dist;
-                            let pos =
-                                self.pos + ray_dir * row_dist + step * x as f32;
-                            let tex_x = ((tex_width as f32
-                                * (pos.x - current_map_x as f32))
-                                as usize)
-                                .min(tex_width - 1);
-                            let tex_y = ((tex_height as f32
-                                * (pos.z - current_map_z as f32))
-                                as usize)
-                                .min(tex_height - 1);
-                            let i = tex_width * 4 * tex_y + tex_x * 4;
-                            let color = &texture[i..i + 4];
-                            rgba.copy_from_slice(color);
-                        });
-                    top_draw_bound = draw_from;
-                }
-
-                // ===============================================
-                //    | DRAW BOTTOM WALL OF THE CURRENT TILE |
-                // ===============================================
-                let bottom_wall_texture =
-                    textures.get(current_tile.pillar1_tex);
-                if !bottom_wall_texture.is_empty() {
-                    let texture = match hit.side {
-                        Side::Vertical => bottom_wall_texture.light_shade,
-                        Side::Horizontal => bottom_wall_texture.medium_shade,
-                    };
-                    let (tex_width, tex_height) =
-                        (texture_data.width as usize, texture_data.height as usize);
-
-                    // Calculate wall pixel height for the parts above and below the middle
-                    let half_wall_pixel_height =
-                        self.f_half_height / hit.wall_dist * self.plane_dist;
-                    let pixels_to_bottom = half_wall_pixel_height
-                        * (-bottom_y_bound + self.pos.y)
-                        - self.y_shearing;
-                    let pixels_to_top = half_wall_pixel_height * (top_y_bound - self.pos.y)
-                        + self.y_shearing;
-                    let full_wall_pixel_height = pixels_to_top + pixels_to_bottom;
-
-                    // From which pixel to begin drawing and on which to end
-                    let draw_from = ((self.f_half_height - pixels_to_bottom) as usize)
-                        .clamp(bottom_draw_bound, top_draw_bound);
-                    let draw_to = ((self.f_half_height + pixels_to_top) as usize)
-                        .clamp(bottom_draw_bound, top_draw_bound);
-
-                    if draw_from == draw_to {
-                        return draw_to;
-                    }
-
-                    let tex_x = match hit.side {
-                        Side::Vertical if hit.dir.x > 0.0 => {
-                            tex_width - (hit.wall_x * tex_width as f32) as usize - 1
-                        }
-                        Side::Horizontal if hit.dir.z < 0.0 => {
-                            tex_width - (hit.wall_x * tex_width as f32) as usize - 1
-                        }
-                        _ => (hit.wall_x * tex_width as f32) as usize,
-                    };
-                    let tex_y_step = tex_height as f32
-                        / full_wall_pixel_height
-                        / (2.0 / (top_y_bound - bottom_y_bound));
-                    let mut tex_y = (draw_from as f32 + pixels_to_bottom
-                        - self.f_half_height)
-                        * tex_y_step;
-                    let draw_fn = match texture_data.transparency {
-                        true => draw_transparent_wall_pixel,
-                        false => draw_full_wall_pixel,
-                    };
-
-                    // Precomputed variables for performance increase
-                    let four_tex_width = tex_width * 4;
-                    let four_tex_x = tex_x * 4;
-                    column
-                        .chunks_exact_mut(4)
-                        .skip(draw_from)
-                        .take(draw_to - draw_from)
-                        .for_each(|dest| {
-                            //if dest[3] != 255 {
-                            let tex_y_pos = tex_y.round() as usize % tex_height;
-                            let i =
-                                (tex_height - tex_y_pos - 1) * four_tex_width + four_tex_x;
-                            let src = &texture[i..i + 4];
-
-                            // Draw the pixel:
-                            draw_fn(dest, src);
-                            //}
-                            // TODO maybe make it so `tex_y_step` is being subtracted.
-                            tex_y += tex_y_step;
-                        });
-                }*/
             }
         });
     }
