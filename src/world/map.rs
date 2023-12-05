@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use crate::{
-    parser::{parse_error::MapParseError, MapParser},
+    map_parser::{parse_error::MapParseError, MapParser},
     textures::{Texture, TextureManager},
 };
 

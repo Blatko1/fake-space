@@ -2,6 +2,7 @@
 mod tests;
 
 pub mod parse_error;
+mod parser;
 
 use std::{ops::RangeInclusive, path::PathBuf, str::FromStr};
 
@@ -20,7 +21,6 @@ const MAP_TILE_LEVEL2_DEFAULT: f32 = -1.0;
 const MAP_TILE_LEVEL3_DEFAULT: f32 = f32::MAX;
 const MAP_TILE_LEVEL4_DEFAULT: f32 = f32::MAX;
 
-// TODO rename to AssetLoader or AssetParser
 pub struct MapParser {
     src_path: PathBuf,
     data: String,
@@ -57,6 +57,7 @@ impl<'a> MapParser {
             return Err(DirectiveError::MultipleSameDirectives)?;
         }
 
+        // Parse the first line 
         let dimensions = match lines.next() {
             Some((i, l)) => Self::parse_dimensions(i, l)?,
             None => return Err(DimensionsError::MissingDimensions)?,

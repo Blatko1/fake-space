@@ -1,4 +1,4 @@
-use crate::parser::{
+use crate::map_parser::{
     parse_error::{DimensionsError, DirectiveError},
     Directive, MapParser,
 };

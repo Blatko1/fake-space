@@ -1,5 +1,4 @@
 mod colors;
-mod renderer;
 mod top_bottom;
 mod voxel_model;
 mod wall;
