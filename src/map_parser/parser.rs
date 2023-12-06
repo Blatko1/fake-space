@@ -1,4 +1,4 @@
-use super::error::{DimensionsError, ParseError};
+use super::error::{DimensionError, ParseError, ConstantError};
 
 struct MapParser<'a> {
 data: &'a str,
@@ -54,23 +54,41 @@ impl<'a> MapParser<'a> {
         Ok(())
     }
 
-    fn parse_dimensions(&mut self, line: &str) -> Result<(), DimensionsError> {
-        let mut split: Vec<_> = line.split('x').collect();
+    fn parse_dimensions(&mut self, line: &str) -> Result<(), DimensionError> {
+        let mut split: Vec<&str> = line.split('x').collect();
         if split.len() != 2 {
-            return Err(DimensionsError::InvalidFormat(line.to_owned()))
+            return Err(DimensionError::InvalidFormat(line.to_owned()))
         }
         let Ok(d1) = split[0].trim().parse::<u32>() else {
-            return Err(DimensionsError::ParseError(split[0].to_owned()))
+            return Err(DimensionError::ParseError(split[0].to_owned()))
         };
         let Ok(d2) = split[1].trim().parse::<u32>() else {
-            return Err(DimensionsError::ParseError(split[1].to_owned()))
+            return Err(DimensionError::ParseError(split[1].to_owned()))
         };
 
         if d1 == 0 || d2 == 0 {
-            return Err(DimensionsError::IllegalDimensions(d1, d2))
+            return Err(DimensionError::IllegalDimensions(d1, d2))
         }
 
         self.dimensions = (d1, d2);
+        Ok(())
+    }
+
+    fn parse_constant(&self, line: &str) -> Result<(), ConstantError> {
+        let split: Vec<&str> = line.split('=').collect();
+        if split.len() != 2 {
+            return Err(ConstantError::InvalidFormat(line.to_owned()))
+        }
+        let variable = split[0];
+
+        match variable {
+            "lvl1" => (),
+            "lvl2" => (),
+            "lvl3" => (),
+            "lvl4" => (),
+            _ => return Err(ConstantError::UnknownVariable(variable.to_owned()))
+        }
+        
         Ok(())
     }
 }

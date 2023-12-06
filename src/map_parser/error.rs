@@ -1,25 +1,30 @@
-use std::{error::Error, fmt::Display, io};
-
 #[derive(Debug, PartialEq)]
 pub enum ParseError {
     Invalid,
-    Dimensions(DimensionsError, u32),
+    Dimensions(DimensionError, u32),
+    Constant(ConstantError, u32),
 
     //Texture(TextureError),
     Directive(DirectiveError),
     Tile(TileError),
 
-    FileErr(io::ErrorKind),
+    FileErr(std::io::ErrorKind),
     UndefinedExpression(usize, String),
     UndefinedTileIndex(usize),
 }
 
 #[derive(Debug, PartialEq)]
-pub enum DimensionsError {
+pub enum DimensionError {
     MissingDimensions,
     InvalidFormat(String),
     ParseError(String),
     IllegalDimensions(u32, u32)
+}
+
+#[derive(Debug, PartialEq)]
+pub enum ConstantError {
+    InvalidFormat(String),
+    UnknownVariable(String)
 }
 
 #[derive(Debug)]
@@ -30,7 +35,7 @@ pub enum TextureError {
 
     InvalidOperandSeparatorFormat(usize),
     UnknownParameter(usize, String),
-    FailedToOpenTexture(io::ErrorKind),
+    FailedToOpenTexture(std::io::ErrorKind),
     FailedToReadTexture(image::ImageError),
     FailedToParseBoolValue(usize, String),
     TextureSrcNotSpecified(usize),
