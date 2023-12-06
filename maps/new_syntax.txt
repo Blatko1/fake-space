@@ -1,4 +1,5 @@
-*dimensions = 20x20
+20x20
+
 *lvl1 = -90.0
 *lvl2 = -1.0
 *lvl3 = 5.0

@@ -3,6 +3,7 @@ mod tests;
 
 pub mod parse_error;
 mod parser;
+mod error;
 
 use std::{ops::RangeInclusive, path::PathBuf, str::FromStr};
 
@@ -57,7 +58,7 @@ impl<'a> MapParser {
             return Err(DirectiveError::MultipleSameDirectives)?;
         }
 
-        // Parse the first line 
+        // Parse the first line
         let dimensions = match lines.next() {
             Some((i, l)) => Self::parse_dimensions(i, l)?,
             None => return Err(DimensionsError::MissingDimensions)?,
