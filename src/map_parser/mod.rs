@@ -1,9 +1,9 @@
 #[cfg(test)]
 mod tests;
 
+mod error;
 pub mod parse_error;
 mod parser;
-mod error;
 
 use std::{ops::RangeInclusive, path::PathBuf, str::FromStr};
 
