@@ -521,7 +521,6 @@ impl<'a> MapParser {
                 texture_data.width(),
                 texture_data.height(),
                 transparency,
-                repeating,
             );
             textures.push(texture);
             texture_indices

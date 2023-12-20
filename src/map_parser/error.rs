@@ -3,12 +3,13 @@ use std::io;
 #[derive(Debug)]
 pub enum ParseError {
     Invalid,
-    Dimensions(DimensionError, u32),
-    Constant(ConstantError, u32),
     FileErr(std::io::ErrorKind),
 
-    Texture(TextureError),
-    Directive(DirectiveError),
+    Dimensions(DimensionError, u32),
+    Variable(VariableError, u32),
+    Texture(TextureError, u32),
+    Preset(PresetError, u32),
+
     Tile(TileError),
 
     UndefinedExpression(usize, String),
@@ -24,7 +25,7 @@ pub enum DimensionError {
 }
 
 #[derive(Debug)]
-pub enum ConstantError {
+pub enum VariableError {
     InvalidFormat(String),
     UnknownVariable(String),
     InvalidValue(String),
@@ -34,15 +35,17 @@ pub enum ConstantError {
 pub enum TextureError {
     InvalidFormat(String),
     InvalidExpressionFormat(String),
+
+    TextureAlreadyExists(String),
     UnknownExpressionParameter(String),
-    FailedBoolParse(String),
+
+    BoolParseFail(String),
     TextureFileErr(std::io::ErrorKind),
     TextureReadFailed(image::ImageError),
+
     UnspecifiedTexture,
     UnspecifiedTransparency,
 
-    TextureNameContainsWhitespace(usize, String),
-    TextureNameAlreadyTaken(usize, String),
     //InvalidOperandSeparatorFormat(usize),
     //UnknownParameter(usize, String),
     //FailedToOpenTexture(std::io::ErrorKind),
@@ -54,30 +57,35 @@ pub enum TextureError {
 }
 
 #[derive(Debug)]
-pub enum DirectiveError {
-    MultipleSameDirectives,
-    InvalidDirective(usize, String),
-    UnknownDirective(usize, String),
+pub enum PresetError {
+    InvalidFormat(String),
+    InvalidPreset(TileError)
 }
 
 #[derive(Debug)]
 pub enum TileError {
     InvalidSeparator(usize),
-    InvalidExpression(usize, String),
-    UnknownParameter(usize, String),
-    FloatParseError(usize, String),
-    UnknownTexture(usize, String),
+    InvalidExpressionFormat(String),
+    UnknownParameter(String),
+    UnknownTexture(String),
+    FloatParseFail(String),
 
     InvalidTileIndexSeparator(usize),
     FailedToParseTileIndex(usize, String),
     InvalidTileIndex(usize),
-    InvalidLevels(usize, f32, f32, f32),
     TileIndexExceedsLimits(usize),
+
+    InvalidLevels(usize, f32, f32, f32),
 
     InvalidVariableSeparatorFormat(usize),
     InvalidVariableFormat(usize),
-    UnknownVariable(usize, String),
-    VariableNameAlreadyTaken(usize, String),
+    UnknownVariable(usize, String)
+}
+
+impl From<TileError> for PresetError {
+    fn from(value: TileError) -> Self {
+        Self::InvalidPreset(value)
+    }
 }
 
 impl From<io::Error> for ParseError {
