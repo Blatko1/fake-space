@@ -1,16 +1,37 @@
 use std::path::PathBuf;
 
 use crate::{
-    map_parser::{parse_error::MapParseError, MapParser},
+    config_parser::{parse_error::MapParseError, MapParser},
     textures::{Texture, TextureManager},
 };
+
+pub struct World {
+    segments: Vec<Segment>,
+    texture_manager: TextureManager,
+}
+
+pub struct Segment {
+    dimensions: (u32, u32),
+    tiles: Vec<Tile>,
+    repeatable: bool
+}
+
+impl Segment {
+    pub fn new(dimensions: (u32, u32), tiles: Vec<Tile>, repeatable: bool) -> Self {
+        Self {
+            dimensions,
+            tiles,
+            repeatable,
+        }
+    }
+}
 
 // TODO maybe the Map struct should store the TextureManager
 // because all textures are bound to a their own map.
 pub struct Map {
     width: usize,
     height: usize,
-    tiles: Vec<MapTile>,
+    tiles: Vec<Tile>,
     texture_manager: TextureManager,
 }
 
@@ -33,7 +54,7 @@ impl Map {
     /// and `z` represents moving forward or backward on the map.
     /// Returns [`Tile::Void`] if coordinates are out of bounds.
     #[inline]
-    pub fn get_tile(&self, x: i32, z: i32) -> Option<&MapTile> {
+    pub fn get_tile(&self, x: i32, z: i32) -> Option<&Tile> {
         // TODO do something about i32 arguments
         if x >= self.width as i32 || x < 0 || z >= self.height as i32 || z < 0 {
             return None;
@@ -47,7 +68,7 @@ impl Map {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct MapTile {
+pub struct Tile {
     /// Texture of the lower pillar walls.
     pub pillar1_tex: Texture,
     /// Texture of the upper pillar walls.

@@ -3,6 +3,7 @@ mod tests;
 
 mod error;
 pub mod parse_error;
+mod segment_parser;
 mod parser;
 
 use std::{ops::RangeInclusive, path::PathBuf, str::FromStr};
@@ -11,7 +12,7 @@ use hashbrown::HashMap;
 use image::{io::Reader as ImageReader, EncodableLayout};
 
 use crate::textures::{Texture, TextureData};
-use crate::world::map::MapTile;
+use crate::world::map::Tile;
 
 use parse_error::{
     DimensionsError, DirectiveError, MapParseError, TextureError, TileError,
@@ -45,7 +46,7 @@ impl<'a> MapParser {
 
     pub fn parse(
         mut self,
-    ) -> Result<((usize, usize), Vec<MapTile>, Vec<TextureData>), MapParseError>
+    ) -> Result<((usize, usize), Vec<Tile>, Vec<TextureData>), MapParseError>
     {
         let mut lines = self
             .data
@@ -599,7 +600,7 @@ impl Directive {
 #[derive(Debug, Clone, Copy)]
 enum MapTileInput {
     Undefined,
-    Tile(MapTile),
+    Tile(Tile),
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -615,8 +616,8 @@ struct MapTileVariable {
 }
 // TODO rename top height and bottom height to top_y and bot_y
 impl MapTileVariable {
-    fn to_map_tile(self) -> MapTile {
-        MapTile {
+    fn to_map_tile(self) -> Tile {
+        Tile {
             pillar1_tex: self.pillar1_tex.unwrap_or_default(),
             pillar2_tex: self.pillar2_tex.unwrap_or_default(),
             bottom_platform_tex: self.bottom_platform.unwrap_or_default(),

@@ -1,0 +1,19 @@
+// The configuration and segment map files are read and processed in the line by line order.
+
+// Determine the constant settings
+*lvl1 = -90.0
+*lvl2 = -1.0
+*lvl3 = 5.0
+*lvl4 = 7.0
+
+// Declare the textures
+// You can't have multiple textures with the same name
+#BlueBrick = path:../res/blue_brick.png, transparency:false
+#LightPlank = path:../res/light_plank.png, transparency:false
+#Mossy = path:../res/mossy_stone.png, transparency:false
+#Glass = path:../res/blue_glass.png, transparency:true
+
+// Declare the segments
+// You can't have multiple segments with the same name
+!kupaona = src:kupaona.txt, repeatable: true
+!soba = src:../a.txt, repeatable: false

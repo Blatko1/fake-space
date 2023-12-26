@@ -2,18 +2,37 @@ use std::io;
 
 #[derive(Debug)]
 pub enum ParseError {
-    Invalid,
+    UnknownKey(String, u32),
     FileErr(std::io::ErrorKind),
-
-    Dimensions(DimensionError, u32),
-    Variable(VariableError, u32),
-    Texture(TextureError, u32),
-    Preset(PresetError, u32),
-
-    Tile(TileError),
+    SettingErr(SettingError, u32),
+    TextureErr(TextureError, u32),
+    SegmentErr(SegmentError, u32),
 
     UndefinedExpression(usize, String),
     UndefinedTileIndex(usize),
+}
+
+#[derive(Debug)]
+pub enum SegmentError {
+    // Errors for the config file
+    FileErr(std::io::ErrorKind),
+    InvalidFormat(String),
+    UnknownParameter(String),
+    BoolParseFail(String),
+    UnspecifiedSrc,
+    UnspecifiedRepetition,
+
+    // Errors for the segment file
+    SegmentParseErr(SegmentParseError, String),
+}
+
+#[derive(Debug)]
+pub enum SegmentParseError {
+    Invalid,
+    UnknownKey(String, u32),
+    DimensionsErr(DimensionError, u32),
+    PresetErr(PresetError, u32),
+    TileErr(TileError),
 }
 
 #[derive(Debug)]
@@ -25,9 +44,9 @@ pub enum DimensionError {
 }
 
 #[derive(Debug)]
-pub enum VariableError {
+pub enum SettingError {
     InvalidFormat(String),
-    UnknownVariable(String),
+    UnknownSetting(String),
     InvalidValue(String),
 }
 
@@ -43,7 +62,7 @@ pub enum TextureError {
     TextureFileErr(std::io::ErrorKind),
     TextureReadFailed(image::ImageError),
 
-    UnspecifiedTexture,
+    UnspecifiedSrc,
     UnspecifiedTransparency,
 
     //InvalidOperandSeparatorFormat(usize),
@@ -89,6 +108,12 @@ impl From<TileError> for PresetError {
 }
 
 impl From<io::Error> for ParseError {
+    fn from(value: io::Error) -> Self {
+        Self::FileErr(value.kind())
+    }
+}
+
+impl From<io::Error> for SegmentError {
     fn from(value: io::Error) -> Self {
         Self::FileErr(value.kind())
     }

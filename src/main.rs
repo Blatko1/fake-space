@@ -3,7 +3,7 @@
 /// output, have tried MSAA but it doesn't work on textures, have tried applying
 /// bilinear texture filtering but unnoticeable.
 mod backend;
-mod map_parser;
+mod config_parser;
 mod render;
 mod state;
 mod textures;

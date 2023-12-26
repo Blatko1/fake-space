@@ -1,25 +1,19 @@
+// Declare the segment dimensions
 20x20
 
-*lvl1 = -90.0
-*lvl2 = -1.0
-*lvl3 = 5.0
-*lvl4 = 7.0
 //Parameters: pillar1->bottom pillar, pillar2->top pillar, lvl1->bottom starting bound of bottom pillar,
 // lvl2->top ending bound of bottom pillar, lvl3->bottom starting bound of top pillar,
 // lvl4->top ending bound of top pillar, bottom->texture of bottom platform,
 // top->texture of top platform
 
-#BlueBrick = path:../res/blue_brick.png, transparency:false
-#LightPlank = path:../res/light_plank.png, transparency:false
-#Mossy = path:../res/mossy_stone.png, transparency:false
-#Glass = path:../res/blue_glass.png, transparency:true
-
+// Declare the presets used in modifying the tiles
 $groundLevel = lvl1:-1.0
 $border = pillar1:BlueBrick, lvl2:2.0, top:LightPlank, $groundLevel
 $pillars = $border, pillar2:Mossy, lvl3:3.0, lvl4:100
 $grass = pillar1:BlueBrick, $groundLevel, lvl2:0.0, bottom:BlueBrick, top:BlueBrick
 
-// Borders
+// Modifying the tiles
+1-400 = $grass
 1-21 = $border
 40-41 = $border
 60-61 = $border
@@ -47,7 +41,6 @@ $grass = pillar1:BlueBrick, $groundLevel, lvl2:0.0, bottom:BlueBrick, top:BlueBr
 254 = $pillars, lvl2:4.5, lvl3:5.5, lvl4:5.6
 275 = $pillars, lvl2:6.0, lvl3:100,
 276 = $pillars, lvl2:0.5, lvl3:3.0,
-_ = $grass
 
 // Second row
 //11 = $grass $dada
