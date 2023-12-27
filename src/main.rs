@@ -20,7 +20,7 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder as WinitWindowBuilder,
 };
-use world::map::Map;
+use world::map::World;
 
 const FPS: u32 = 60;
 
@@ -34,11 +34,11 @@ fn main() {
     let winit_window = WinitWindowBuilder::new().build(&event_loop).unwrap();
     winit_window.set_title("False Space");
 
-    let map = Map::from_path(include_str!("../maps/map1.txt")).unwrap();
+    let world = World::from_path("maps/config.txt").unwrap();
 
     let canvas = block_on(Canvas::init(&winit_window, 240, 180));
 
-    let mut state = State::new(canvas, map);
+    let mut state = State::new(canvas, world);
 
     let framerate_delta = Duration::from_secs_f64(1.0 / FPS as f64);
     let mut time_delta = Instant::now();

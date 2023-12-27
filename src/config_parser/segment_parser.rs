@@ -6,7 +6,7 @@ use crate::{textures::Texture, world::map::Tile};
 
 use super::{
     error::{DimensionError, PresetError, SegmentParseError, TileError},
-    parser::Settings,
+    Settings,
 };
 
 #[derive(Debug)]
@@ -68,10 +68,11 @@ impl<'a> SegmentDataParser<'a> {
                     }
                     Err(e) => return Err(SegmentParseError::PresetErr(e, i)),
                 },
-                k if k.is_ascii_digit() => match self.parse_tile_def(line) {
-                    Err(e) => return Err(SegmentParseError::TileErr(e, i)),
-                    _ => (),
-                },
+                k if k.is_ascii_digit() => {
+                    if let Err(e) = self.parse_tile_def(line) {
+                        return Err(SegmentParseError::TileErr(e, i));
+                    }
+                }
                 _ => {
                     return Err(SegmentParseError::UnknownKey(
                         key.to_string(),
@@ -81,11 +82,14 @@ impl<'a> SegmentDataParser<'a> {
             };
         }
 
-        let tiles: Vec<Tile> = self
-            .tiles
-            .into_iter()
-            .map(|t| t.to_tile(&self.settings))
-            .collect();
+        let mut tiles = Vec::with_capacity(self.tiles.len());
+        for (i, tile) in self.tiles.into_iter().enumerate() {
+            let t = match tile.to_tile(self.settings) {
+                Ok(t) => t,
+                Err(e) => return Err(SegmentParseError::InvalidLevels(i+1, e.0, e.1, e.2, e.3)),
+            };
+            tiles.push(t);
+        }
 
         Ok((dimensions, tiles))
     }
@@ -163,12 +167,10 @@ impl<'a> SegmentDataParser<'a> {
                     if i == 0 {
                         return Err(TileError::IndexIsZero(index.to_owned()));
                     }
-                    return Ok((i - 1)..=(i - 1));
+                    Ok((i - 1)..=(i - 1))
                 }
                 Err(_) => {
-                    return Err(TileError::IndexUsizeParseFail(
-                        i_str.to_string(),
-                    ))
+                    Err(TileError::IndexUsizeParseFail(i_str.to_string()))
                 }
             },
             // If index is an inclusive range
@@ -196,9 +198,9 @@ impl<'a> SegmentDataParser<'a> {
                         to,
                     ));
                 }
-                return Ok((from - 1)..=(to - 1));
+                Ok((from - 1)..=(to - 1))
             }
-            _ => return Err(TileError::InvalidIndexFormat(index.to_owned())),
+            _ => Err(TileError::InvalidIndexFormat(index.to_owned())),
         }
     }
 
@@ -337,16 +339,25 @@ impl TilePreset {
     }
 
     /// Fills the `None` values with default ones and convert to [`Tile`].
-    fn to_tile(self, settings: &Settings) -> Tile {
-        Tile {
-            pillar1_tex: self.pillar1_tex.unwrap_or_default(),
-            pillar2_tex: self.pillar2_tex.unwrap_or_default(),
-            bottom_platform_tex: self.bottom_platform.unwrap_or_default(),
-            top_platform_tex: self.top_platform.unwrap_or_default(),
-            level1: self.lvl1.unwrap_or(settings.lvl1),
-            level2: self.lvl2.unwrap_or(settings.lvl2),
-            level3: self.lvl3.unwrap_or(settings.lvl3),
-            level4: self.lvl4.unwrap_or(settings.lvl4),
+    /// Compares levels to each other to find errors (lvl1 <= lvl2 < lvl3 <= lvl4).
+    fn to_tile(&self, settings: &Settings) -> Result<Tile, (f32, f32, f32, f32)> {
+        let level1 = self.lvl1.unwrap_or(settings.lvl1);
+        let level2 = self.lvl2.unwrap_or(settings.lvl2);
+        let level3 = self.lvl3.unwrap_or(settings.lvl3);
+        let level4 = self.lvl4.unwrap_or(settings.lvl4);
+        if level1 <= level2 && level2 < level3 && level3 <= level4 {
+            Ok(Tile {
+                pillar1_tex: self.pillar1_tex.unwrap_or_default(),
+                pillar2_tex: self.pillar2_tex.unwrap_or_default(),
+                bottom_platform_tex: self.bottom_platform.unwrap_or_default(),
+                top_platform_tex: self.top_platform.unwrap_or_default(),
+                level1,
+                level2,
+                level3,
+                level4,
+            })
+        } else {
+            Err((level1, level2, level3, level4))
         }
     }
 }

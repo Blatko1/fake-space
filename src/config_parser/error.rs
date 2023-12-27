@@ -7,9 +7,6 @@ pub enum ParseError {
     SettingErr(SettingError, u32),
     TextureErr(TextureError, u32),
     SegmentErr(SegmentError, u32),
-
-    UndefinedExpression(usize, String),
-    UndefinedTileIndex(usize),
 }
 
 #[derive(Debug)]
@@ -33,11 +30,12 @@ pub enum SegmentParseError {
     DimensionsErr(DimensionError, u32),
     PresetErr(PresetError, u32),
     TileErr(TileError, u32),
+
+    InvalidLevels(usize, f32, f32, f32, f32),
 }
 
 #[derive(Debug)]
 pub enum DimensionError {
-    MissingDimensions,
     InvalidFormat(String),
     ParseError(String),
     IllegalDimensions(u32, u32),
@@ -64,14 +62,6 @@ pub enum TextureError {
 
     UnspecifiedSrc,
     UnspecifiedTransparency,
-    //InvalidOperandSeparatorFormat(usize),
-    //UnknownParameter(usize, String),
-    //FailedToOpenTexture(std::io::ErrorKind),
-    //FailedToReadTexture(image::ImageError),
-    //FailedToParseBoolValue(usize, String),
-    //TextureSrcNotSpecified(usize),
-    //TextureTransparencyNotSpecified(usize),
-    //TextureRepetitionNotSpecified(usize),
 }
 
 #[derive(Debug)]
@@ -95,18 +85,6 @@ pub enum TileError {
     UnknownParameter(String),
     UnknownTexture(String),
     FloatParseFail(String),
-
-    InvalidSeparator(usize),
-
-    InvalidTileIndexSeparator(usize),
-    FailedToParseTileIndex(usize, String),
-    InvalidTileIndex(usize),
-    TileIndexExceedsLimits(usize),
-
-    InvalidLevels(usize, f32, f32, f32),
-
-    InvalidVariableSeparatorFormat(usize),
-    InvalidVariableFormat(usize),
 }
 
 impl From<TileError> for PresetError {

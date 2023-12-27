@@ -7,10 +7,7 @@ use glam::Vec3;
 use std::f32::consts::{PI, TAU};
 use winit::event::{DeviceEvent, ElementState, KeyboardInput, VirtualKeyCode};
 
-use crate::{
-    voxel::VoxelModelManager,
-    world::map::{Map, Tile},
-};
+use crate::{voxel::VoxelModelManager, world::map::Tile, World};
 
 // TODO rotation control with mouse and/or keyboard
 const MOVEMENT_SPEED: f32 = 0.1;
@@ -163,11 +160,12 @@ impl RayCaster {
 
     pub fn cast_and_draw(
         &self,
-        tile_map: &Map,
+        world: &World,
         models: &VoxelModelManager,
         data: &mut [u8],
     ) {
-        let texture_manager = tile_map.texture_manager();
+        let tile_map = world.segments.first().unwrap();
+        let texture_manager = world.texture_manager();
         let canvas_column_iterator =
             data.chunks_exact_mut(self.height as usize * 4).enumerate();
         canvas_column_iterator.for_each(|(x, column)| {

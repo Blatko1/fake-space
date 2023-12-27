@@ -1,4 +1,4 @@
-use crate::config_parser::{
+/*use crate::config_parser::{
     parse_error::{DimensionsError, DirectiveError},
     Directive, MapParser,
 };
@@ -159,3 +159,4 @@ fn map_parser_test() {
         println!("tile: {:?}", t);
     }
 }
+*/

@@ -3,8 +3,8 @@
 // Determine the constant settings
 *lvl1 = -90.0
 *lvl2 = -1.0
-*lvl3 = 5.0
-*lvl4 = 7.0
+*lvl3 = 50.0
+*lvl4 = 70.0
 
 // Declare the textures
 // You can't have multiple textures with the same name

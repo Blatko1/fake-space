@@ -1,11 +1,12 @@
 use std::path::PathBuf;
 
 use crate::{
-    config_parser::{parse_error::MapParseError, MapParser},
-    textures::{Texture, TextureManager, TextureData},
+    config_parser::{error::ParseError, ConfigParser},
+    textures::{Texture, TextureData, TextureManager},
 };
 
 pub struct World {
+    // TODO remove this 'pub'
     pub segments: Vec<Segment>,
     texture_manager: TextureManager,
 }
@@ -17,10 +18,19 @@ impl World {
             texture_manager: TextureManager::new(textures),
         }
     }
+
+    pub fn from_path<P: Into<PathBuf>>(path: P) -> Result<Self, ParseError> {
+        ConfigParser::new(path)?.parse()
+    }
+
+    pub fn texture_manager(&self) -> &TextureManager {
+        &self.texture_manager
+    }
 }
 
 #[derive(Debug)]
 pub struct Segment {
+    id: String,
     dimensions: (u32, u32),
     tiles: Vec<Tile>,
     repeatable: bool,
@@ -28,37 +38,17 @@ pub struct Segment {
 
 impl Segment {
     pub fn new(
+        id: String,
         dimensions: (u32, u32),
         tiles: Vec<Tile>,
         repeatable: bool,
     ) -> Self {
         Self {
+            id,
             dimensions,
             tiles,
             repeatable,
         }
-    }
-}
-
-// TODO maybe the Map struct should store the TextureManager
-// because all textures are bound to a their own map.
-pub struct Map {
-    width: usize,
-    height: usize,
-    tiles: Vec<Tile>,
-    texture_manager: TextureManager,
-}
-
-impl Map {
-    pub fn from_path<P: Into<PathBuf>>(path: P) -> Result<Self, MapParseError> {
-        let ((w, h), tiles, textures) = MapParser::from_path(path)?.parse()?;
-        let texture_manager = TextureManager::new(textures);
-        Ok(Self {
-            width: w,
-            height: h,
-            tiles,
-            texture_manager,
-        })
     }
 
     /// Returns the value at the provided map coordinates.
@@ -70,14 +60,15 @@ impl Map {
     #[inline]
     pub fn get_tile(&self, x: i32, z: i32) -> Option<&Tile> {
         // TODO do something about i32 arguments
-        if x >= self.width as i32 || x < 0 || z >= self.height as i32 || z < 0 {
+        if x >= self.dimensions.0 as i32
+            || x < 0
+            || z >= self.dimensions.0 as i32
+            || z < 0
+        {
             return None;
         }
-        self.tiles.get(z as usize * self.width + x as usize)
-    }
-
-    pub fn texture_manager(&self) -> &TextureManager {
-        &self.texture_manager
+        self.tiles
+            .get(z as usize * self.dimensions.0 as usize + x as usize)
     }
 }
 
