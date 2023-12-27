@@ -24,7 +24,6 @@ pub enum Texture {
     Empty,
 }
 
-#[derive(Debug)]
 pub struct TextureData {
     data: Vec<u8>,
     width: u32,

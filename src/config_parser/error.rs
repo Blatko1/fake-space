@@ -32,7 +32,7 @@ pub enum SegmentParseError {
     UnknownKey(String, u32),
     DimensionsErr(DimensionError, u32),
     PresetErr(PresetError, u32),
-    TileErr(TileError),
+    TileErr(TileError, u32),
 }
 
 #[derive(Debug)]
@@ -64,7 +64,6 @@ pub enum TextureError {
 
     UnspecifiedSrc,
     UnspecifiedTransparency,
-
     //InvalidOperandSeparatorFormat(usize),
     //UnknownParameter(usize, String),
     //FailedToOpenTexture(std::io::ErrorKind),
@@ -78,16 +77,26 @@ pub enum TextureError {
 #[derive(Debug)]
 pub enum PresetError {
     InvalidFormat(String),
-    InvalidPreset(TileError)
+    InvalidPreset(TileError),
 }
 
 #[derive(Debug)]
 pub enum TileError {
-    InvalidSeparator(usize),
+    InvalidFormat(String),
     InvalidExpressionFormat(String),
+
+    InvalidIndexFormat(String),
+    IndexUsizeParseFail(String),
+    IndexIsZero(String),
+    InvalidIndexRange(String, usize, usize),
+    IndexOutOfRange(String, usize),
+
+    UnknownPreset(String),
     UnknownParameter(String),
     UnknownTexture(String),
     FloatParseFail(String),
+
+    InvalidSeparator(usize),
 
     InvalidTileIndexSeparator(usize),
     FailedToParseTileIndex(usize, String),
@@ -98,7 +107,6 @@ pub enum TileError {
 
     InvalidVariableSeparatorFormat(usize),
     InvalidVariableFormat(usize),
-    UnknownVariable(usize, String)
 }
 
 impl From<TileError> for PresetError {

@@ -2,9 +2,15 @@ use hashbrown::HashMap;
 use image::{io::Reader as ImageReader, EncodableLayout};
 use std::path::PathBuf;
 
-use crate::{textures::{TextureData, Texture}, world::map::Segment};
+use crate::{
+    textures::{Texture, TextureData, TextureManager},
+    world::map::{Segment, World},
+};
 
-use super::{error::{SettingError, ParseError, TextureError, SegmentError}, segment_parser::SegmentDataParser};
+use super::{
+    error::{ParseError, SegmentError, SettingError, TextureError},
+    segment_parser::SegmentDataParser,
+};
 
 struct ConfigParser {
     data: String,
@@ -14,7 +20,7 @@ struct ConfigParser {
     textures: Vec<TextureData>,
     texture_map: HashMap<String, Texture>,
     texture_counter: usize,
-    segments: Vec<Segment>
+    segments: Vec<Segment>,
 }
 
 impl ConfigParser {
@@ -29,11 +35,11 @@ impl ConfigParser {
             textures: Vec::new(),
             texture_map: HashMap::new(),
             texture_counter: 0,
-            segments: Vec::new()
+            segments: Vec::new(),
         })
     }
 
-    fn parse(&mut self) -> Result<(), ParseError> {
+    fn parse(mut self) -> Result<World, ParseError> {
         let data = self.data.clone();
 
         // Remove comments, remove empty lines and trim data
@@ -41,7 +47,7 @@ impl ConfigParser {
             .lines()
             .enumerate()
             .map(|(i, line)| {
-                (1+i as u32, line.split("//").next().unwrap().trim())
+                (1 + i as u32, line.split("//").next().unwrap().trim())
             })
             .filter(|(_, line)| !line.is_empty());
 
@@ -53,12 +59,13 @@ impl ConfigParser {
                 // Mutates setting values through the function
                 '*' => match self.parse_setting(line) {
                     Err(e) => return Err(ParseError::SettingErr(e, i)),
-                    _ => ()
+                    _ => (),
                 },
                 '#' => match self.parse_texture(line) {
                     Ok((name, tex)) => {
                         self.textures.push(tex);
-                        self.texture_map.insert(name, Texture::ID(self.texture_counter));
+                        self.texture_map
+                            .insert(name, Texture::ID(self.texture_counter));
                         self.texture_counter += 1;
                     }
                     Err(e) => return Err(ParseError::TextureErr(e, i)),
@@ -66,19 +73,18 @@ impl ConfigParser {
                 '!' => match self.parse_segment(line) {
                     Ok(segment) => self.segments.push(segment),
                     Err(e) => return Err(ParseError::SegmentErr(e, i)),
-                }
+                },
                 _ => return Err(ParseError::UnknownKey(key.to_string(), i)),
             }
         }
-
-        Ok(())
+        Ok(World::new(self.segments, self.textures))
     }
 
     fn parse_segment(&self, line: &str) -> Result<Segment, SegmentError> {
         // Split the line and check for formatting errors
         let split: Vec<&str> = line.split('=').collect();
         if split.len() != 2 {
-            return Err(SegmentError::InvalidFormat(line.to_owned()))
+            return Err(SegmentError::InvalidFormat(line.to_owned()));
         }
         let identifier = split[0].trim();
         let expressions = split[1].trim();
@@ -89,7 +95,7 @@ impl ConfigParser {
             // Split the expression and check for formatting errors
             let split: Vec<&str> = expr.split(':').collect();
             if split.len() != 2 {
-                return Err(SegmentError::InvalidFormat(expr.to_owned()))
+                return Err(SegmentError::InvalidFormat(expr.to_owned()));
             }
             let parameter = split[0].trim();
             let value = split[1].trim();
@@ -99,12 +105,23 @@ impl ConfigParser {
                 "src" => {
                     let full_path = self.dir_path.join(value);
                     let data = std::fs::read_to_string(full_path.clone())?;
-                    let parsed = match SegmentDataParser::new(&data, &self.settings, &self.texture_map).parse() {
+                    let parsed = match SegmentDataParser::new(
+                        &data,
+                        &self.settings,
+                        &self.texture_map,
+                    )
+                    .parse()
+                    {
                         Ok(p) => p,
-                        Err(e) => return Err(SegmentError::SegmentParseErr(e, full_path.to_string_lossy().to_string())),
+                        Err(e) => {
+                            return Err(SegmentError::SegmentParseErr(
+                                e,
+                                full_path.to_string_lossy().to_string(),
+                            ))
+                        }
                     };
                     segment_tiles = Some(parsed);
-                },
+                }
                 "repeatable" => {
                     repeatable = match value.parse::<bool>() {
                         Ok(b) => Some(b),
@@ -114,8 +131,12 @@ impl ConfigParser {
                             ))
                         }
                     }
-                },
-                _ => return Err(SegmentError::UnknownParameter(parameter.to_owned()))
+                }
+                _ => {
+                    return Err(SegmentError::UnknownParameter(
+                        parameter.to_owned(),
+                    ))
+                }
             }
         }
         // Check if all needed information is acquired
@@ -125,16 +146,16 @@ impl ConfigParser {
         let Some(repeatable) = repeatable else {
             return Err(SegmentError::UnspecifiedRepetition);
         };
- 
-        Ok(Segment::new(dimensions,tiles,repeatable))
+
+        Ok(Segment::new(dimensions, tiles, repeatable))
     }
 
-    fn parse_setting(&mut self, src: &str) -> Result<(), SettingError> {
+    fn parse_setting(&mut self, line: &str) -> Result<(), SettingError> {
         // Split the line and check for formatting errors
-        let src = &src[1..];
-        let split: Vec<&str> = src.split('=').collect();
+        let line = &line[1..];
+        let split: Vec<&str> = line.split('=').collect();
         if split.len() != 2 {
-            return Err(SettingError::InvalidFormat(src.to_owned()));
+            return Err(SettingError::InvalidFormat(line.to_owned()));
         }
         let setting = split[0].trim();
         let val = split[1].trim();
@@ -165,27 +186,30 @@ impl ConfigParser {
                 };
                 self.settings.lvl4 = value;
             }
-            _ => {
-                return Err(SettingError::UnknownSetting(setting.to_owned()))
-            }
+            _ => return Err(SettingError::UnknownSetting(setting.to_owned())),
         }
 
         Ok(())
     }
 
-    fn parse_texture(&self, src: &str) -> Result<(String, TextureData), TextureError> {
+    fn parse_texture(
+        &self,
+        line: &str,
+    ) -> Result<(String, TextureData), TextureError> {
         // Split the line and check for formatting errors
-        let src = &src[1..];
-        let operands: Vec<&str> = src.split('=').collect();
+        let line = &line[1..];
+        let operands: Vec<&str> = line.split('=').collect();
         if operands.len() != 2 {
-            return Err(TextureError::InvalidFormat(src.to_owned()));
+            return Err(TextureError::InvalidFormat(line.to_owned()));
         }
         let texture_name = operands[0].trim();
         let expressions = operands[1].trim();
 
         // There can't be multiple texture with the same name
         if self.texture_map.contains_key(texture_name) {
-            return Err(TextureError::TextureAlreadyExists(texture_name.to_owned()))
+            return Err(TextureError::TextureAlreadyExists(
+                texture_name.to_owned(),
+            ));
         }
 
         let mut texture_data = None;
@@ -247,22 +271,28 @@ impl ConfigParser {
 
 #[derive(Debug)]
 pub(super) struct Settings {
-    lvl1: f32,
-    lvl2: f32,
-    lvl3: f32,
-    lvl4: f32,
+    pub lvl1: f32,
+    pub lvl2: f32,
+    pub lvl3: f32,
+    pub lvl4: f32,
 }
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { lvl1: -1.0, lvl2: -0.5, lvl3: 0.5, lvl4: 1.0 }
+        Self {
+            lvl1: -1.0,
+            lvl2: -0.5,
+            lvl3: 0.5,
+            lvl4: 1.0,
+        }
     }
 }
 
 #[test]
 fn parsing() {
-    ConfigParser::new("../../new_syntax.txt")
+    let parse= ConfigParser::new("maps/config.txt")
         .unwrap()
         .parse()
         .unwrap();
+    println!("{:?}", parse.segments);
 }

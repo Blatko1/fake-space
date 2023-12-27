@@ -15,5 +15,5 @@
 
 // Declare the segments
 // You can't have multiple segments with the same name
-!kupaona = src:kupaona.txt, repeatable: true
-!soba = src:../a.txt, repeatable: false
+!start = src:segment.txt, repeatable: true
+//!main = src:../a.txt, repeatable: false

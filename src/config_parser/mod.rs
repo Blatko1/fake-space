@@ -3,8 +3,8 @@ mod tests;
 
 mod error;
 pub mod parse_error;
-mod segment_parser;
 mod parser;
+mod segment_parser;
 
 use std::{ops::RangeInclusive, path::PathBuf, str::FromStr};
 

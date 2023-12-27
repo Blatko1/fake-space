@@ -2,22 +2,36 @@ use std::path::PathBuf;
 
 use crate::{
     config_parser::{parse_error::MapParseError, MapParser},
-    textures::{Texture, TextureManager},
+    textures::{Texture, TextureManager, TextureData},
 };
 
 pub struct World {
-    segments: Vec<Segment>,
+    pub segments: Vec<Segment>,
     texture_manager: TextureManager,
 }
 
+impl World {
+    pub fn new(segments: Vec<Segment>, textures: Vec<TextureData>) -> Self {
+        Self {
+            segments,
+            texture_manager: TextureManager::new(textures),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct Segment {
     dimensions: (u32, u32),
     tiles: Vec<Tile>,
-    repeatable: bool
+    repeatable: bool,
 }
 
 impl Segment {
-    pub fn new(dimensions: (u32, u32), tiles: Vec<Tile>, repeatable: bool) -> Self {
+    pub fn new(
+        dimensions: (u32, u32),
+        tiles: Vec<Tile>,
+        repeatable: bool,
+    ) -> Self {
         Self {
             dimensions,
             tiles,

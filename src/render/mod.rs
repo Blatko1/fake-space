@@ -9,7 +9,7 @@ use winit::event::{DeviceEvent, ElementState, KeyboardInput, VirtualKeyCode};
 
 use crate::{
     voxel::VoxelModelManager,
-    world::map::{Map, MapTile},
+    world::map::{Map, Tile},
 };
 
 // TODO rotation control with mouse and/or keyboard
@@ -31,8 +31,8 @@ struct DrawParams {
     pub bottom_draw_bound: usize,
     pub top_draw_bound: usize,
     pub draw_x: u32,
-    pub current_tile: MapTile,
-    pub next_tile: MapTile,
+    pub current_tile: Tile,
+    pub next_tile: Tile,
     pub tile_x: f32,
     pub tile_z: f32,
     pub ray_dir: Vec3,
