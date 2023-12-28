@@ -15,7 +15,7 @@ use crate::world::map::{Segment, World};
 use self::error::{ParseError, SegmentError, SettingError, TextureError};
 use self::segment_parser::SegmentDataParser;
 
-pub struct ConfigParser {
+pub struct WorldParser {
     data: String,
     dir_path: PathBuf,
 
@@ -26,7 +26,7 @@ pub struct ConfigParser {
     segments: Vec<Segment>,
 }
 
-impl ConfigParser {
+impl WorldParser {
     pub fn new<P: Into<PathBuf>>(path: P) -> Result<Self, ParseError> {
         let path: PathBuf = path.into().canonicalize()?;
         let data = std::fs::read_to_string(path.clone())?;
@@ -299,7 +299,7 @@ impl Default for Settings {
 
 #[test]
 fn parsing() {
-    ConfigParser::new("maps/config.txt")
+    WorldParser::new("maps/world.txt")
         .unwrap()
         .parse()
         .unwrap();

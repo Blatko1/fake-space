@@ -1,9 +1,9 @@
 use std::path::PathBuf;
+use crate::
+    textures::{Texture, TextureData, TextureManager}
+;
 
-use crate::{
-    config_parser::{error::ParseError, ConfigParser},
-    textures::{Texture, TextureData, TextureManager},
-};
+use super::parser::{WorldParser, error::ParseError};
 
 pub struct World {
     // TODO remove this 'pub'
@@ -20,7 +20,7 @@ impl World {
     }
 
     pub fn from_path<P: Into<PathBuf>>(path: P) -> Result<Self, ParseError> {
-        ConfigParser::new(path)?.parse()
+        WorldParser::new(path)?.parse()
     }
 
     pub fn texture_manager(&self) -> &TextureManager {

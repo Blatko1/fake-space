@@ -1,4 +1,4 @@
-// The configuration and segment map files are read and processed in the line by line order.
+// The world file and segment files are read and processed in the line by line order.
 
 // Determine the constant settings
 *lvl1 = -90.0

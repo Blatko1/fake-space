@@ -9,7 +9,7 @@ winit = "0.28.7"
 
 pollster = "0.3.0"
 bytemuck = { version = "1.14.0", features = [ "derive" ] }
-glam = "0.24.2"
+glam = "0.25.0"
 image = "0.24.7"
 hashbrown = "0.14.3"
 

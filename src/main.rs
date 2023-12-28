@@ -3,7 +3,6 @@
 /// output, have tried MSAA but it doesn't work on textures, have tried applying
 /// bilinear texture filtering but unnoticeable.
 mod backend;
-mod config_parser;
 mod render;
 mod state;
 mod textures;
@@ -34,7 +33,7 @@ fn main() {
     let winit_window = WinitWindowBuilder::new().build(&event_loop).unwrap();
     winit_window.set_title("False Space");
 
-    let world = World::from_path("maps/config.txt").unwrap();
+    let world = World::from_path("maps/world.txt").unwrap();
 
     let canvas = block_on(Canvas::init(&winit_window, 240, 180));
 

@@ -11,7 +11,7 @@ pub enum ParseError {
 
 #[derive(Debug)]
 pub enum SegmentError {
-    // Errors for the config file
+    // Errors for the world file
     FileErr(std::io::ErrorKind),
     InvalidFormat(String),
     UnknownParameter(String),
