@@ -1,8 +1,11 @@
-use std::ops::RangeInclusive;
+use std::{ops::RangeInclusive, str::FromStr};
 
 use hashbrown::HashMap;
 
-use crate::{textures::Texture, world::map::Tile};
+use crate::{
+    textures::Texture,
+    world::world::{Portal, PortalDirection, Tile},
+};
 
 use super::{
     error::{DimensionError, PresetError, SegmentParseError, TileError},
@@ -36,28 +39,23 @@ impl<'a> SegmentDataParser<'a> {
     }
     pub(super) fn parse(
         mut self,
-    ) -> Result<((u32, u32), Vec<Tile>), SegmentParseError> {
+    ) -> Result<((u32, u32), Vec<Tile>, Vec<Portal>), SegmentParseError> {
         // Remove comments, remove empty lines and trim data
         let mut lines = self
             .data
             .lines()
             .enumerate()
-            .map(|(i, line)| {
-                (1 + i as u32, line.split("//").next().unwrap().trim())
-            })
+            .map(|(i, line)| (1 + i as u32, line.split("//").next().unwrap().trim()))
             .filter(|(_, line)| !line.is_empty());
 
         let dimensions = match lines.next() {
-            Some((i, dimensions_str)) => match self
-                .parse_dimensions(dimensions_str)
-            {
+            Some((i, dimensions_str)) => match self.parse_dimensions(dimensions_str) {
                 Ok(d) => d,
                 Err(e) => return Err(SegmentParseError::DimensionsErr(e, i)),
             },
             None => return Err(SegmentParseError::Invalid),
         };
-        self.tiles =
-            vec![TilePreset::default(); (dimensions.0 * dimensions.1) as usize];
+        self.tiles = vec![TilePreset::default(); (dimensions.0 * dimensions.1) as usize];
 
         for (i, line) in lines {
             let key = line.chars().next().unwrap();
@@ -73,31 +71,62 @@ impl<'a> SegmentDataParser<'a> {
                         return Err(SegmentParseError::TileErr(e, i));
                     }
                 }
-                _ => {
-                    return Err(SegmentParseError::UnknownKey(
-                        key.to_string(),
-                        i,
-                    ))
-                }
+                _ => return Err(SegmentParseError::UnknownKey(key.to_string(), i)),
             };
         }
 
         let mut tiles = Vec::with_capacity(self.tiles.len());
+        let mut portals = Vec::new();
+        let mut portal_index = 0;
         for (i, tile) in self.tiles.into_iter().enumerate() {
-            let t = match tile.to_tile(self.settings) {
-                Ok(t) => t,
-                Err(e) => return Err(SegmentParseError::InvalidLevels(i+1, e.0, e.1, e.2, e.3)),
+            // Fill the `None` values with default ones and convert to [`Tile`], then
+            // compare levels to each other to find error (lvl1 <= lvl2 < lvl3 <= lvl4)
+            let level1 = tile.lvl1.unwrap_or(self.settings.lvl1);
+            let level2 = tile.lvl2.unwrap_or(self.settings.lvl2);
+            let level3 = tile.lvl3.unwrap_or(self.settings.lvl3);
+            let level4 = tile.lvl4.unwrap_or(self.settings.lvl4);
+            if !(level1 <= level2 && level2 < level3 && level3 <= level4) {
+                return Err(SegmentParseError::InvalidLevels(
+                    i + 1,
+                    level1,
+                    level2,
+                    level3,
+                    level4,
+                ));
+            }
+            let portal = match tile.portal_dir {
+                Some(dir) => {
+                    let portal = Portal {
+                        index: portal_index,
+                        direction: dir,
+                        tile_index: i,
+                        connection: None,
+                    };
+                    portals.push(portal);
+                    portal_index += 1;
+                    Some(portal)
+                }
+                None => None,
             };
+            let t = Tile {
+                pillar1_tex: tile.pillar1_tex.unwrap_or_default(),
+                pillar2_tex: tile.pillar2_tex.unwrap_or_default(),
+                bottom_platform_tex: tile.bottom_platform.unwrap_or_default(),
+                top_platform_tex: tile.top_platform.unwrap_or_default(),
+                level1,
+                level2,
+                level3,
+                level4,
+                portal,
+            };
+
             tiles.push(t);
         }
 
-        Ok((dimensions, tiles))
+        Ok((dimensions, tiles, portals))
     }
 
-    fn parse_dimensions(
-        &mut self,
-        line: &str,
-    ) -> Result<(u32, u32), DimensionError> {
+    fn parse_dimensions(&mut self, line: &str) -> Result<(u32, u32), DimensionError> {
         let split: Vec<&str> = line.split('x').collect();
         if split.len() != 2 {
             return Err(DimensionError::InvalidFormat(line.to_owned()));
@@ -114,10 +143,7 @@ impl<'a> SegmentDataParser<'a> {
         Ok((d1, d2))
     }
 
-    fn parse_preset(
-        &mut self,
-        line: &str,
-    ) -> Result<(String, TilePreset), PresetError> {
+    fn parse_preset(&mut self, line: &str) -> Result<(String, TilePreset), PresetError> {
         // Split the line and check for formatting errors
         let line = &line[1..];
         let split: Vec<&str> = line.split('=').collect();
@@ -169,34 +195,24 @@ impl<'a> SegmentDataParser<'a> {
                     }
                     Ok((i - 1)..=(i - 1))
                 }
-                Err(_) => {
-                    Err(TileError::IndexUsizeParseFail(i_str.to_string()))
-                }
+                Err(_) => Err(TileError::IndexUsizeParseFail(i_str.to_string())),
             },
             // If index is an inclusive range
             [from_str, to_str] => {
                 let from = match from_str.trim().parse::<usize>() {
                     Ok(i) => i,
                     Err(_) => {
-                        return Err(TileError::IndexUsizeParseFail(
-                            from_str.to_string(),
-                        ))
+                        return Err(TileError::IndexUsizeParseFail(from_str.to_string()))
                     }
                 };
                 let to = match to_str.trim().parse::<usize>() {
                     Ok(i) => i,
                     Err(_) => {
-                        return Err(TileError::IndexUsizeParseFail(
-                            to_str.to_string(),
-                        ))
+                        return Err(TileError::IndexUsizeParseFail(to_str.to_string()))
                     }
                 };
                 if from > to || from == 0 {
-                    return Err(TileError::InvalidIndexRange(
-                        index.to_owned(),
-                        from,
-                        to,
-                    ));
+                    return Err(TileError::InvalidIndexRange(index.to_owned(), from, to));
                 }
                 Ok((from - 1)..=(to - 1))
             }
@@ -204,10 +220,7 @@ impl<'a> SegmentDataParser<'a> {
         }
     }
 
-    fn parse_tile_expressions(
-        &self,
-        expressions: &str,
-    ) -> Result<TilePreset, TileError> {
+    fn parse_tile_expressions(&self, expressions: &str) -> Result<TilePreset, TileError> {
         let mut preset = TilePreset::default();
         for expr in expressions.split(',') {
             // Split the expression and check for formatting errors
@@ -230,19 +243,12 @@ impl<'a> SegmentDataParser<'a> {
                             }
                         }
                     } else {
-                        return Err(TileError::InvalidExpressionFormat(
-                            expr.to_owned(),
-                        ));
+                        return Err(TileError::InvalidExpressionFormat(expr.to_owned()));
                     }
                 }
                 [_, _] => (),
-                _ => {
-                    return Err(TileError::InvalidExpressionFormat(
-                        expr.to_owned(),
-                    ))
-                }
+                _ => return Err(TileError::InvalidExpressionFormat(expr.to_owned())),
             }
-
             let parameter = operands[0].trim();
             let value = operands[1].trim();
 
@@ -250,46 +256,36 @@ impl<'a> SegmentDataParser<'a> {
             match parameter {
                 // If the parameter is one of these, the value should be a *texture name*
                 "pillar1" | "pillar2" | "bottom" | "top" => {
-                    let texture = match self.texture_map.get(value) {
-                        Some(&t) => Some(t),
-                        None => {
-                            return Err(TileError::UnknownTexture(
-                                value.to_owned(),
-                            ))
-                        }
+                    let Some(&texture) = self.texture_map.get(value) else {
+                        return Err(TileError::UnknownTexture(value.to_owned()));
                     };
                     match parameter {
-                        "pillar1" => preset.pillar1_tex = texture,
-                        "pillar2" => preset.pillar2_tex = texture,
-                        "bottom" => preset.bottom_platform = texture,
-                        "top" => preset.top_platform = texture,
+                        "pillar1" => preset.pillar1_tex = Some(texture),
+                        "pillar2" => preset.pillar2_tex = Some(texture),
+                        "bottom" => preset.bottom_platform = Some(texture),
+                        "top" => preset.top_platform = Some(texture),
                         _ => unreachable!(),
                     }
                 }
                 // If the parameter is one of these, the value should be a *number*
                 "lvl1" | "lvl2" | "lvl3" | "lvl4" => {
-                    let parsed = match value.parse::<f32>() {
-                        Ok(n) => Some(n),
-                        Err(_) => {
-                            return Err(TileError::FloatParseFail(
-                                value.to_string(),
-                            ))
-                        }
+                    let Ok(parsed) = value.parse::<f32>() else {
+                        return Err(TileError::FloatParseFail(value.to_string()));
                     };
 
                     match parameter {
-                        "lvl1" => preset.lvl1 = parsed,
-                        "lvl2" => preset.lvl2 = parsed,
-                        "lvl3" => preset.lvl3 = parsed,
-                        "lvl4" => preset.lvl4 = parsed,
+                        "lvl1" => preset.lvl1 = Some(parsed),
+                        "lvl2" => preset.lvl2 = Some(parsed),
+                        "lvl3" => preset.lvl3 = Some(parsed),
+                        "lvl4" => preset.lvl4 = Some(parsed),
                         _ => unreachable!(),
                     }
                 }
-                _ => {
-                    return Err(TileError::UnknownParameter(
-                        parameter.to_owned(),
-                    ))
+                "portal_direction" => {
+                    let parsed = value.parse::<PortalDirection>()?;
+                    preset.portal_dir = Some(parsed);
                 }
+                _ => return Err(TileError::UnknownParameter(parameter.to_owned())),
             }
         }
         Ok(preset)
@@ -306,6 +302,7 @@ struct TilePreset {
     lvl2: Option<f32>,
     lvl3: Option<f32>,
     lvl4: Option<f32>,
+    portal_dir: Option<PortalDirection>,
 }
 
 impl TilePreset {
@@ -336,28 +333,22 @@ impl TilePreset {
         if let Some(lvl4) = other.lvl4 {
             self.lvl4.replace(lvl4);
         }
+        if let Some(portal_dir) = other.portal_dir {
+            self.portal_dir.replace(portal_dir);
+        }
     }
+}
 
-    /// Fills the `None` values with default ones and convert to [`Tile`].
-    /// Compares levels to each other to find errors (lvl1 <= lvl2 < lvl3 <= lvl4).
-    fn to_tile(&self, settings: &Settings) -> Result<Tile, (f32, f32, f32, f32)> {
-        let level1 = self.lvl1.unwrap_or(settings.lvl1);
-        let level2 = self.lvl2.unwrap_or(settings.lvl2);
-        let level3 = self.lvl3.unwrap_or(settings.lvl3);
-        let level4 = self.lvl4.unwrap_or(settings.lvl4);
-        if level1 <= level2 && level2 < level3 && level3 <= level4 {
-            Ok(Tile {
-                pillar1_tex: self.pillar1_tex.unwrap_or_default(),
-                pillar2_tex: self.pillar2_tex.unwrap_or_default(),
-                bottom_platform_tex: self.bottom_platform.unwrap_or_default(),
-                top_platform_tex: self.top_platform.unwrap_or_default(),
-                level1,
-                level2,
-                level3,
-                level4,
-            })
-        } else {
-            Err((level1, level2, level3, level4))
+impl FromStr for PortalDirection {
+    type Err = TileError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "N" => Ok(PortalDirection::North),
+            "S" => Ok(PortalDirection::South),
+            "E" => Ok(PortalDirection::East),
+            "W" => Ok(PortalDirection::West),
+            _ => Err(TileError::BoolParseFail(s.to_owned())),
         }
     }
 }

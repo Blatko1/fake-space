@@ -1,5 +1,6 @@
 mod colors;
-mod top_bottom;
+mod column;
+mod platforms;
 mod voxel_model;
 mod wall;
 
@@ -7,7 +8,14 @@ use glam::Vec3;
 use std::f32::consts::{PI, TAU};
 use winit::event::{DeviceEvent, ElementState, KeyboardInput, VirtualKeyCode};
 
-use crate::{voxel::VoxelModelManager, world::map::Tile, World};
+use crate::{
+    textures::TextureManager,
+    voxel::VoxelModelManager,
+    world::world::{RoomRef, Tile},
+    World,
+};
+
+use self::column::ColumnRenderer;
 
 // TODO rotation control with mouse and/or keyboard
 const MOVEMENT_SPEED: f32 = 0.1;
@@ -22,23 +30,66 @@ const MAX_Y: f32 = 50.0;
 const MIN_Y: f32 = -50.0;
 
 #[derive(Debug, Clone, Copy)]
-struct DrawParams {
-    pub closer_wall_dist: f32,
-    pub further_wall_dist: f32,
-    pub bottom_draw_bound: usize,
-    pub top_draw_bound: usize,
-    pub draw_x: u32,
-    pub current_tile: Tile,
-    pub next_tile: Tile,
-    pub tile_x: f32,
-    pub tile_z: f32,
-    pub ray_dir: Vec3,
-    pub side: Side,
-    pub wall_offset: f32,
-    pub delta_dist_x: f32,
-    pub delta_dist_z: f32,
+struct Ray {
+    x: usize,
+    dir: Vec3,
+    delta_dist_x: f32,
+    delta_dist_z: f32,
+    side_dist_x: f32,
+    side_dist_z: f32,
+    next_tile_x: f32,
+    next_tile_z: f32,
+    step_x: f32,
+    step_z: f32,
 }
 
+impl Ray {
+    fn cast_for(x: usize, caster: &RayCaster) -> Self {
+        // ========================================================
+        //        | CALCULATE RAY DISTANCES AND OTHER INFO |
+        // ========================================================
+        let origin = caster.origin;
+        let caster_dir = caster.dir;
+
+        // X-coordinate on the horizontal camera plane (range [-1.0, 1.0])
+        let plane_x = 2.0 * (x as f32 * caster.width_recip) - 1.0;
+        // Ray direction for current pixel column
+        let ray_dir = caster_dir + caster.plane_h * plane_x;
+        // Length of ray from one x/z side to next x/z side on the tile_map
+        let delta_dist_x = 1.0 / ray_dir.x.abs();
+        let delta_dist_z = 1.0 / ray_dir.z.abs();
+        // Distance to nearest x side
+        let side_dist_x = delta_dist_x
+            * if ray_dir.x < 0.0 {
+                origin.x.fract()
+            } else {
+                1.0 - origin.x.fract()
+            };
+        // Distance to nearest z side
+        let side_dist_z = delta_dist_z
+            * if ray_dir.z < 0.0 {
+                origin.z.fract()
+            } else {
+                1.0 - origin.z.fract()
+            };
+
+        Self {
+            x,
+            dir: ray_dir,
+            delta_dist_x,
+            delta_dist_z,
+            side_dist_x,
+            side_dist_z,
+            // Coordinates of the map tile the raycaster is in
+            next_tile_x: origin.x.trunc(),
+            next_tile_z: origin.z.trunc(),
+            step_x: ray_dir.x.signum(),
+            step_z: ray_dir.z.signum(),
+        }
+    }
+}
+
+// TODO maybe remove clone and copy
 #[derive(Debug, Clone, Copy)]
 pub enum Side {
     Vertical,
@@ -57,7 +108,7 @@ pub struct RayCaster {
     /// Position of the raycaster. Whole number represents the tile and
     /// fraction represents the offset in the tile. Each tile has width and
     /// height of `1.0`.
-    pos: Vec3,
+    origin: Vec3,
     /// Direction of the raycaster. Raycaster game engines can't make the player
     /// look up the 'normal' way and instead uses y-shearing.
     /// y-coord is always 0.
@@ -118,7 +169,7 @@ impl RayCaster {
         let plane_dist = 1.0 / f32::tan(fov / 2.0);
         let aspect = f_width / f_height;
 
-        let pos = Vec3::new(pos_x, pos_y, pos_z);
+        let origin = Vec3::new(pos_x, pos_y, pos_z);
         let dir = Vec3::new(angle.cos(), 0.0, angle.sin());
 
         let plane_v = DEFAULT_PLANE_V / plane_dist;
@@ -127,7 +178,7 @@ impl RayCaster {
         Self {
             fov,
             plane_dist,
-            pos,
+            origin,
             dir,
             plane_h,
             plane_v,
@@ -158,147 +209,19 @@ impl RayCaster {
         }
     }
 
-    pub fn cast_and_draw(
-        &self,
-        world: &World,
-        models: &VoxelModelManager,
-        data: &mut [u8],
-    ) {
-        let tile_map = world.segments.first().unwrap();
-        let texture_manager = world.texture_manager();
+    pub fn cast_and_draw(&self, world: &mut World, data: &mut [u8]) {
         let canvas_column_iterator =
             data.chunks_exact_mut(self.height as usize * 4).enumerate();
         canvas_column_iterator.for_each(|(x, column)| {
-            // ========================================================
-            //           | CALCULATE RAY DISTANCES AND INFO |
-            // ========================================================
-            // X-coordinate on the horizontal camera plane (range [-1.0, 1.0])
-            let plane_x = 2.0 * (x as f32 * self.width_recip) - 1.0;
-            // Ray direction for current pixel column
-            let ray_dir = self.dir + self.plane_h * plane_x;
-            // Length of ray from one x/z side to next x/z side on the tile_map
-            let delta_dist_x = 1.0 / ray_dir.x.abs();
-            let delta_dist_z = 1.0 / ray_dir.z.abs();
-            // Distance to nearest x side
-            let mut side_dist_x = delta_dist_x
-                * if ray_dir.x < 0.0 {
-                    self.pos.x.fract()
-                } else {
-                    1.0 - self.pos.x.fract()
-                };
-            // Distance to nearest z side
-            let mut side_dist_z = delta_dist_z
-                * if ray_dir.z < 0.0 {
-                    self.pos.z.fract()
-                } else {
-                    1.0 - self.pos.z.fract()
-                };
-            // Coordinates of the map tile the raycaster is in
-            let mut next_tile_x = self.pos.x.trunc();
-            let mut next_tile_z = self.pos.z.trunc();
-            let (step_x, step_z) = (ray_dir.x.signum(), ray_dir.z.signum());
+            let ray = Ray::cast_for(x, self);
 
-            // ====================================================
-            //    | LOOP OVER THE RAY PATH AND DRAW HORIZONTAL |
-            //    | PLATFORMS AND VERTICAL PLATFORMS (WALLS)   |
-            // ====================================================
-            let mut previous_perp_wall_dist = 0.0;
-            let mut bottom_draw_bound = 0usize;
-            let mut top_draw_bound = self.height as usize;
-            loop {
-                let current_tile_x = next_tile_x;
-                let current_tile_z = next_tile_z;
-                // DDA loop
-                let (side, perp_wall_dist, wall_offset) =
-                    if side_dist_x < side_dist_z {
-                        let dist_to_wall = side_dist_x.max(0.0);
-                        let wall_offset = self.pos.z + dist_to_wall * ray_dir.z;
-                        next_tile_x += step_x;
-                        side_dist_x += delta_dist_x;
-                        (
-                            Side::Vertical,
-                            dist_to_wall,
-                            wall_offset - wall_offset.floor(),
-                        )
-                    } else {
-                        let dist_to_wall = side_dist_z.max(0.0);
-                        let wall_offset = self.pos.x + dist_to_wall * ray_dir.x;
-                        next_tile_z += step_z;
-                        side_dist_z += delta_dist_z;
-                        (
-                            Side::Horizontal,
-                            dist_to_wall,
-                            wall_offset - wall_offset.floor(),
-                        )
-                    };
-
-                // ====================================================
-                //  | DRAW TOP AND BOTTOM PLATFORMS OF CURRENT TILE |
-                // ====================================================
-
-                // Tile which the ray just traveled over before hitting a wall.
-                let current_tile = match tile_map
-                    .get_tile(current_tile_x as i32, current_tile_z as i32)
-                {
-                    Some(t) => *t,
-                    None => {
-                        break;
-                    }
-                };
-                let next_tile = match tile_map
-                    .get_tile(next_tile_x as i32, next_tile_z as i32)
-                {
-                    Some(t) => *t,
-                    None => {
-                        break;
-                    }
-                };
-                let mut params = DrawParams {
-                    closer_wall_dist: previous_perp_wall_dist,
-                    further_wall_dist: perp_wall_dist,
-                    bottom_draw_bound,
-                    top_draw_bound,
-                    draw_x: x as u32,
-                    current_tile,
-                    next_tile,
-                    tile_x: current_tile_x,
-                    tile_z: current_tile_z,
-                    ray_dir,
-                    side,
-                    wall_offset,
-                    delta_dist_x,
-                    delta_dist_z,
-                };
-
-                // Drawing top and bottom platforms
-                let drawn_to =
-                    self.draw_bottom_platform(params, texture_manager, column);
-                bottom_draw_bound = drawn_to;
-                params.bottom_draw_bound = bottom_draw_bound;
-
-                let drawn_from =
-                    self.draw_top_platform(params, texture_manager, column);
-                top_draw_bound = drawn_from;
-                params.top_draw_bound = top_draw_bound;
-
-                // Drawing top and bottom walls
-                let drawn_to =
-                    self.draw_bottom_wall(params, texture_manager, column);
-                bottom_draw_bound = drawn_to;
-
-                let drawn_from =
-                    self.draw_top_wall(params, texture_manager, column);
-                top_draw_bound = drawn_from;
-
-                previous_perp_wall_dist = perp_wall_dist;
-            }
+            ColumnRenderer::new(self, ray).draw(world, column)
         });
     }
 
     pub fn update(&mut self) {
         // Change FOV and vertical FOV
-        self.fov = (self.fov
-            + (self.increase_fov - self.decrease_fov) * ONE_DEGREE_RAD)
+        self.fov = (self.fov + (self.increase_fov - self.decrease_fov) * ONE_DEGREE_RAD)
             .clamp(ONE_DEGREE_RAD, MAX_FOV_RAD);
         self.plane_dist = 1.0 / f32::tan(self.fov * 0.5);
 
@@ -315,18 +238,16 @@ impl RayCaster {
 
         // Rotate raycaster (camera) planes
         self.plane_v = DEFAULT_PLANE_V / self.plane_dist;
-        self.plane_h = Vec3::cross(DEFAULT_PLANE_V, self.dir) * self.aspect
-            / self.plane_dist;
+        self.plane_h =
+            Vec3::cross(DEFAULT_PLANE_V, self.dir) * self.aspect / self.plane_dist;
 
-        // Update position
-        self.pos.x +=
-            self.dir.x * (self.forward - self.backward) * MOVEMENT_SPEED;
-        self.pos.z +=
-            self.dir.z * (self.forward - self.backward) * MOVEMENT_SPEED;
-        self.pos += self.plane_h.normalize()
+        // Update origin position
+        self.origin.x += self.dir.x * (self.forward - self.backward) * MOVEMENT_SPEED;
+        self.origin.z += self.dir.z * (self.forward - self.backward) * MOVEMENT_SPEED;
+        self.origin += self.plane_h.normalize()
             * (self.strafe_right - self.strafe_left)
             * MOVEMENT_SPEED;
-        self.pos.y = (self.pos.y
+        self.origin.y = (self.origin.y
             + (self.fly_up - self.fly_down) * FLY_UP_DOWN_SPEED)
             .clamp(MIN_Y, MAX_Y);
     }
@@ -336,8 +257,7 @@ impl RayCaster {
             DeviceEvent::MouseMotion { delta } => {
                 self.y_shearing += delta.1 as f32 * Y_SHEARING_SENSITIVITY;
 
-                self.angle -=
-                    delta.0 as f32 * ONE_DEGREE_RAD * MOUSE_ROTATION_SPEED;
+                self.angle -= delta.0 as f32 * ONE_DEGREE_RAD * MOUSE_ROTATION_SPEED;
             }
             _ => (),
         }
@@ -390,12 +310,9 @@ fn blend(background: &[u8], foreground: &[u8]) -> [u8; 4] {
     let inv_alpha = 1.0 - alpha;
 
     [
-        ((foreground[0] as f32 * alpha + background[0] as f32 * inv_alpha)
-            as u8),
-        ((foreground[1] as f32 * alpha + background[1] as f32 * inv_alpha)
-            as u8),
-        ((foreground[2] as f32 * alpha + background[2] as f32 * inv_alpha)
-            as u8),
+        ((foreground[0] as f32 * alpha + background[0] as f32 * inv_alpha) as u8),
+        ((foreground[1] as f32 * alpha + background[1] as f32 * inv_alpha) as u8),
+        ((foreground[2] as f32 * alpha + background[2] as f32 * inv_alpha) as u8),
         (255.0 * alpha + background[3] as f32 * inv_alpha) as u8,
     ]
 }

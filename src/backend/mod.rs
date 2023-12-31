@@ -29,8 +29,7 @@ pub struct Canvas {
 }
 
 impl Canvas {
-    const CANVAS_FORMAT: wgpu::TextureFormat =
-        wgpu::TextureFormat::Rgba8UnormSrgb;
+    const CANVAS_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
 
     pub async fn init(
         winit_window: &winit::window::Window,
@@ -60,8 +59,7 @@ impl Canvas {
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
             format: Self::CANVAS_FORMAT,
-            usage: wgpu::TextureUsages::TEXTURE_BINDING
-                | wgpu::TextureUsages::COPY_DST,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
             view_formats: &[],
         });
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
@@ -140,9 +138,8 @@ impl Canvas {
                 usage: wgpu::BufferUsages::VERTEX,
             });
 
-        let shader: wgpu::ShaderModule = device.create_shader_module(
-            wgpu::include_wgsl!("../shaders/shader.wgsl"),
-        );
+        let shader: wgpu::ShaderModule =
+            device.create_shader_module(wgpu::include_wgsl!("../shaders/shader.wgsl"));
 
         let pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -151,34 +148,32 @@ impl Canvas {
                 push_constant_ranges: &[],
             });
 
-        let pipeline =
-            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: Some("Render Pipeline"),
-                layout: Some(&pipeline_layout),
-                vertex: wgpu::VertexState {
-                    module: &shader,
-                    entry_point: "vs_main",
-                    buffers: &[wgpu::VertexBufferLayout {
-                        array_stride: std::mem::size_of::<[f32; 2]>()
-                            as wgpu::BufferAddress,
-                        step_mode: wgpu::VertexStepMode::Vertex,
-                        attributes: &wgpu::vertex_attr_array![0 => Float32x2],
-                    }],
-                },
-                primitive: wgpu::PrimitiveState::default(),
-                multisample: wgpu::MultisampleState::default(),
-                fragment: Some(wgpu::FragmentState {
-                    module: &shader,
-                    entry_point: "fs_main",
-                    targets: &[Some(wgpu::ColorTargetState {
-                        format: render_format,
-                        blend: Some(wgpu::BlendState::ALPHA_BLENDING),
-                        write_mask: wgpu::ColorWrites::ALL,
-                    })],
-                }),
-                depth_stencil: None,
-                multiview: None,
-            });
+        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("Render Pipeline"),
+            layout: Some(&pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &shader,
+                entry_point: "vs_main",
+                buffers: &[wgpu::VertexBufferLayout {
+                    array_stride: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
+                    step_mode: wgpu::VertexStepMode::Vertex,
+                    attributes: &wgpu::vertex_attr_array![0 => Float32x2],
+                }],
+            },
+            primitive: wgpu::PrimitiveState::default(),
+            multisample: wgpu::MultisampleState::default(),
+            fragment: Some(wgpu::FragmentState {
+                module: &shader,
+                entry_point: "fs_main",
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: render_format,
+                    blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+            }),
+            depth_stencil: None,
+            multiview: None,
+        });
 
         let buffer_len = (canvas_width * canvas_height * 4) as usize;
 
@@ -243,40 +238,38 @@ impl Canvas {
             self.size,
         );
 
-        let mut encoder = self.gfx.device().create_command_encoder(
-            &wgpu::CommandEncoderDescriptor {
-                label: Some("Command Encoder"),
-            },
-        );
+        let mut encoder =
+            self.gfx
+                .device()
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("Command Encoder"),
+                });
 
         let frame = self.gfx.get_current_texture()?;
         let view = frame
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
         {
-            let mut rpass =
-                encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                    label: Some("Main RenderPass"),
-                    color_attachments: &[Some(
-                        wgpu::RenderPassColorAttachment {
-                            view: &view,
-                            resolve_target: None,
-                            ops: wgpu::Operations {
-                                load: wgpu::LoadOp::Clear(wgpu::Color {
-                                    r: 0.1,
-                                    g: 0.2,
-                                    b: 0.3,
-                                    a: 1.0,
-                                }),
-                                // TODO maybe this can be Discard???
-                                store: wgpu::StoreOp::Store,
-                            },
-                        },
-                    )],
-                    depth_stencil_attachment: None,
-                    timestamp_writes: None,
-                    occlusion_query_set: None,
-                });
+            let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("Main RenderPass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color {
+                            r: 0.1,
+                            g: 0.2,
+                            b: 0.3,
+                            a: 1.0,
+                        }),
+                        // TODO maybe this can be Discard???
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+            });
 
             rpass.set_pipeline(&self.pipeline);
             rpass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
@@ -302,8 +295,7 @@ impl Canvas {
 
         let window_width = config.width as f32;
         let window_height = config.height as f32;
-        let (texture_width, texture_height) =
-            (self.width as f32, self.height as f32);
+        let (texture_width, texture_height) = (self.width as f32, self.height as f32);
 
         let scale = (window_width / texture_width)
             .min(window_height / texture_height)

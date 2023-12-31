@@ -1,9 +1,13 @@
 use crate::textures::TextureManager;
 
-use super::{blend, DrawParams, RayCaster, Side};
+use super::{
+    blend,
+    column::{ColumnRenderer, DrawParams},
+    Side,
+};
 
 // TODO write tests for each draw call function to check for overflows
-impl RayCaster {
+impl<'a> ColumnRenderer<'a> {
     // Draws full and transparent walls.
     pub(super) fn draw_bottom_wall(
         &self,
@@ -11,11 +15,12 @@ impl RayCaster {
         texture_manager: &TextureManager,
         column: &mut [u8],
     ) -> usize {
-        let tile = draw_params.next_tile;
-        let bottom_draw_bound = draw_params.bottom_draw_bound;
-        let top_draw_bound = draw_params.top_draw_bound;
+        let caster = self.caster;
+        let bottom_draw_bound = self.bottom_draw_bound;
+        let top_draw_bound = self.top_draw_bound;
+        let ray = self.ray;
+        let tile = draw_params.tile;
         let wall_dist = draw_params.further_wall_dist;
-        let ray_dir = draw_params.ray_dir;
         let side = draw_params.side;
         let wall_offset = draw_params.wall_offset;
 
@@ -37,26 +42,25 @@ impl RayCaster {
         );
 
         // Calculate wall pixel height for the parts above and below the middle
-        let half_wall_pixel_height =
-            self.f_half_height / wall_dist * self.plane_dist;
+        let half_wall_pixel_height = caster.f_half_height / wall_dist * caster.plane_dist;
         let pixels_to_bottom = half_wall_pixel_height
-            * (-bottom_y_level + self.pos.y)
-            - self.y_shearing;
-        let pixels_to_top = half_wall_pixel_height * (top_y_level - self.pos.y)
-            + self.y_shearing;
+            * (-bottom_y_level + caster.origin.y)
+            - caster.y_shearing;
+        let pixels_to_top =
+            half_wall_pixel_height * (top_y_level - caster.origin.y) + caster.y_shearing;
         let full_wall_pixel_height = pixels_to_top + pixels_to_bottom;
 
         // From which pixel to begin drawing and on which to end
-        let draw_from = ((self.f_half_height - pixels_to_bottom) as usize)
+        let draw_from = ((caster.f_half_height - pixels_to_bottom) as usize)
             .clamp(bottom_draw_bound, top_draw_bound);
-        let draw_to = ((self.f_half_height + pixels_to_top) as usize)
+        let draw_to = ((caster.f_half_height + pixels_to_top) as usize)
             .clamp(bottom_draw_bound, top_draw_bound);
 
         let tex_x = match side {
-            Side::Vertical if ray_dir.x > 0.0 => {
+            Side::Vertical if ray.dir.x > 0.0 => {
                 tex_width - (wall_offset * tex_width as f32) as usize - 1
             }
-            Side::Horizontal if ray_dir.z < 0.0 => {
+            Side::Horizontal if ray.dir.z < 0.0 => {
                 tex_width - (wall_offset * tex_width as f32) as usize - 1
             }
             _ => (wall_offset * tex_width as f32) as usize,
@@ -64,9 +68,8 @@ impl RayCaster {
         let tex_y_step = tex_height as f32
             / full_wall_pixel_height
             / (2.0 / (top_y_level - bottom_y_level));
-        let mut tex_y = (draw_from as f32 + pixels_to_bottom
-            - self.f_half_height)
-            * tex_y_step;
+        let mut tex_y =
+            (draw_from as f32 + pixels_to_bottom - caster.f_half_height) * tex_y_step;
         let draw_fn = match bottom_wall_texture.transparency {
             true => draw_transparent_wall_pixel,
             false => draw_full_wall_pixel,
@@ -82,8 +85,7 @@ impl RayCaster {
             .for_each(|dest| {
                 //if dest[3] != 255 {
                 let tex_y_pos = tex_y.round() as usize % tex_height;
-                let i =
-                    (tex_height - tex_y_pos - 1) * four_tex_width + four_tex_x;
+                let i = (tex_height - tex_y_pos - 1) * four_tex_width + four_tex_x;
                 let src = &texture[i..i + 4];
 
                 // Draw the pixel:
@@ -115,11 +117,12 @@ impl RayCaster {
         texture_manager: &TextureManager,
         column: &mut [u8],
     ) -> usize {
-        let tile = draw_params.next_tile;
-        let bottom_draw_bound = draw_params.bottom_draw_bound;
-        let top_draw_bound = draw_params.top_draw_bound;
+        let caster = self.caster;
+        let bottom_draw_bound = self.bottom_draw_bound;
+        let top_draw_bound = self.top_draw_bound;
+        let ray = self.ray;
+        let tile = draw_params.tile;
         let wall_dist = draw_params.further_wall_dist;
-        let ray_dir = draw_params.ray_dir;
         let side = draw_params.side;
         let wall_offset = draw_params.wall_offset;
 
@@ -145,26 +148,25 @@ impl RayCaster {
         };
 
         // Calculate wall pixel height for the parts above and below the middle
-        let half_wall_pixel_height =
-            self.f_half_height / wall_dist * self.plane_dist;
+        let half_wall_pixel_height = caster.f_half_height / wall_dist * caster.plane_dist;
         let pixels_to_bottom = half_wall_pixel_height
-            * (-bottom_y_level + self.pos.y)
-            - self.y_shearing;
-        let pixels_to_top = half_wall_pixel_height * (top_y_level - self.pos.y)
-            + self.y_shearing;
+            * (-bottom_y_level + caster.origin.y)
+            - caster.y_shearing;
+        let pixels_to_top =
+            half_wall_pixel_height * (top_y_level - caster.origin.y) + caster.y_shearing;
         let full_wall_pixel_height = pixels_to_top + pixels_to_bottom;
 
         // From which pixel to begin drawing and on which to end
-        let draw_from = ((self.f_half_height - pixels_to_bottom) as usize)
+        let draw_from = ((caster.f_half_height - pixels_to_bottom) as usize)
             .clamp(bottom_draw_bound, top_draw_bound);
-        let draw_to = ((self.f_half_height + pixels_to_top) as usize)
+        let draw_to = ((caster.f_half_height + pixels_to_top) as usize)
             .clamp(bottom_draw_bound, top_draw_bound);
 
         let tex_x = match side {
-            Side::Vertical if ray_dir.x > 0.0 => {
+            Side::Vertical if ray.dir.x > 0.0 => {
                 tex_width - (wall_offset * tex_width as f32) as usize - 1
             }
-            Side::Horizontal if ray_dir.z < 0.0 => {
+            Side::Horizontal if ray.dir.z < 0.0 => {
                 tex_width - (wall_offset * tex_width as f32) as usize - 1
             }
             _ => (wall_offset * tex_width as f32) as usize,
@@ -172,9 +174,8 @@ impl RayCaster {
         let tex_y_step = tex_height as f32
             / full_wall_pixel_height
             / (2.0 / (top_y_level - bottom_y_level));
-        let mut tex_y = (draw_from as f32 + pixels_to_bottom
-            - self.f_half_height)
-            * tex_y_step;
+        let mut tex_y =
+            (draw_from as f32 + pixels_to_bottom - caster.f_half_height) * tex_y_step;
 
         // Precomputed variables for performance increase
         let four_tex_width = tex_width * 4;
@@ -186,8 +187,7 @@ impl RayCaster {
             .for_each(|dest| {
                 //if dest[3] != 255 {
                 let tex_y_pos = tex_y.round() as usize % tex_height;
-                let i =
-                    (tex_height - tex_y_pos - 1) * four_tex_width + four_tex_x;
+                let i = (tex_height - tex_y_pos - 1) * four_tex_width + four_tex_x;
                 let src = &texture[i..i + 4];
 
                 // Draw the pixel:

@@ -1,2 +1,2 @@
-pub mod map;
 mod parser;
+pub mod world;

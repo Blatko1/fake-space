@@ -11,8 +11,8 @@ impl Gfx {
     pub async fn init(
         winit_window: &WinitWindow,
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        let backends = wgpu::util::backend_bits_from_env()
-            .unwrap_or(wgpu::Backends::PRIMARY);
+        let backends =
+            wgpu::util::backend_bits_from_env().unwrap_or(wgpu::Backends::PRIMARY);
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends,
             dx12_shader_compiler: wgpu::Dx12Compiler::Fxc,

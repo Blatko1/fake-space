@@ -1,6 +1,5 @@
 use crate::{
-    backend::Canvas, render::RayCaster, voxel::VoxelModelManager,
-    world::map::World,
+    backend::Canvas, render::RayCaster, voxel::VoxelModelManager, world::world::World,
 };
 use winit::{
     dpi::PhysicalSize,
@@ -36,11 +35,8 @@ impl State {
     pub fn update(&mut self) {
         self.canvas.clear_buffer();
         self.raycaster.update();
-        self.raycaster.cast_and_draw(
-            &self.world,
-            &self.models,
-            self.canvas.buffer_mut(),
-        );
+        self.raycaster
+            .cast_and_draw(&mut self.world, self.canvas.buffer_mut());
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {

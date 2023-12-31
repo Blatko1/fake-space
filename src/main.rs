@@ -19,7 +19,7 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder as WinitWindowBuilder,
 };
-use world::map::World;
+use world::world::World;
 
 const FPS: u32 = 60;
 
@@ -69,9 +69,7 @@ fn main() {
                 WindowEvent::Resized(new_size) => state.resize(new_size),
                 _ => (),
             },
-            Event::DeviceEvent { event, .. } => {
-                state.process_mouse_input(event)
-            }
+            Event::DeviceEvent { event, .. } => state.process_mouse_input(event),
             Event::RedrawRequested(..) => {
                 state.update();
 
@@ -79,9 +77,7 @@ fn main() {
                     Ok(_) => (),
                     Err(wgpu::SurfaceError::Lost) => state.on_surface_lost(),
                     // The system is out of memory, we should probably quit
-                    Err(wgpu::SurfaceError::OutOfMemory) => {
-                        *control = ControlFlow::Exit
-                    }
+                    Err(wgpu::SurfaceError::OutOfMemory) => *control = ControlFlow::Exit,
                     // All other errors (Outdated, Timeout) should be resolved by the next frame
                     Err(e) => eprintln!("{:?}", e),
                 }

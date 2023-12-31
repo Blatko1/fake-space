@@ -45,7 +45,7 @@ pub enum DimensionError {
 pub enum SettingError {
     InvalidFormat(String),
     UnknownSetting(String),
-    InvalidValue(String),
+    InvalidF32Value(String),
 }
 
 #[derive(Debug)]
@@ -85,6 +85,7 @@ pub enum TileError {
     UnknownParameter(String),
     UnknownTexture(String),
     FloatParseFail(String),
+    BoolParseFail(String),
 }
 
 impl From<TileError> for PresetError {

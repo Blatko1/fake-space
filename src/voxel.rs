@@ -7,16 +7,14 @@ impl VoxelModelManager {
     pub fn init() -> Self {
         // Cube model:
         let dimension = 2;
-        let mut cube_data =
-            vec![vec![vec![9; dimension]; dimension]; dimension];
+        let mut cube_data = vec![vec![vec![9; dimension]; dimension]; dimension];
         cube_data[0][0][0] = 0u8;
         let cube_data = cube_data.into_iter().flatten().flatten().collect();
         let cube = VoxelModel::new(cube_data, dimension);
 
         // Cube with a hole model:
         let dimension = 6;
-        let mut cube_hole_data =
-            vec![vec![vec![30; dimension]; dimension]; dimension];
+        let mut cube_hole_data = vec![vec![vec![30; dimension]; dimension]; dimension];
         for x in 1..dimension - 1 {
             for z in 0..dimension {
                 for y in 1..dimension - 1 {
@@ -24,22 +22,19 @@ impl VoxelModelManager {
                 }
             }
         }
-        let cube_hole_data =
-            cube_hole_data.into_iter().flatten().flatten().collect();
+        let cube_hole_data = cube_hole_data.into_iter().flatten().flatten().collect();
         let cube_hole = VoxelModel::new(cube_hole_data, dimension);
 
         // Single voxel model:
         let dimension = 10;
-        let mut voxel_data =
-            vec![vec![vec![0; dimension]; dimension]; dimension];
+        let mut voxel_data = vec![vec![vec![0; dimension]; dimension]; dimension];
         voxel_data[2][2][2] = 100;
         let voxel_data = voxel_data.into_iter().flatten().flatten().collect();
         let voxel = VoxelModel::new(voxel_data, dimension);
 
         // pillars model:
         let dimension = 8;
-        let mut pillars_data =
-            vec![vec![vec![0; dimension]; dimension]; dimension];
+        let mut pillars_data = vec![vec![vec![0; dimension]; dimension]; dimension];
         for x in 0..dimension / 2 {
             for z in 0..dimension / 2 {
                 for y in 0..dimension {
@@ -47,14 +42,12 @@ impl VoxelModelManager {
                 }
             }
         }
-        let pillars_data =
-            pillars_data.into_iter().flatten().flatten().collect();
+        let pillars_data = pillars_data.into_iter().flatten().flatten().collect();
         let pillars = VoxelModel::new(pillars_data, dimension);
 
         // letter B model:
         let dimension = 8;
-        let mut damaged_data =
-            vec![vec![vec![1; dimension]; dimension]; dimension];
+        let mut damaged_data = vec![vec![vec![1; dimension]; dimension]; dimension];
         for x in 0..4 {
             for z in 0..3 {
                 for y in 5..8 {
@@ -73,8 +66,7 @@ impl VoxelModelManager {
         }
         damaged_data[5][1][3] = 10u8;
         damaged_data[5][2][3] = 20u8;
-        let damaged_data =
-            damaged_data.into_iter().flatten().flatten().collect();
+        let damaged_data = damaged_data.into_iter().flatten().flatten().collect();
         let damaged = VoxelModel::new(damaged_data, dimension);
 
         let models = vec![cube, cube_hole, voxel, pillars, damaged];
@@ -117,8 +109,7 @@ pub struct VoxelModelRef<'a> {
 impl<'a> VoxelModelRef<'a> {
     #[inline]
     pub fn get_voxel(&self, x: usize, y: usize, z: usize) -> Option<&u8> {
-        let index =
-            x + z * self.dimension + y * self.dimension * self.dimension;
+        let index = x + z * self.dimension + y * self.dimension * self.dimension;
         self.data.get(index)
     }
 }

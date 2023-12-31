@@ -35,12 +35,7 @@ pub struct TextureData {
 }
 
 impl TextureData {
-    pub fn new(
-        data: Vec<u8>,
-        width: u32,
-        height: u32,
-        transparency: bool,
-    ) -> Self {
+    pub fn new(data: Vec<u8>, width: u32, height: u32, transparency: bool) -> Self {
         let mut light_shade = data.clone();
         let mut medium_shade = data.clone();
 

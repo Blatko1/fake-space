@@ -10,7 +10,7 @@ use hashbrown::HashMap;
 use image::{io::Reader as ImageReader, EncodableLayout};
 
 use crate::textures::{Texture, TextureData};
-use crate::world::map::{Segment, World};
+use crate::world::world::{Segment, World};
 
 use self::error::{ParseError, SegmentError, SettingError, TextureError};
 use self::segment_parser::SegmentDataParser;
@@ -49,9 +49,7 @@ impl WorldParser {
         let lines = data
             .lines()
             .enumerate()
-            .map(|(i, line)| {
-                (1 + i as u32, line.split("//").next().unwrap().trim())
-            })
+            .map(|(i, line)| (1 + i as u32, line.split("//").next().unwrap().trim()))
             .filter(|(_, line)| !line.is_empty());
 
         // Process each line
@@ -90,7 +88,7 @@ impl WorldParser {
         if split.len() != 2 {
             return Err(SegmentError::InvalidFormat(line.to_owned()));
         }
-        let identifier = split[0].trim();
+        let name = split[0].trim();
         let expressions = split[1].trim();
 
         let mut segment_tiles = None;
@@ -130,21 +128,15 @@ impl WorldParser {
                     repeatable = match value.parse::<bool>() {
                         Ok(b) => Some(b),
                         Err(_) => {
-                            return Err(SegmentError::BoolParseFail(
-                                value.to_owned(),
-                            ))
+                            return Err(SegmentError::BoolParseFail(value.to_owned()))
                         }
                     }
                 }
-                _ => {
-                    return Err(SegmentError::UnknownParameter(
-                        parameter.to_owned(),
-                    ))
-                }
+                _ => return Err(SegmentError::UnknownParameter(parameter.to_owned())),
             }
         }
-        // Check if all needed information is acquired
-        let Some((dimensions, tiles)) = segment_tiles else {
+        // Check if all needed information has been acquired
+        let Some((dimensions, tiles, portals)) = segment_tiles else {
             return Err(SegmentError::UnspecifiedSrc);
         };
         let Some(repeatable) = repeatable else {
@@ -152,9 +144,10 @@ impl WorldParser {
         };
 
         Ok(Segment::new(
-            identifier.to_owned(),
+            name.to_owned(),
             dimensions,
             tiles,
+            portals,
             repeatable,
         ))
     }
@@ -173,25 +166,25 @@ impl WorldParser {
         match setting {
             "lvl1" => {
                 let Ok(value) = val.parse::<f32>() else {
-                    return Err(SettingError::InvalidValue(val.to_owned()));
+                    return Err(SettingError::InvalidF32Value(val.to_owned()));
                 };
                 self.settings.lvl1 = value;
             }
             "lvl2" => {
                 let Ok(value) = val.parse::<f32>() else {
-                    return Err(SettingError::InvalidValue(val.to_owned()));
+                    return Err(SettingError::InvalidF32Value(val.to_owned()));
                 };
                 self.settings.lvl2 = value;
             }
             "lvl3" => {
                 let Ok(value) = val.parse::<f32>() else {
-                    return Err(SettingError::InvalidValue(val.to_owned()));
+                    return Err(SettingError::InvalidF32Value(val.to_owned()));
                 };
                 self.settings.lvl3 = value;
             }
             "lvl4" => {
                 let Ok(value) = val.parse::<f32>() else {
-                    return Err(SettingError::InvalidValue(val.to_owned()));
+                    return Err(SettingError::InvalidF32Value(val.to_owned()));
                 };
                 self.settings.lvl4 = value;
             }
@@ -201,10 +194,7 @@ impl WorldParser {
         Ok(())
     }
 
-    fn parse_texture(
-        &self,
-        line: &str,
-    ) -> Result<(String, TextureData), TextureError> {
+    fn parse_texture(&self, line: &str) -> Result<(String, TextureData), TextureError> {
         // Split the line and check for formatting errors
         let line = &line[1..];
         let operands: Vec<&str> = line.split('=').collect();
@@ -216,9 +206,7 @@ impl WorldParser {
 
         // There can't be multiple texture with the same name
         if self.texture_map.contains_key(texture_name) {
-            return Err(TextureError::TextureAlreadyExists(
-                texture_name.to_owned(),
-            ));
+            return Err(TextureError::TextureAlreadyExists(texture_name.to_owned()));
         }
 
         let mut texture_data = None;
@@ -227,9 +215,7 @@ impl WorldParser {
             // Split the expression and check for formatting errors
             let operands: Vec<&str> = expr.split(':').collect();
             if operands.len() != 2 {
-                return Err(TextureError::InvalidExpressionFormat(
-                    expr.to_owned(),
-                ));
+                return Err(TextureError::InvalidExpressionFormat(expr.to_owned()));
             }
             let parameter = operands[0].trim();
             let value = operands[1].trim();
@@ -238,16 +224,13 @@ impl WorldParser {
             match parameter {
                 "path" => {
                     let full_path = self.dir_path.join(value);
-                    texture_data =
-                        Some(ImageReader::open(full_path)?.decode()?);
+                    texture_data = Some(ImageReader::open(full_path)?.decode()?);
                 }
                 "transparency" => {
                     transparency = match value.parse::<bool>() {
                         Ok(b) => Some(b),
                         Err(_) => {
-                            return Err(TextureError::BoolParseFail(
-                                value.to_owned(),
-                            ))
+                            return Err(TextureError::BoolParseFail(value.to_owned()))
                         }
                     }
                 }
@@ -299,8 +282,5 @@ impl Default for Settings {
 
 #[test]
 fn parsing() {
-    WorldParser::new("maps/world.txt")
-        .unwrap()
-        .parse()
-        .unwrap();
+    WorldParser::new("maps/world.txt").unwrap().parse().unwrap();
 }
