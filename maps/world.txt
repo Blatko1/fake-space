@@ -15,5 +15,6 @@
 
 // Declare the segments
 // You can't have multiple segments with the same name
-!start = src:segment.txt, repeatable: true
-//!main = src:../a.txt, repeatable: false
+!start = src:start.txt, repeatable: true
+!main = src:main.txt, repeatable: false
+!room = src:room.txt, repeatable: false

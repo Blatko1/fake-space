@@ -2,7 +2,7 @@ use glam::Vec3;
 
 use crate::{
     textures::TextureManager,
-    world::world::{RoomRef, Tile, World},
+    world::world::{RoomDataRef, Tile, World},
 };
 
 use super::{Ray, RayCaster, Side};
@@ -46,14 +46,11 @@ impl<'a> ColumnRenderer<'a> {
             //previous_perp_wall_dist: todo!(),
         }
     }
-    pub fn draw(mut self, world: &'a mut World, column: &mut [u8]) {
+    pub fn draw(mut self, world: &'a World, column: &mut [u8]) {
         // ====================================================
         //    | LOOP OVER THE RAY PATH AND DRAW HORIZONTAL |
         //    | PLATFORMS AND VERTICAL PLATFORMS (WALLS)   |
         // ====================================================
-        if self.portals_passed >= 4 {
-            return;
-        }
         let caster = self.caster;
         let ray = self.ray;
         let texture_manager = world.texture_manager();
@@ -62,8 +59,8 @@ impl<'a> ColumnRenderer<'a> {
         let mut side_dist_x = ray.side_dist_x;
         let mut side_dist_z = ray.side_dist_z;
 
-        let mut room = world.get_current_room();
-        let segment = room.segment;
+        let mut room = world.get_current_room_data();
+        let mut segment = room.segment;
         let mut previous_perp_wall_dist = 0.0;
         loop {
             let current_tile_x = next_tile_x;
@@ -103,10 +100,16 @@ impl<'a> ColumnRenderer<'a> {
             // Switch to the different room if portal is hit
             if let Some(portal) = current_tile.portal {
                 self.portals_passed += 1;
-                let (dest_room_index, dest_portal_index) = portal.connection.unwrap();
-                room = world.get_room(dest_room_index);
-
-                continue;
+                if self.portals_passed >= 4 {
+                    return;
+                }
+                let Some((dest_room_id, dest_portal_id)) = room.portals[portal.id.0].connection else {
+                    break;
+                };
+                room = world.get_room_data(dest_room_id);
+                segment = room.segment;
+                let dest_portal = &room.portals[dest_portal_id.0];
+                //next_tile_x = dest_portal.
             }
             let mut params = DrawParams {
                 closer_wall_dist: previous_perp_wall_dist,

@@ -34,7 +34,8 @@ $grass = pillar1:BlueBrick, $groundLevel, lvl2:0.0, bottom:BlueBrick, top:BlueBr
 360-361 = $border
 380-400 = $border
 
-250 = $pillars, lvl2:2.5, lvl3:3.5, lvl4:4.0, portal_direction:N
+244 = portal_direction: N
+250 = $pillars, lvl2:0.5, lvl3:3.5, lvl4:4.0, portal_direction:N
 251 = $pillars, lvl2:3.0, lvl3:4.0, lvl4:5.0
 252 = $pillars, lvl2:3.5, lvl3:4.5, lvl4:5.5
 253 = $pillars, lvl2:4.0, lvl3:5.0, lvl4:6.0

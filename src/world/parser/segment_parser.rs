@@ -4,7 +4,7 @@ use hashbrown::HashMap;
 
 use crate::{
     textures::Texture,
-    world::world::{Portal, PortalDirection, Tile},
+    world::world::{Portal, PortalDirection, Tile, PortalLocalID},
 };
 
 use super::{
@@ -77,7 +77,7 @@ impl<'a> SegmentDataParser<'a> {
 
         let mut tiles = Vec::with_capacity(self.tiles.len());
         let mut portals = Vec::new();
-        let mut portal_index = 0;
+        let mut portal_id = 0;
         for (i, tile) in self.tiles.into_iter().enumerate() {
             // Fill the `None` values with default ones and convert to [`Tile`], then
             // compare levels to each other to find error (lvl1 <= lvl2 < lvl3 <= lvl4)
@@ -97,13 +97,13 @@ impl<'a> SegmentDataParser<'a> {
             let portal = match tile.portal_dir {
                 Some(dir) => {
                     let portal = Portal {
-                        index: portal_index,
+                        id: PortalLocalID(portal_id),
                         direction: dir,
                         tile_index: i,
                         connection: None,
                     };
                     portals.push(portal);
-                    portal_index += 1;
+                    portal_id += 1;
                     Some(portal)
                 }
                 None => None,

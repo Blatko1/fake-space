@@ -7,6 +7,8 @@ pub enum ParseError {
     SettingErr(SettingError, u32),
     TextureErr(TextureError, u32),
     SegmentErr(SegmentError, u32),
+
+    NotEnoughSegments(usize)
 }
 
 #[derive(Debug)]

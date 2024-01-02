@@ -1,79 +1,133 @@
-use rand::{rngs::ThreadRng, seq::SliceRandom, Rng};
+use rand::{rngs::ThreadRng, Rng, seq::SliceRandom};
 
 use crate::textures::{Texture, TextureData, TextureManager};
 use std::path::PathBuf;
 
 use super::parser::{error::ParseError, WorldParser};
 
-pub type RoomIndex = usize;
-pub type SegmentIndex = usize;
 pub type TileIndex = usize;
-pub type PortalIndex = usize;
+
+#[derive(Debug, Clone, Copy)]
+pub struct RoomID(pub usize);
+
+#[derive(Debug, Clone, Copy)]
+pub struct SegmentID(pub usize);
+
+#[derive(Debug, Clone, Copy)]
+pub struct PortalLocalID(pub usize);
 
 pub struct World {
     // TODO maybe store these two into Assets struct
     // TODO remove this 'pub'
     pub segments: Vec<Segment>,
+    segment_count: usize,
     texture_manager: TextureManager,
 
     rng: ThreadRng,
     //player: Player,
-    pub current_room_index: RoomIndex,
+    pub current_room_id: RoomID,
     // Each room has index which is the position in this Vec
     pub rooms: Vec<Room>,
 }
 
 impl World {
-    fn _new(segments: Vec<Segment>, textures: Vec<TextureData>) -> Self {
-        Self {
-            segments,
-            texture_manager: TextureManager::new(textures),
-            rng: rand::thread_rng(),
-            current_room_index: 0,
-            rooms: Vec::new(),
-        }
-    }
-
-    pub fn new(segments: Vec<Segment>, textures: Vec<TextureData>) -> Self {
-        let mut world = Self::_new(segments, textures);
-        world.add_start_room();
-        world
-    }
-
-    fn add_start_room(&mut self) {
-        let start_seg = self.segments.first().unwrap();
-        let start_room = Room {
-            segment_index: 0,
-            portals: start_seg.portals.clone(),
-        }
-    }
-
     pub fn from_path<P: Into<PathBuf>>(path: P) -> Result<Self, ParseError> {
         WorldParser::new(path)?.parse()
+    }
+
+    // TODO starting segment is always '0' and main room is '1'
+    pub fn new(segments: Vec<Segment>, textures: Vec<TextureData>) -> Self {
+        let mut rooms = Vec::new();
+        let mut room_counter = 0;
+        let mut rng = rand::thread_rng();
+
+        // Select the first segment which repeats only once
+        let segment = &segments[0];
+        let mut starting_room = Room {
+            id: RoomID(room_counter),
+            segment_id: segment.id,
+            portals: segment.portals.clone(),
+        };
+        room_counter += 1;
+
+        let mut adjacent_rooms: Vec<Room> = starting_room.portals.iter_mut().map(|portal| {
+            // The first segment appears only once at the beginning, so skip it
+            let rand_segment = segments[1..].choose(&mut rng).unwrap();
+            let mut room = Room {
+                id: RoomID(room_counter),
+                segment_id: rand_segment.id,
+                portals: rand_segment.portals.clone(),
+            };
+            let room_rand_portal = room.portals.choose_mut(&mut rng).unwrap();
+            
+            // Connect the two portals:
+            // Connect the starting room with new random room
+            portal.connection = Some((room.id, room_rand_portal.id));
+            // Connect the new random room with the starting room
+            room_rand_portal.connection = Some((starting_room.id, portal.id));
+            room_counter += 1;
+
+            room
+        }).collect();
+        rooms.push(starting_room);
+        rooms.append(&mut adjacent_rooms);
+        for r in rooms.iter() {
+            println!("r: {:?}, portals: {:?}, segment: {:?}", r.id, r.portals, r.segment_id);
+        }
+
+        let segment_count = segments.len();
+        Self {
+            segments,
+            segment_count,
+            texture_manager: TextureManager::new(textures),
+            rng,
+            current_room_id: RoomID(0),
+            rooms,
+        }
+    }
+
+    fn add_new_room(&mut self, segment_id: SegmentID) -> &mut Room {
+        // Append the room at the end of the list.
+        let room_id = RoomID(self.rooms.len());
+        let segment = &self.segments[segment_id.0];
+        let mut starting_room = Room {
+            id: room_id,
+            segment_id: segment.id,
+            portals: segment.portals.clone(),
+        };
+        self.rooms.push(starting_room);
+        self.rooms.last_mut().unwrap()
+    }
+
+    fn add_new_random_room(&mut self) -> &mut Room {
+        let rand_segment_id = self.get_random_segment_id();
+        self.add_new_room(rand_segment_id)
+    }
+
+    fn get_random_segment_id(&mut self) -> SegmentID {
+        // The first segment repeats only once at the beginning
+        SegmentID(self.rng.gen_range(1..self.segment_count))
+    }
+
+    pub fn get_current_room_data(&self) -> RoomDataRef {
+        self.get_room_data(self.current_room_id)
+    }
+
+    pub fn get_room_data(&self, index: RoomID) -> RoomDataRef {
+        let room = &self.rooms[index.0];
+        RoomDataRef {
+            segment: &self.segments[room.segment_id.0],
+            portals: &room.portals,
+        }
     }
 
     pub fn texture_manager(&self) -> &TextureManager {
         &self.texture_manager
     }
-
-    pub fn get_current_room(&self) -> RoomRef {
-        self.get_room(self.current_room_index)
-    }
-
-    pub fn get_room(&self, index: RoomIndex) -> RoomRef {
-        let room = &self.rooms[index];
-        let segment = &self.segments[index];
-        RoomRef {
-            segment_index: room.segment_index,
-            segment: segment,
-            portals: &room.portals,
-        }
-    }
 }
 
 #[derive(Debug)]
-pub struct RoomRef<'a> {
-    pub segment_index: SegmentIndex,
+pub struct RoomDataRef<'a> {
     pub segment: &'a Segment,
     pub portals: &'a [Portal],
 }
@@ -81,15 +135,15 @@ pub struct RoomRef<'a> {
 // TODO remove 'pub'
 #[derive(Debug)]
 pub struct Room {
-    //id: RoomID,
-    pub segment_index: SegmentIndex,
+    id: RoomID,
+    pub segment_id: SegmentID,
     // Each portal has its own index which is the position in this Vec
     pub portals: Vec<Portal>,
 }
 
 #[derive(Debug)]
 pub struct Segment {
-    //id: SegmentIndex,
+    id: SegmentID,
     name: String,
     dimensions: (u32, u32),
     tiles: Vec<Tile>,
@@ -99,6 +153,7 @@ pub struct Segment {
 
 impl Segment {
     pub fn new(
+        id: SegmentID,
         name: String,
         dimensions: (u32, u32),
         tiles: Vec<Tile>,
@@ -106,6 +161,7 @@ impl Segment {
         repeatable: bool,
     ) -> Self {
         Self {
+            id,
             name,
             dimensions,
             portals,
@@ -135,14 +191,7 @@ impl Segment {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct Portal {
-    pub index: PortalIndex,
-    pub direction: PortalDirection,
-    pub tile_index: TileIndex,
-    pub connection: Option<(RoomIndex, PortalIndex)>,
-}
-
+// TODO try removing Clone and Copy
 #[derive(Debug, Clone, Copy)]
 pub struct Tile {
     /// Texture of the lower pillar walls.
@@ -166,6 +215,14 @@ pub struct Tile {
     pub level4: f32,
     /// If the current tile should be a portal to different segment (map).
     pub portal: Option<Portal>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Portal {
+    pub id: PortalLocalID,
+    pub direction: PortalDirection,
+    pub tile_index: TileIndex,
+    pub connection: Option<(RoomID, PortalLocalID)>,
 }
 
 #[derive(Debug, Clone, Copy)]

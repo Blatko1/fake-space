@@ -15,6 +15,8 @@ use crate::world::world::{Segment, World};
 use self::error::{ParseError, SegmentError, SettingError, TextureError};
 use self::segment_parser::SegmentDataParser;
 
+use super::world::SegmentID;
+
 pub struct WorldParser {
     data: String,
     dir_path: PathBuf,
@@ -72,17 +74,20 @@ impl WorldParser {
                     }
                     Err(e) => return Err(ParseError::TextureErr(e, i)),
                 },
-                '!' => match self.parse_segment(line) {
+                '!' => match self.parse_segment(line, SegmentID(self.segments.len())) {
                     Ok(segment) => self.segments.push(segment),
                     Err(e) => return Err(ParseError::SegmentErr(e, i)),
                 },
                 _ => return Err(ParseError::UnknownKey(key.to_string(), i)),
             }
         }
+        if self.segments.len() < 2 {
+            return Err(ParseError::NotEnoughSegments(self.segments.len()));
+        }
         Ok(World::new(self.segments, self.textures))
     }
 
-    fn parse_segment(&self, line: &str) -> Result<Segment, SegmentError> {
+    fn parse_segment(&self, line: &str, id: SegmentID) -> Result<Segment, SegmentError> {
         // Split the line and check for formatting errors
         let split: Vec<&str> = line.split('=').collect();
         if split.len() != 2 {
@@ -144,6 +149,7 @@ impl WorldParser {
         };
 
         Ok(Segment::new(
+            id,
             name.to_owned(),
             dimensions,
             tiles,

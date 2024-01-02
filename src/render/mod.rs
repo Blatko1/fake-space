@@ -11,7 +11,7 @@ use winit::event::{DeviceEvent, ElementState, KeyboardInput, VirtualKeyCode};
 use crate::{
     textures::TextureManager,
     voxel::VoxelModelManager,
-    world::world::{RoomRef, Tile},
+    world::world::{RoomDataRef, Tile},
     World,
 };
 
