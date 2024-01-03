@@ -205,6 +205,10 @@ impl Canvas {
         &mut self.buffer
     }
 
+    pub fn column_iterator(&mut self) -> impl Iterator<Item = &mut [u8]> {
+        self.buffer.chunks_exact_mut(self.height as usize * 4)
+    }
+
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         // Flip the buffer texture to correct position (90 degrees to left)
         self.frame

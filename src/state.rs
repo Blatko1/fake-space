@@ -1,5 +1,5 @@
 use crate::{
-    backend::Canvas, render::RayCaster, voxel::VoxelModelManager, world::world::World,
+    backend::Canvas, voxel::VoxelModelManager, world::{world::{World, RoomID}}, player::{Player}, render::camera::Camera,
 };
 use winit::{
     dpi::PhysicalSize,
@@ -8,38 +8,41 @@ use winit::{
 
 pub struct State {
     canvas: Canvas,
-    raycaster: RayCaster,
     models: VoxelModelManager,
+
     world: World,
+    player: Player,
 }
 
 impl State {
     pub fn new(canvas: Canvas, world: World) -> Self {
-        let raycaster = RayCaster::new(
+        let camera = Camera::new(
             2.0,
-            0.0,
+            1.0,
             2.0,
             90f32.to_radians(),
+            80f32.to_radians(),
             canvas.width(),
             canvas.height(),
         );
 
         Self {
             canvas,
-            raycaster,
             models: VoxelModelManager::init(),
+
             world,
+            player: Player::new(camera, RoomID(0))
         }
     }
 
     pub fn update(&mut self) {
-        self.canvas.clear_buffer();
-        self.raycaster.update(&mut self.world);
-        self.raycaster
-            .cast_and_draw(&mut self.world, self.canvas.buffer_mut());
+        self.player.update(&self.world);
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+        self.canvas.clear_buffer();
+        self.player
+            .cast_and_draw(&self.world, self.canvas.buffer_mut());
         self.canvas.render()
     }
 
@@ -48,11 +51,11 @@ impl State {
     }
 
     pub fn process_keyboard_input(&mut self, event: KeyboardInput) {
-        self.raycaster.process_keyboard_input(event);
+        self.player.process_keyboard_input(event);
     }
 
     pub fn process_mouse_input(&mut self, event: DeviceEvent) {
-        self.raycaster.process_mouse_input(event);
+        self.player.process_mouse_input(event);
     }
 
     pub fn on_surface_lost(&self) {

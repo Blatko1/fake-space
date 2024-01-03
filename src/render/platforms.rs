@@ -4,9 +4,7 @@
 // is difficult due to existence of transparent walls
 // and their fully transparent parts
 // TODO problem! adding unsafe could improve performance
-use super::{column::DrawParams, RayCaster};
 
-impl RayCaster {
     pub(super) fn draw_bottom_platform(
         &self,
         draw_params: DrawParams,
@@ -156,4 +154,3 @@ impl RayCaster {
 
         draw_from
     }
-}

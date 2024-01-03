@@ -24,8 +24,6 @@ pub struct World {
     texture_manager: TextureManager,
 
     rng: ThreadRng,
-    //player: Player,
-    pub current_room_id: RoomID,
     // Each room has index which is the position in this Vec
     pub rooms: Vec<Room>,
 }
@@ -82,7 +80,6 @@ impl World {
             segment_count,
             texture_manager: TextureManager::new(textures),
             rng,
-            current_room_id: RoomID(0),
             rooms,
         }
     }
@@ -110,10 +107,6 @@ impl World {
         SegmentID(self.rng.gen_range(1..self.segment_count))
     }
 
-    pub fn get_current_room_data(&self) -> RoomDataRef {
-        self.get_room_data(self.current_room_id)
-    }
-
     pub fn get_room_data(&self, index: RoomID) -> RoomDataRef {
         let room = &self.rooms[index.0];
         RoomDataRef {
@@ -131,6 +124,12 @@ impl World {
 pub struct RoomDataRef<'a> {
     pub segment: &'a Segment,
     pub portals: &'a [Portal],
+}
+
+impl<'a> RoomDataRef<'a> {
+    pub fn get_portal(&self, local_id: PortalLocalID) -> Portal {
+        self.portals[local_id.0]
+    }
 }
 
 // TODO remove 'pub'

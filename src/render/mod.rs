@@ -1,262 +1,158 @@
+pub mod camera;
+mod ray;
 mod colors;
-mod column;
 mod platforms;
 mod voxel_model;
 mod wall;
 
-use glam::Vec3;
-use std::f32::consts::{PI, TAU};
-use winit::event::{DeviceEvent, ElementState, KeyboardInput, VirtualKeyCode};
+use crate::{World, player::{Player}, world::world::Tile, textures::TextureManager};
 
-use crate::World;
+use self::ray::Ray;
 
-// TODO rotation control with mouse and/or keyboard
-const MOVEMENT_SPEED: f32 = 0.1;
-const ROTATION_SPEED: f32 = 0.035;
-const FLY_UP_DOWN_SPEED: f32 = 0.05;
-const ONE_DEGREE_RAD: f32 = PI / 180.0;
-const MAX_FOV_RAD: f32 = 119.0 * ONE_DEGREE_RAD;
-const DEFAULT_PLANE_V: Vec3 = Vec3::new(0.0, 0.5, 0.0);
-const Y_SHEARING_SENSITIVITY: f32 = 0.8;
-const MOUSE_ROTATION_SPEED: f32 = 0.08;
-const MAX_Y: f32 = 50.0;
-const MIN_Y: f32 = -50.0;
+pub fn cast_and_draw<'a, C>(player: &Player, world: &World, column_iter: C) where C: Iterator<Item = &'a mut [u8]> {
+    let cam = player.get_camera();
+    let current_room = world.get_room_data(player.get_current_room_id());
+    column_iter.enumerate().for_each(|(x, column)| {
+        // ====================================================
+        //    | LOOP OVER THE RAY PATH AND DRAW HORIZONTAL |
+        //    | PLATFORMS AND VERTICAL PLATFORMS (WALLS)   |
+        // ====================================================
+        let mut ray = cam.cast_ray_for(x);
+        let texture_manager = world.texture_manager();
+        let mut room = current_room;
+        let mut segment = room.segment;
+
+        let mut portals_passed = 0;
+        let mut previous_perp_wall_dist = 0.0;
+        let mut bottom_draw_bound = 0;
+        let mut top_draw_bound = cam.view_height as usize;
+        // DDA loop
+        loop {
+            let current_tile_x = ray.next_tile_x;
+            let current_tile_z = ray.next_tile_z;
+
+            let (side, perp_wall_dist, wall_offset) = if ray.side_dist_x < ray.side_dist_z
+            {
+                let dist_to_wall = ray.side_dist_x.max(0.0);
+                let wall_offset = cam.origin.z + dist_to_wall * ray.dir.z;
+                ray.next_tile_x += ray.step_x;
+                ray.side_dist_x += ray.delta_dist_x;
+                (
+                    Side::Vertical,
+                    dist_to_wall,
+                    wall_offset - wall_offset.floor(),
+                )
+            } else {
+                let dist_to_wall = ray.side_dist_z.max(0.0);
+                let wall_offset = cam.origin.x + dist_to_wall * ray.dir.x;
+                ray.next_tile_z += ray.step_z;
+                ray.side_dist_z += ray.delta_dist_z;
+                (
+                    Side::Horizontal,
+                    dist_to_wall,
+                    wall_offset - wall_offset.floor(),
+                )
+            };
+
+            // ====================================================
+            //  | DRAW TOP AND BOTTOM PLATFORMS OF CURRENT TILE |
+            // ====================================================
+            // Tile which the ray just traveled over before hitting a wall.
+            let Some(&current_tile) =
+                segment.get_tile(current_tile_x as i32, current_tile_z as i32)
+            else {
+                break;
+            };
+
+            let mut params = DrawParams {
+                closer_wall_dist: previous_perp_wall_dist,
+                further_wall_dist: perp_wall_dist,
+                bottom_draw_bound,
+                top_draw_bound,
+                tile: current_tile,
+                tile_x: current_tile_x,
+                tile_z: current_tile_z,
+                side,
+                wall_offset,
+                ray,
+                texture_manager,
+            };
+
+            // Drawing top and bottom platforms
+            let drawn_to = draw_bottom_platform(params, column);
+            bottom_draw_bound = drawn_to;
+            params.bottom_draw_bound = bottom_draw_bound;
+            let drawn_from = draw_top_platform(params, column);
+            top_draw_bound = drawn_from;
+            params.top_draw_bound = top_draw_bound;
+
+            let Some(&next_tile) =
+                segment.get_tile(ray.next_tile_x as i32, ray.next_tile_z as i32)
+            else {
+                break;
+            };
+            // Switch to the different room if portal is hit
+            if let Some(portal) = next_tile.portal {
+                portals_passed += 1;
+                if portals_passed >= 4 {
+                    break;
+                }
+                let Some((dest_room_id, dest_portal_id)) =
+                    room.portals[portal.id.0].connection
+                else {
+                    break;
+                };
+                room = world.get_room_data(dest_room_id);
+                segment = room.segment;
+                let dest_portal = &room.portals[dest_portal_id.0];
+                let old_next_x = ray.next_tile_x;
+                let old_next_z = ray.next_tile_z;
+                ray.next_tile_x = dest_portal.local_position.0 as i64;
+                ray.next_tile_z = dest_portal.local_position.1 as i64;
+                ray.origin.x += (-old_next_x + ray.next_tile_x) as f32;
+                ray.origin.z += (-old_next_z + ray.next_tile_z) as f32;
+                params.ray = ray;
+            }
+            let Some(&next_tile) =
+                segment.get_tile(ray.next_tile_x as i32, ray.next_tile_z as i32)
+            else {
+                break;
+            };
+            params.tile = next_tile;
+            // Drawing top and bottom walls
+            let drawn_to = draw_bottom_wall(params, column);
+            bottom_draw_bound = drawn_to;
+            let drawn_from = draw_top_wall(params, column);
+            top_draw_bound = drawn_from;
+
+            previous_perp_wall_dist = perp_wall_dist;
+        }
+    })
+}
+
+// TODO maybe remove clone and copy
+#[derive(Clone, Copy)]
+pub struct DrawParams<'a> {
+    pub closer_wall_dist: f32,
+    pub further_wall_dist: f32,
+    pub bottom_draw_bound: usize,
+    pub top_draw_bound: usize,
+    pub tile: Tile,
+    pub tile_x: i64,
+    pub tile_z: i64,
+    pub side: Side,
+    pub wall_offset: f32,
+    pub ray: Ray,
+    pub texture_manager: &'a TextureManager,
+    //pub delta_dist_x: f32,
+    //pub delta_dist_z: f32,
+}
 
 // TODO maybe remove clone and copy
 #[derive(Debug, Clone, Copy)]
 pub enum Side {
     Vertical,
     Horizontal,
-}
-
-#[derive(Debug)]
-/// Draws the player view on the screen framebuffer.
-/// Uses a coordinate system where y-axis points upwards,
-/// z-axis forwards and x-axis to the right.
-pub struct RayCaster {
-    /// Field of view in radians.
-    fov: f32,
-    /// Distance from the raycaster position to the camera plane.
-    plane_dist: f32,
-    /// Position of the raycaster. Whole number represents the tile and
-    /// fraction represents the offset in the tile. Each tile has width and
-    /// height of `1.0`.
-    origin: Vec3,
-    /// Direction of the raycaster. Raycaster game engines can't make the player
-    /// look up the 'normal' way and instead uses y-shearing.
-    /// y-coord is always 0.
-    dir: Vec3,
-    /// Raycaster (camera) horizontal plane.
-    /// y-coord is always 0.
-    plane_h: Vec3,
-    /// Raycaster (camera) vertical plane.
-    plane_v: Vec3,
-    /// Angle in radians.
-    angle: f32,
-    /// Width of the output screen/texture.
-    width: u32,
-    /// Height of the output screen/texture.
-    height: u32,
-    /// Output screen dimension aspect (width/height)
-    aspect: f32,
-    /// Creates an illusion that the camera is looking up or down.
-    /// In interval of [-self.height/2.0, self.height/2.0]
-    y_shearing: f32,
-
-    // Specific use variables with goal to improve performance.
-    four_width: usize,
-    f_height: f32,
-    width_recip: f32,
-    height_recip: f32,
-    f_half_height: f32,
-
-    // Variables for controlling and moving the scene.
-    turn_left: f32,
-    turn_right: f32,
-    strafe_left: f32,
-    strafe_right: f32,
-    increase_fov: f32,
-    decrease_fov: f32,
-    increase_y_shearing: f32,
-    decrease_y_shearing: f32,
-    fly_up: f32,
-    fly_down: f32,
-    forward: f32,
-    backward: f32,
-    in_portal: bool,
-}
-
-impl RayCaster {
-    /// `pos_y` - height of the raycaster (camera)
-    pub fn new(
-        pos_x: f32,
-        pos_y: f32,
-        pos_z: f32,
-        angle: f32,
-        width: u32,
-        height: u32,
-    ) -> Self {
-        let fov = 80f32.to_radians();
-        let f_width = width as f32;
-        let f_height = height as f32;
-
-        let plane_dist = 1.0 / f32::tan(fov / 2.0);
-        let aspect = f_width / f_height;
-
-        let origin = Vec3::new(pos_x, pos_y, pos_z);
-        let dir = Vec3::new(angle.cos(), 0.0, angle.sin());
-
-        let plane_v = DEFAULT_PLANE_V / plane_dist;
-        let plane_h = Vec3::cross(DEFAULT_PLANE_V, dir) * aspect / plane_dist;
-
-        Self {
-            fov,
-            plane_dist,
-            origin,
-            dir,
-            plane_h,
-            plane_v,
-            angle,
-            width,
-            height,
-            aspect,
-            y_shearing: 0.0,
-
-            four_width: 4 * width as usize,
-            f_height,
-            width_recip: f_width.recip(),
-            height_recip: f_height.recip(),
-            f_half_height: height as f32 * 0.5,
-
-            turn_left: 0.0,
-            turn_right: 0.0,
-            strafe_left: 0.0,
-            strafe_right: 0.0,
-            increase_fov: 0.0,
-            decrease_fov: 0.0,
-            increase_y_shearing: 0.0,
-            decrease_y_shearing: 0.0,
-            fly_up: 0.0,
-            fly_down: 0.0,
-            forward: 0.0,
-            backward: 0.0,
-            in_portal: false,
-        }
-    }
-
-    pub fn cast_and_draw(&self, world: &mut World, data: &mut [u8]) {
-        let canvas_column_iterator =
-            data.chunks_exact_mut(self.height as usize * 4).enumerate();
-        canvas_column_iterator.for_each(|(x, column)| {
-            self.draw_column(x, world, column);
-        });
-    }
-
-    pub fn update(&mut self, world: &mut World) {
-        // Change FOV and vertical FOV
-        self.fov = (self.fov + (self.increase_fov - self.decrease_fov) * ONE_DEGREE_RAD)
-            .clamp(ONE_DEGREE_RAD, MAX_FOV_RAD);
-        self.plane_dist = 1.0 / f32::tan(self.fov * 0.5);
-
-        // Change y_shearing (look up/down)
-        self.y_shearing = (self.y_shearing
-            + (self.decrease_y_shearing - self.increase_y_shearing) * 2.5)
-            .clamp(-self.f_height, self.f_height);
-
-        // Update rotation and direction
-        self.angle = normalize_rad(
-            self.angle + (self.turn_left - self.turn_right) * ROTATION_SPEED,
-        );
-        self.dir = Vec3::new(self.angle.cos(), 0.0, self.angle.sin());
-
-        // Rotate raycaster (camera) planes
-        self.plane_v = DEFAULT_PLANE_V / self.plane_dist;
-        self.plane_h =
-            Vec3::cross(DEFAULT_PLANE_V, self.dir) * self.aspect / self.plane_dist;
-
-        // Update origin position
-        self.origin.x += self.dir.x * (self.forward - self.backward) * MOVEMENT_SPEED;
-        self.origin.z += self.dir.z * (self.forward - self.backward) * MOVEMENT_SPEED;
-        self.origin += self.plane_h.normalize()
-            * (self.strafe_right - self.strafe_left)
-            * MOVEMENT_SPEED;
-        self.origin.y = (self.origin.y
-            + (self.fly_up - self.fly_down) * FLY_UP_DOWN_SPEED)
-            .clamp(MIN_Y, MAX_Y);
-
-        // Teleportation between rooms
-        let room = world.get_current_room_data();
-        if let Some(tile) = room
-            .segment
-            .get_tile(self.origin.x as i32, self.origin.z as i32)
-        {
-            if let Some(portal) = tile.portal {
-                if !self.in_portal {
-                    if let Some((room_id, portal_id)) = room.portals[portal.id.0].connection {
-                        world.current_room_id = room_id;
-                        let connected_room = world.get_room_data(room_id);
-                        let portal_pos =
-                            connected_room.portals[portal_id.0].local_position;
-                        self.origin.x += (-self.origin.x as i64 + portal_pos.0 as i64) as f32;
-                        self.origin.z += (-self.origin.z as i64 + portal_pos.1 as i64) as f32;
-                        self.in_portal = true;
-                    }
-                }
-            } else {
-                self.in_portal = false;
-            }            
-        }
-    }
-
-    pub fn process_mouse_input(&mut self, event: DeviceEvent) {
-        match event {
-            DeviceEvent::MouseMotion { delta } => {
-                self.y_shearing += delta.1 as f32 * Y_SHEARING_SENSITIVITY;
-
-                self.angle -= delta.0 as f32 * ONE_DEGREE_RAD * MOUSE_ROTATION_SPEED;
-            }
-            _ => (),
-        }
-    }
-
-    pub fn process_keyboard_input(&mut self, event: KeyboardInput) {
-        if let Some(key) = event.virtual_keycode {
-            let value = match event.state {
-                ElementState::Pressed => 1.0,
-                ElementState::Released => 0.0,
-            };
-
-            match key {
-                // Turn left:
-                VirtualKeyCode::Q => self.turn_left = value,
-                // Turn right:
-                VirtualKeyCode::E => self.turn_right = value,
-                // Move forward:
-                VirtualKeyCode::W => self.forward = value,
-                // Move backward:
-                VirtualKeyCode::S => self.backward = value,
-                // Strafe left:
-                VirtualKeyCode::A => self.strafe_left = value,
-                // Strafe right:
-                VirtualKeyCode::D => self.strafe_right = value,
-                // Increase FOV:
-                VirtualKeyCode::Up => self.increase_fov = value,
-                // Increase FOV:
-                VirtualKeyCode::Down => self.decrease_fov = value,
-                // Look more up (y_shearing):
-                VirtualKeyCode::PageUp => self.increase_y_shearing = value,
-                // Look more down (y_shearing):
-                VirtualKeyCode::PageDown => self.decrease_y_shearing = value,
-                // Reset look (y_shearing):
-                VirtualKeyCode::Home => self.y_shearing = 0.0,
-                // Reset look (y_shearing):
-                VirtualKeyCode::Space => self.fly_up = value,
-                // Reset look (y_shearing):
-                VirtualKeyCode::LShift => self.fly_down = value,
-                _ => (),
-            }
-        }
-    }
 }
 
 // TODO convert to unsafe for speed
@@ -271,9 +167,4 @@ fn blend(background: &[u8], foreground: &[u8]) -> [u8; 4] {
         ((foreground[2] as f32 * alpha + background[2] as f32 * inv_alpha) as u8),
         (255.0 * alpha + background[3] as f32 * inv_alpha) as u8,
     ]
-}
-
-#[inline]
-fn normalize_rad(angle: f32) -> f32 {
-    angle - (angle / TAU).floor() * TAU
 }

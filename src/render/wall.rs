@@ -1,12 +1,10 @@
 use crate::textures::TextureManager;
 
-use super::{blend, column::DrawParams, RayCaster, Side};
+use super::{blend, Side, DrawParams};
 
 // TODO write tests for each draw call function to check for overflows
-impl RayCaster {
     // Draws full and transparent walls.
     pub(super) fn draw_bottom_wall(
-        &self,
         draw_params: DrawParams,
         column: &mut [u8],
     ) -> usize {
@@ -106,7 +104,6 @@ impl RayCaster {
     }
 
     pub(super) fn draw_top_wall(
-        &self,
         draw_params: DrawParams,
         column: &mut [u8],
     ) -> usize {
@@ -204,7 +201,6 @@ impl RayCaster {
 
         draw_from
     }
-}
 
 #[inline]
 fn draw_full_wall_pixel(dest: &mut [u8], color: &[u8]) {

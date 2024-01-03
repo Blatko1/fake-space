@@ -8,6 +8,7 @@ mod state;
 mod textures;
 mod voxel;
 mod world;
+mod player;
 
 use std::time::{Duration, Instant};
 
