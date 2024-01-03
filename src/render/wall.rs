@@ -1,24 +1,19 @@
 use crate::textures::TextureManager;
 
-use super::{
-    blend,
-    column::{ColumnRenderer, DrawParams},
-    Side,
-};
+use super::{blend, column::DrawParams, RayCaster, Side};
 
 // TODO write tests for each draw call function to check for overflows
-impl<'a> ColumnRenderer<'a> {
+impl RayCaster {
     // Draws full and transparent walls.
     pub(super) fn draw_bottom_wall(
         &self,
         draw_params: DrawParams,
-        texture_manager: &TextureManager,
         column: &mut [u8],
     ) -> usize {
-        let caster = self.caster;
-        let bottom_draw_bound = self.bottom_draw_bound;
-        let top_draw_bound = self.top_draw_bound;
-        let ray = self.ray;
+        let texture_manager = draw_params.texture_manager;
+        let bottom_draw_bound = draw_params.bottom_draw_bound;
+        let top_draw_bound = draw_params.top_draw_bound;
+        let ray = draw_params.ray;
         let tile = draw_params.tile;
         let wall_dist = draw_params.further_wall_dist;
         let side = draw_params.side;
@@ -42,18 +37,17 @@ impl<'a> ColumnRenderer<'a> {
         );
 
         // Calculate wall pixel height for the parts above and below the middle
-        let half_wall_pixel_height = caster.f_half_height / wall_dist * caster.plane_dist;
-        let pixels_to_bottom = half_wall_pixel_height
-            * (-bottom_y_level + caster.origin.y)
-            - caster.y_shearing;
+        let half_wall_pixel_height = self.f_half_height / wall_dist * self.plane_dist;
+        let pixels_to_bottom =
+            half_wall_pixel_height * (-bottom_y_level + ray.origin.y) - self.y_shearing;
         let pixels_to_top =
-            half_wall_pixel_height * (top_y_level - caster.origin.y) + caster.y_shearing;
+            half_wall_pixel_height * (top_y_level - ray.origin.y) + self.y_shearing;
         let full_wall_pixel_height = pixels_to_top + pixels_to_bottom;
 
         // From which pixel to begin drawing and on which to end
-        let draw_from = ((caster.f_half_height - pixels_to_bottom) as usize)
+        let draw_from = ((self.f_half_height - pixels_to_bottom) as usize)
             .clamp(bottom_draw_bound, top_draw_bound);
-        let draw_to = ((caster.f_half_height + pixels_to_top) as usize)
+        let draw_to = ((self.f_half_height + pixels_to_top) as usize)
             .clamp(bottom_draw_bound, top_draw_bound);
 
         let tex_x = match side {
@@ -69,7 +63,7 @@ impl<'a> ColumnRenderer<'a> {
             / full_wall_pixel_height
             / (2.0 / (top_y_level - bottom_y_level));
         let mut tex_y =
-            (draw_from as f32 + pixels_to_bottom - caster.f_half_height) * tex_y_step;
+            (draw_from as f32 + pixels_to_bottom - self.f_half_height) * tex_y_step;
         let draw_fn = match bottom_wall_texture.transparency {
             true => draw_transparent_wall_pixel,
             false => draw_full_wall_pixel,
@@ -114,13 +108,12 @@ impl<'a> ColumnRenderer<'a> {
     pub(super) fn draw_top_wall(
         &self,
         draw_params: DrawParams,
-        texture_manager: &TextureManager,
         column: &mut [u8],
     ) -> usize {
-        let caster = self.caster;
-        let bottom_draw_bound = self.bottom_draw_bound;
-        let top_draw_bound = self.top_draw_bound;
-        let ray = self.ray;
+        let texture_manager = draw_params.texture_manager;
+        let bottom_draw_bound = draw_params.bottom_draw_bound;
+        let top_draw_bound = draw_params.top_draw_bound;
+        let ray = draw_params.ray;
         let tile = draw_params.tile;
         let wall_dist = draw_params.further_wall_dist;
         let side = draw_params.side;
@@ -148,18 +141,17 @@ impl<'a> ColumnRenderer<'a> {
         };
 
         // Calculate wall pixel height for the parts above and below the middle
-        let half_wall_pixel_height = caster.f_half_height / wall_dist * caster.plane_dist;
-        let pixels_to_bottom = half_wall_pixel_height
-            * (-bottom_y_level + caster.origin.y)
-            - caster.y_shearing;
+        let half_wall_pixel_height = self.f_half_height / wall_dist * self.plane_dist;
+        let pixels_to_bottom =
+            half_wall_pixel_height * (-bottom_y_level + ray.origin.y) - self.y_shearing;
         let pixels_to_top =
-            half_wall_pixel_height * (top_y_level - caster.origin.y) + caster.y_shearing;
+            half_wall_pixel_height * (top_y_level - ray.origin.y) + self.y_shearing;
         let full_wall_pixel_height = pixels_to_top + pixels_to_bottom;
 
         // From which pixel to begin drawing and on which to end
-        let draw_from = ((caster.f_half_height - pixels_to_bottom) as usize)
+        let draw_from = ((self.f_half_height - pixels_to_bottom) as usize)
             .clamp(bottom_draw_bound, top_draw_bound);
-        let draw_to = ((caster.f_half_height + pixels_to_top) as usize)
+        let draw_to = ((self.f_half_height + pixels_to_top) as usize)
             .clamp(bottom_draw_bound, top_draw_bound);
 
         let tex_x = match side {
@@ -175,7 +167,7 @@ impl<'a> ColumnRenderer<'a> {
             / full_wall_pixel_height
             / (2.0 / (top_y_level - bottom_y_level));
         let mut tex_y =
-            (draw_from as f32 + pixels_to_bottom - caster.f_half_height) * tex_y_step;
+            (draw_from as f32 + pixels_to_bottom - self.f_half_height) * tex_y_step;
 
         // Precomputed variables for performance increase
         let four_tex_width = tex_width * 4;

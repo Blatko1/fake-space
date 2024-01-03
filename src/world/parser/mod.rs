@@ -51,7 +51,7 @@ impl WorldParser {
         let lines = data
             .lines()
             .enumerate()
-            .map(|(i, line)| (1 + i as u32, line.split("//").next().unwrap().trim()))
+            .map(|(i, line)| (1 + i as u64, line.split("//").next().unwrap().trim()))
             .filter(|(_, line)| !line.is_empty());
 
         // Process each line

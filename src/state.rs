@@ -34,7 +34,7 @@ impl State {
 
     pub fn update(&mut self) {
         self.canvas.clear_buffer();
-        self.raycaster.update();
+        self.raycaster.update(&mut self.world);
         self.raycaster
             .cast_and_draw(&mut self.world, self.canvas.buffer_mut());
     }

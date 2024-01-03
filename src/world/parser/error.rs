@@ -2,13 +2,13 @@ use std::io;
 
 #[derive(Debug)]
 pub enum ParseError {
-    UnknownKey(String, u32),
+    UnknownKey(String, u64),
     FileErr(std::io::ErrorKind),
-    SettingErr(SettingError, u32),
-    TextureErr(TextureError, u32),
-    SegmentErr(SegmentError, u32),
+    SettingErr(SettingError, u64),
+    TextureErr(TextureError, u64),
+    SegmentErr(SegmentError, u64),
 
-    NotEnoughSegments(usize)
+    NotEnoughSegments(usize),
 }
 
 #[derive(Debug)]
@@ -28,19 +28,20 @@ pub enum SegmentError {
 #[derive(Debug)]
 pub enum SegmentParseError {
     Invalid,
-    UnknownKey(String, u32),
-    DimensionsErr(DimensionError, u32),
-    PresetErr(PresetError, u32),
-    TileErr(TileError, u32),
+    UnknownKey(String, u64),
+    DimensionsErr(DimensionError, u64),
+    PresetErr(PresetError, u64),
+    TileErr(TileError, u64),
 
     InvalidLevels(usize, f32, f32, f32, f32),
+    NoPortalsSpecified
 }
 
 #[derive(Debug)]
 pub enum DimensionError {
     InvalidFormat(String),
     ParseError(String),
-    IllegalDimensions(u32, u32),
+    IllegalDimensions(u64, u64),
 }
 
 #[derive(Debug)]

@@ -1,4 +1,4 @@
-use rand::{rngs::ThreadRng, Rng, seq::SliceRandom};
+use rand::{rngs::ThreadRng, seq::SliceRandom, Rng};
 
 use crate::textures::{Texture, TextureData, TextureManager};
 use std::path::PathBuf;
@@ -50,30 +50,31 @@ impl World {
         };
         room_counter += 1;
 
-        let mut adjacent_rooms: Vec<Room> = starting_room.portals.iter_mut().map(|portal| {
-            // The first segment appears only once at the beginning, so skip it
-            let rand_segment = segments[1..].choose(&mut rng).unwrap();
-            let mut room = Room {
-                id: RoomID(room_counter),
-                segment_id: rand_segment.id,
-                portals: rand_segment.portals.clone(),
-            };
-            let room_rand_portal = room.portals.choose_mut(&mut rng).unwrap();
-            
-            // Connect the two portals:
-            // Connect the starting room with new random room
-            portal.connection = Some((room.id, room_rand_portal.id));
-            // Connect the new random room with the starting room
-            room_rand_portal.connection = Some((starting_room.id, portal.id));
-            room_counter += 1;
+        let mut adjacent_rooms: Vec<Room> = starting_room
+            .portals
+            .iter_mut()
+            .map(|portal| {
+                // The first segment appears only once at the beginning, so skip it
+                let rand_segment = segments[1..].choose(&mut rng).unwrap();
+                let mut room = Room {
+                    id: RoomID(room_counter),
+                    segment_id: rand_segment.id,
+                    portals: rand_segment.portals.clone(),
+                };
+                let room_rand_portal = room.portals.choose_mut(&mut rng).unwrap();
 
-            room
-        }).collect();
+                // Connect the two portals:
+                // Connect the starting room with new random room
+                portal.connection = Some((room.id, room_rand_portal.id));
+                // Connect the new random room with the starting room
+                room_rand_portal.connection = Some((starting_room.id, portal.id));
+                room_counter += 1;
+
+                room
+            })
+            .collect();
         rooms.push(starting_room);
         rooms.append(&mut adjacent_rooms);
-        for r in rooms.iter() {
-            println!("r: {:?}, portals: {:?}, segment: {:?}", r.id, r.portals, r.segment_id);
-        }
 
         let segment_count = segments.len();
         Self {
@@ -141,11 +142,12 @@ pub struct Room {
     pub portals: Vec<Portal>,
 }
 
+// TODO Use a struct or type for dimensions instead
 #[derive(Debug)]
 pub struct Segment {
     id: SegmentID,
     name: String,
-    dimensions: (u32, u32),
+    dimensions: (u64, u64),
     tiles: Vec<Tile>,
     portals: Vec<Portal>,
     repeatable: bool,
@@ -155,7 +157,7 @@ impl Segment {
     pub fn new(
         id: SegmentID,
         name: String,
-        dimensions: (u32, u32),
+        dimensions: (u64, u64),
         tiles: Vec<Tile>,
         portals: Vec<Portal>,
         repeatable: bool,
@@ -221,7 +223,7 @@ pub struct Tile {
 pub struct Portal {
     pub id: PortalLocalID,
     pub direction: PortalDirection,
-    pub tile_index: TileIndex,
+    pub local_position: (u64, u64),
     pub connection: Option<(RoomID, PortalLocalID)>,
 }
 

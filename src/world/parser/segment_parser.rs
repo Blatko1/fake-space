@@ -4,7 +4,7 @@ use hashbrown::HashMap;
 
 use crate::{
     textures::Texture,
-    world::world::{Portal, PortalDirection, Tile, PortalLocalID},
+    world::world::{Portal, PortalDirection, PortalLocalID, Tile},
 };
 
 use super::{
@@ -39,13 +39,13 @@ impl<'a> SegmentDataParser<'a> {
     }
     pub(super) fn parse(
         mut self,
-    ) -> Result<((u32, u32), Vec<Tile>, Vec<Portal>), SegmentParseError> {
+    ) -> Result<((u64, u64), Vec<Tile>, Vec<Portal>), SegmentParseError> {
         // Remove comments, remove empty lines and trim data
         let mut lines = self
             .data
             .lines()
             .enumerate()
-            .map(|(i, line)| (1 + i as u32, line.split("//").next().unwrap().trim()))
+            .map(|(i, line)| (1 + i as u64, line.split("//").next().unwrap().trim()))
             .filter(|(_, line)| !line.is_empty());
 
         let dimensions = match lines.next() {
@@ -96,10 +96,12 @@ impl<'a> SegmentDataParser<'a> {
             }
             let portal = match tile.portal_dir {
                 Some(dir) => {
+                    let local_pos_x = i as u64 % dimensions.0;
+                    let local_pos_y = i as u64 / dimensions.0;
                     let portal = Portal {
                         id: PortalLocalID(portal_id),
                         direction: dir,
-                        tile_index: i,
+                        local_position: (local_pos_x, local_pos_y),
                         connection: None,
                     };
                     portals.push(portal);
@@ -122,19 +124,22 @@ impl<'a> SegmentDataParser<'a> {
 
             tiles.push(t);
         }
+        if portals.is_empty() {
+            return Err(SegmentParseError::NoPortalsSpecified)
+        }
 
         Ok((dimensions, tiles, portals))
     }
 
-    fn parse_dimensions(&mut self, line: &str) -> Result<(u32, u32), DimensionError> {
+    fn parse_dimensions(&mut self, line: &str) -> Result<(u64, u64), DimensionError> {
         let split: Vec<&str> = line.split('x').collect();
         if split.len() != 2 {
             return Err(DimensionError::InvalidFormat(line.to_owned()));
         }
-        let Ok(d1) = split[0].trim().parse::<u32>() else {
+        let Ok(d1) = split[0].trim().parse::<u64>() else {
             return Err(DimensionError::ParseError(split[0].to_owned()));
         };
-        let Ok(d2) = split[1].trim().parse::<u32>() else {
+        let Ok(d2) = split[1].trim().parse::<u64>() else {
             return Err(DimensionError::ParseError(split[1].to_owned()));
         };
         if d1 == 0 || d2 == 0 {

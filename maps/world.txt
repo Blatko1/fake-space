@@ -3,8 +3,8 @@
 // Determine the constant settings
 *lvl1 = -90.0
 *lvl2 = -1.0
-*lvl3 = 50.0
-*lvl4 = 70.0
+*lvl3 = 20.0
+*lvl4 = 300.0
 
 // Declare the textures
 // You can't have multiple textures with the same name
@@ -15,6 +15,6 @@
 
 // Declare the segments
 // You can't have multiple segments with the same name
-!start = src:start.txt, repeatable: true
 !main = src:main.txt, repeatable: false
+!start = src:start.txt, repeatable: false
 !room = src:room.txt, repeatable: false
