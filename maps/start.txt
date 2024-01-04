@@ -7,38 +7,81 @@
 // top->texture of top platform
 
 // Declare the presets used in modifying the tiles
-$groundLevel = lvl1:-1.0
-$border = pillar1:BlueBrick, lvl2:2.0, top:LightPlank, $groundLevel
-$pillars = $border, pillar2:Mossy, lvl3:3.0, lvl4:100
-$grass = pillar1:BlueBrick, $groundLevel, lvl2:0.0, bottom:BlueBrick, top:BlueBrick
+$noRoof = lvl3:100000.0, lvl4:100000.0
+$pillar = lvl2:5.0, pillar1:Stone, bottom:Stone
+$tallPillar = $pillar, lvl2:100.0, lvl3:100.1
+$pillarsTopBottom1 = $pillar, lvl2:9.8, lvl3:11.7, top:Stone, pillar2:Stone
+$pillarsTopBottom2 = $pillar, lvl2:9.0, lvl3:12.0, top:Stone, pillar2:Stone
+$pillarsTopBottom3 = $pillar, lvl2:8.0, lvl3:13.0, top:Stone, pillar2:Stone
+$pillarsTopBottom4 = $pillar, lvl2:6.0, lvl3:18.0, top:Stone, pillar2:Stone
+$pillarsTopBottom5 = $pillar, lvl2:2.3, lvl3:24.0, top:Stone, pillar2:Stone
+
+$tower = lvl2:5.0, pillar1:Bricks, bottom:Grass
+$topTower = lvl2:5.0, pillar2:Bricks, top:Bricks
+
+$grass = lvl2:0.0, bottom:Grass,
 
 // Modifying the tiles
-1-400 = $grass
-1-21 = $border
-40-41 = $border
-60-61 = $border
-80-81 = $border
-100-101 = $border
-120-121 = $border
-140-141 = $border
-160-161 = $border
-180-181 = $border
-200-201 = $border
-220-221 = $border
-240-241 = $border
-260-261 = $border
-280-281 = $border
-300-301 = $border
-320-321 = $border
-340-341 = $border
-360-361 = $border
-380-400 = $border
+// Add surrounding pillars
+1-400 = $pillar, $noRoof
+22-39 = $grass
+42-59 = $grass
+62-79 = $grass
+82-99 = $grass
+102-119 = $grass
+122-139 = $grass
+142-159 = $grass
+162-179 = $grass
+182-199 = $grass
+202-219 = $grass
+222-239 = $grass
+242-259 = $grass
+262-279 = $grass
+282-299 = $grass
+302-319 = $grass
+322-339 = $grass
+342-359 = $grass
+362-379 = $grass
 
-244 = portal_direction: N
-250 = $pillars, lvl2:0.5, lvl3:3.5, lvl4:4.0, portal_direction:N
-251 = $pillars, lvl2:3.0, lvl3:4.0, lvl4:5.0
-252 = $pillars, lvl2:3.5, lvl3:4.5, lvl4:5.5
-253 = $pillars, lvl2:4.0, lvl3:5.0, lvl4:6.0
-254 = $pillars, lvl2:4.5, lvl3:5.5, lvl4:5.6
-275 = $pillars, lvl2:6.0, lvl3:100,
-276 = $pillars, lvl2:0.5, lvl3:3.0, portal_direction:S
+// Mountain 1
+22 = $pillarsTopBottom1
+23 = $pillarsTopBottom2
+42 = $pillarsTopBottom2
+24 = $pillarsTopBottom3
+43 = $pillarsTopBottom3
+62 = $pillarsTopBottom3
+25 = $pillarsTopBottom4
+26 = $pillarsTopBottom5
+44 = $pillarsTopBottom4
+45 = $pillarsTopBottom5
+63 = $pillarsTopBottom5
+82 = $pillarsTopBottom5
+5 = $tallPillar
+61 = $tallPillar
+
+// Entrance mountain
+226 = $tower, lvl2:5.0,
+227 = $tower, lvl2:5.9, $topTower, lvl3: 10.0
+
+
+
+
+// Stairs down
+248 = lvl2:-0.3, 
+249 = lvl2:-0.8, 
+250 = lvl2:-0.3,
+
+268 = lvl2:-1.0, 
+269 = lvl2:-1.1, 
+270 = lvl2:-1.0, 
+
+288 = lvl2:-1.7, 
+289 = lvl2:-1.74, 
+290 = lvl2:-0.7, 
+
+308 = lvl2:-2.6, 
+309 = lvl2:-2.7, 
+310 = lvl2:-0.9, 
+
+329 = lvl2:-2.8, portal_direction:N
+

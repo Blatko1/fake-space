@@ -102,6 +102,7 @@ impl<'a> SegmentDataParser<'a> {
                         id: PortalLocalID(portal_id),
                         direction: dir,
                         local_position: (local_pos_x, local_pos_y),
+                        ground_level: level2,
                         connection: None,
                     };
                     portals.push(portal);

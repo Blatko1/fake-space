@@ -223,6 +223,7 @@ pub struct Portal {
     pub id: PortalLocalID,
     pub direction: PortalDirection,
     pub local_position: (u64, u64),
+    pub ground_level: f32,
     pub connection: Option<(RoomID, PortalLocalID)>,
 }
 
@@ -232,4 +233,42 @@ pub enum PortalDirection {
     South,
     East,
     West,
+}
+
+impl PortalDirection {
+    pub fn rotation_radian_difference(&self, other: Self) -> PortalRotationDifference {
+        match self {
+            PortalDirection::North => match other {
+                PortalDirection::North => PortalRotationDifference::Deg180,
+                PortalDirection::South => PortalRotationDifference::None,
+                PortalDirection::East => PortalRotationDifference::LeftDeg90,
+                PortalDirection::West => PortalRotationDifference::RightDeg90,
+            },
+            PortalDirection::South => match other {
+                PortalDirection::North => PortalRotationDifference::None,
+                PortalDirection::South => PortalRotationDifference::Deg180,
+                PortalDirection::East => PortalRotationDifference::RightDeg90,
+                PortalDirection::West => PortalRotationDifference::LeftDeg90,
+            },
+            PortalDirection::East => match other {
+                PortalDirection::North => PortalRotationDifference::RightDeg90,
+                PortalDirection::South => PortalRotationDifference::LeftDeg90,
+                PortalDirection::East => PortalRotationDifference::Deg180,
+                PortalDirection::West => PortalRotationDifference::None,
+            },
+            PortalDirection::West => match other {
+                PortalDirection::North => PortalRotationDifference::LeftDeg90,
+                PortalDirection::South => PortalRotationDifference::RightDeg90,
+                PortalDirection::East => PortalRotationDifference::None,
+                PortalDirection::West => PortalRotationDifference::Deg180,
+            },
+        }
+    }
+}
+
+pub enum PortalRotationDifference {
+    None,
+    LeftDeg90,
+    RightDeg90,
+    Deg180
 }

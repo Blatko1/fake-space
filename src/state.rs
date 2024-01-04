@@ -17,11 +17,11 @@ pub struct State {
 impl State {
     pub fn new(canvas: Canvas, world: World) -> Self {
         let camera = Camera::new(
-            2.0,
+            10.0,
             1.0,
-            2.0,
+            10.0,
             90f32.to_radians(),
-            80f32.to_radians(),
+            90f32.to_radians(),
             canvas.width(),
             canvas.height(),
         );
@@ -42,7 +42,7 @@ impl State {
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         self.canvas.clear_buffer();
         self.player
-            .cast_and_draw(&self.world, self.canvas.buffer_mut());
+            .cast_and_draw(&self.world, self.canvas.mut_column_iterator());
         self.canvas.render()
     }
 

@@ -40,4 +40,4 @@ $grass = pillar1:Mossy, $groundLevel, lvl2:0.0, bottom:Mossy, top:Mossy
 253 = $pillars, lvl2:4.0, lvl3:5.0, lvl4:6.0
 254 = $pillars, lvl2:4.5, lvl3:5.5, lvl4:5.6
 275 = $pillars, lvl2:6.0, lvl3:100,
-276 = $pillars, lvl2:0.5, lvl3:3.0, portal_direction:S
+276 = $pillars, lvl2:0.5, lvl3:3.0, //portal_direction:S

@@ -21,13 +21,13 @@ Excellent explanations about the raycaster [here](https://lodev.org/cgtutor/rayc
 - [x] Add an ability to look freely up and down, moving up and down
 - [x] Improve how map tiles are stored, split the map into three maps, one for regular wall tiles, one for ceiling tiles and one for floor tiles
 - [x] Rotate the canvas by 90 degrees so drawing is more efficient
-- [ ] Add multiple shading effects
+- [x] Simplify map creation by making possible creating maps in external .txt files while following a defined format
+- [x] Add portals
+- [ ] Add shading effects
 - [ ] Add removable object walls (cool opening or moving animation with voxels)
 - [ ] Add collision detection (circle-rectangle collision detection)
 - [ ] Draw a skybox when outside of the map (looking at out of bound parts or at transparent ceiling)
-- [ ] Simplify map creation by making possible creating maps in external .txt files while following a defined format
 - [ ] Add different height walls while also their tops sides (floor), if seen from above, and bottom sides (ceilings), if seen from below
-- [ ] Add portals and a portal gun like in the Portal game
 - [ ] Add special tiles through which the player would fall to their demise
 - [ ] Add an UI
 - [ ] Go unsafe for performance increase after most of the project is finished

@@ -11,7 +11,7 @@ const ROTATION_SPEED: f32 = 0.035;
 const FLY_UP_DOWN_SPEED: f32 = 0.05;
 const ONE_DEGREE_RAD: f32 = PI / 180.0;
 const MAX_FOV_RAD: f32 = 119.0 * ONE_DEGREE_RAD;
-const DEFAULT_PLANE_V: Vec3 = Vec3::new(0.0, 0.5, 0.0);
+pub(super) const DEFAULT_PLANE_V: Vec3 = Vec3::new(0.0, 0.5, 0.0);
 const Y_SHEARING_SENSITIVITY: f32 = 0.8;
 const MOUSE_ROTATION_SPEED: f32 = 0.08;
 const MAX_Y: f32 = 50.0;
@@ -25,7 +25,7 @@ pub struct Camera {
     /// Field of view in radians.
     fov: f32,
     /// Distance from the raycaster position to the camera plane.
-    plane_dist: f32,
+    pub(super) plane_dist: f32,
     /// Position of the raycaster. Whole number represents the tile and
     /// fraction represents the offset in the tile. Each tile has width and
     /// height of `1.0`.
@@ -36,9 +36,9 @@ pub struct Camera {
     pub(super) dir: Vec3,
     /// Raycaster (camera) horizontal plane.
     /// y-coord is always 0.
-    pub(super) plane_h: Vec3,
+    pub(super) horizontal_plane: Vec3,
     /// Raycaster (camera) vertical plane.
-    plane_v: Vec3,
+    vertical_plane: Vec3,
     /// Angle in radians.
     yaw_angle: f32,
     /// Width of the output screen/texture.
@@ -46,18 +46,18 @@ pub struct Camera {
     /// Height of the output screen/texture.
     pub(super) view_height: u32,
     /// Output screen dimension aspect (width/height)
-    aspect: f32,
+    pub(super) aspect: f32,
     /// Creates an illusion that the camera is looking up or down.
     /// In interval of [-self.height/2.0, self.height/2.0]
-    y_shearing: f32,
+    pub(super) y_shearing: f32,
 
     // Specific use variables with goal to improve performance.
     // TODO rename to view_width and view_height
     four_width: usize,
-    f_height: f32,
+    pub(super) f_height: f32,
     pub(super) width_recip: f32,
     height_recip: f32,
-    f_half_height: f32,
+    pub(super) f_half_height: f32,
 
     // Variables for controlling and moving the scene.
     turn_left: f32,
@@ -97,16 +97,16 @@ impl Camera {
         let origin = Vec3::new(pos_x, pos_y, pos_z);
         let dir = Vec3::new(yaw_angle.cos(), 0.0, yaw_angle.sin());
 
-        let plane_v = DEFAULT_PLANE_V / plane_dist;
-        let plane_h = Vec3::cross(DEFAULT_PLANE_V, dir) * aspect / plane_dist;
+        let vertical_plane = DEFAULT_PLANE_V / plane_dist;
+        let horizontal_plane = Vec3::cross(DEFAULT_PLANE_V, dir) * aspect / plane_dist;
 
         Self {
             fov,
             plane_dist,
             origin,
             dir,
-            plane_h,
-            plane_v,
+            horizontal_plane,
+            vertical_plane,
             yaw_angle,
             view_width,
             view_height,
@@ -161,14 +161,14 @@ impl Camera {
         self.dir = Vec3::new(self.yaw_angle.cos(), 0.0, self.yaw_angle.sin());
 
         // Rotate raycaster (camera) planes
-        self.plane_v = DEFAULT_PLANE_V / self.plane_dist;
-        self.plane_h =
+        self.vertical_plane = DEFAULT_PLANE_V / self.plane_dist;
+        self.horizontal_plane =
             Vec3::cross(DEFAULT_PLANE_V, self.dir) * self.aspect / self.plane_dist;
 
         // Update origin position
         self.origin.x += self.dir.x * (self.forward - self.backward) * MOVEMENT_SPEED;
         self.origin.z += self.dir.z * (self.forward - self.backward) * MOVEMENT_SPEED;
-        self.origin += self.plane_h.normalize()
+        self.origin += self.horizontal_plane.normalize()
             * (self.strafe_right - self.strafe_left)
             * MOVEMENT_SPEED;
         self.origin.y = (self.origin.y
@@ -180,10 +180,15 @@ impl Camera {
         self.origin
     }
 
-    pub fn increase_origin(&mut self, x: f32, y: f32, z: f32) {
-        self.origin.x += x;
-        self.origin.y += y;
-        self.origin.z += z;
+    pub fn set_origin(&mut self, x: f32, y: f32, z: f32) {
+        self.origin.x = x;
+        self.origin.y = y;
+        self.origin.z = z;
+    }
+
+    pub fn increase_direction_angle(&mut self, inc_radians: f32) {
+        self.yaw_angle += inc_radians;
+        self.update();
     }
 
     pub fn cast_ray_for(&self, x: usize) -> Ray {

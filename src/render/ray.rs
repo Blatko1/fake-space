@@ -8,6 +8,7 @@ pub struct Ray {
     pub origin: Vec3,
     pub dir: Vec3,
     pub camera_dir: Vec3,
+    pub horizontal_plane: Vec3,
     pub delta_dist_x: f32,
     pub delta_dist_z: f32,
     pub side_dist_x: f32,
@@ -26,7 +27,7 @@ impl Ray {
         // X-coordinate on the horizontal camera plane (range [-1.0, 1.0])
         let plane_x = 2.0 * (x as f32 * camera.width_recip) - 1.0;
         // Ray direction for current pixel column
-        let ray_dir = camera_dir + camera.plane_h * plane_x;
+        let ray_dir = camera_dir + camera.horizontal_plane * plane_x;
         // Length of ray from one x/z side to next x/z side on the tile_map
         let delta_dist_x = 1.0 / ray_dir.x.abs();
         let delta_dist_z = 1.0 / ray_dir.z.abs();
@@ -49,6 +50,7 @@ impl Ray {
             x,
             origin,
             dir: ray_dir,
+            horizontal_plane: camera.horizontal_plane,
             camera_dir,
             delta_dist_x,
             delta_dist_z,

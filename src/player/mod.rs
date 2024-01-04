@@ -2,7 +2,7 @@ use std::f32::consts::PI;
 
 use winit::event::{DeviceEvent, ElementState, VirtualKeyCode, KeyboardInput};
 
-use crate::{world::world::{RoomID, World}, render::camera::Camera};
+use crate::{world::world::{RoomID, World, PortalRotationDifference}, render::{camera::Camera, self}};
 
 const ONE_DEGREE_RAD: f32 = PI / 180.0;
 
@@ -32,16 +32,28 @@ impl Player {
             .segment
             .get_tile(position.x as i32, position.z as i32)
         {
-            if let Some(portal) = tile.portal {
+            if let Some(src_portal) = tile.portal {
                 if !self.in_portal {
-                    if let Some((room_id, portal_id)) = room.portals[portal.id.0].connection {
+                    if let Some((room_id, portal_id)) = room.portals[src_portal.id.0].connection {
                         self.current_room = room_id;
-                        let connected_room = world.get_room_data(room_id);
+                        let dest_room = world.get_room_data(room_id);
+                        let dest_room_portal = dest_room.get_portal(portal_id);
                         let portal_pos =
-                            connected_room.get_portal(portal_id).local_position;
-                        let offset_x = (portal_pos.0 as i64 - position.x as i64) as f32;
-                        let offset_z = (portal_pos.1 as i64 - position.z as i64) as f32;
-                        self.camera.increase_origin(offset_x, 0.0, offset_z);
+                        dest_room_portal.local_position;
+                        let mut x = portal_pos.0 as f32 + position.x.fract(); //position.x + (portal_pos.0 as i64 - position.x as i64) as f32;
+                        let y = position.y + dest_room_portal.ground_level - src_portal.ground_level;
+                        let mut z = portal_pos.1 as f32 + position.z.fract();// position.z + (portal_pos.1 as i64 - position.z as i64) as f32;
+                        match src_portal.direction.rotation_radian_difference(dest_room_portal.direction) {
+                            PortalRotationDifference::None => (),
+                            PortalRotationDifference::LeftDeg90 => todo!(),
+                            PortalRotationDifference::RightDeg90 => todo!(),
+                            PortalRotationDifference::Deg180 => {
+                                self.camera.increase_direction_angle(PI);
+                                x = portal_pos.0 as f32 + 0.5 + (src_portal.local_position.0 as f32 + 0.5) - position.x;
+                                z = portal_pos.1 as f32 + 0.5 + (src_portal.local_position.1 as f32 + 0.5) - position.z;
+                            },
+                        }
+                        self.camera.set_origin(x, y, z);
                         self.in_portal = true;
                     }
                 }
@@ -51,8 +63,8 @@ impl Player {
         }
     }
 
-    pub fn cast_and_draw(&self, world: &World, data: &mut [u8]) {
-        //self.raycaster.cast_and_draw(world, self.current_room, data)
+    pub fn cast_and_draw<'a, C>(&self, world: &World, column_iter: C) where C: Iterator<Item = &'a mut [u8]> {
+        render::cast_and_draw(self, world, column_iter)
     }
 
     pub fn get_camera(&self) -> &Camera {

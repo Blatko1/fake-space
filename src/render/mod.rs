@@ -5,13 +5,14 @@ mod platforms;
 mod voxel_model;
 mod wall;
 
-use crate::{World, player::{Player}, world::world::Tile, textures::TextureManager};
+use glam::Vec3;
 
-use self::ray::Ray;
+use crate::{World, player::{Player}, world::world::{Tile, PortalRotationDifference}, textures::TextureManager};
+
+use self::{ray::Ray, camera::DEFAULT_PLANE_V};
 
 pub fn cast_and_draw<'a, C>(player: &Player, world: &World, column_iter: C) where C: Iterator<Item = &'a mut [u8]> {
     let cam = player.get_camera();
-    let current_room = world.get_room_data(player.get_current_room_id());
     column_iter.enumerate().for_each(|(x, column)| {
         // ====================================================
         //    | LOOP OVER THE RAY PATH AND DRAW HORIZONTAL |
@@ -19,7 +20,7 @@ pub fn cast_and_draw<'a, C>(player: &Player, world: &World, column_iter: C) wher
         // ====================================================
         let mut ray = cam.cast_ray_for(x);
         let texture_manager = world.texture_manager();
-        let mut room = current_room;
+        let mut room = world.get_room_data(player.get_current_room_id());
         let mut segment = room.segment;
 
         let mut portals_passed = 0;
@@ -34,7 +35,7 @@ pub fn cast_and_draw<'a, C>(player: &Player, world: &World, column_iter: C) wher
             let (side, perp_wall_dist, wall_offset) = if ray.side_dist_x < ray.side_dist_z
             {
                 let dist_to_wall = ray.side_dist_x.max(0.0);
-                let wall_offset = cam.origin.z + dist_to_wall * ray.dir.z;
+                let wall_offset = ray.origin.z + dist_to_wall * ray.dir.z;
                 ray.next_tile_x += ray.step_x;
                 ray.side_dist_x += ray.delta_dist_x;
                 (
@@ -44,7 +45,7 @@ pub fn cast_and_draw<'a, C>(player: &Player, world: &World, column_iter: C) wher
                 )
             } else {
                 let dist_to_wall = ray.side_dist_z.max(0.0);
-                let wall_offset = cam.origin.x + dist_to_wall * ray.dir.x;
+                let wall_offset = ray.origin.x + dist_to_wall * ray.dir.x;
                 ray.next_tile_z += ray.step_z;
                 ray.side_dist_z += ray.delta_dist_z;
                 (
@@ -79,18 +80,26 @@ pub fn cast_and_draw<'a, C>(player: &Player, world: &World, column_iter: C) wher
             };
 
             // Drawing top and bottom platforms
-            let drawn_to = draw_bottom_platform(params, column);
+            let drawn_to = platforms::draw_bottom_platform(&cam, params, column);
             bottom_draw_bound = drawn_to;
             params.bottom_draw_bound = bottom_draw_bound;
-            let drawn_from = draw_top_platform(params, column);
+            let drawn_from = platforms::draw_top_platform(&cam, params, column);
             top_draw_bound = drawn_from;
             params.top_draw_bound = top_draw_bound;
 
-            let Some(&next_tile) =
-                segment.get_tile(ray.next_tile_x as i32, ray.next_tile_z as i32)
-            else {
-                break;
+            let mut next_tile = match segment.get_tile(ray.next_tile_x as i32, ray.next_tile_z as i32) {
+                Some(&t) => t,
+                None => break,
             };
+            params.tile = next_tile;
+            // Drawing top and bottom walls
+            let drawn_to = wall::draw_bottom_wall(&cam, params, column);
+            bottom_draw_bound = drawn_to;
+            let drawn_from = wall::draw_top_wall(&cam, params, column);
+            top_draw_bound = drawn_from;
+
+            previous_perp_wall_dist = perp_wall_dist;
+
             // Switch to the different room if portal is hit
             if let Some(portal) = next_tile.portal {
                 portals_passed += 1;
@@ -109,23 +118,33 @@ pub fn cast_and_draw<'a, C>(player: &Player, world: &World, column_iter: C) wher
                 let old_next_z = ray.next_tile_z;
                 ray.next_tile_x = dest_portal.local_position.0 as i64;
                 ray.next_tile_z = dest_portal.local_position.1 as i64;
-                ray.origin.x += (-old_next_x + ray.next_tile_x) as f32;
-                ray.origin.z += (-old_next_z + ray.next_tile_z) as f32;
-                params.ray = ray;
-            }
-            let Some(&next_tile) =
-                segment.get_tile(ray.next_tile_x as i32, ray.next_tile_z as i32)
-            else {
-                break;
-            };
-            params.tile = next_tile;
-            // Drawing top and bottom walls
-            let drawn_to = draw_bottom_wall(params, column);
-            bottom_draw_bound = drawn_to;
-            let drawn_from = draw_top_wall(params, column);
-            top_draw_bound = drawn_from;
+                ray.origin.x += (ray.next_tile_x - old_next_x) as f32;
+                ray.origin.z += (ray.next_tile_z - old_next_z) as f32;
+                let old_tile_ground_level = next_tile.level2;
+                let next_tile = match segment.get_tile(ray.next_tile_x as i32, ray.next_tile_z as i32) {
+                    Some(&t) => t,
+                    None => break,
+                };
+                ray.origin.y -= old_tile_ground_level - next_tile.level2;
 
-            previous_perp_wall_dist = perp_wall_dist;
+                let src_portal_dir = portal.direction;
+                let dest_portal_dir = dest_portal.direction;
+                match src_portal_dir.rotation_radian_difference(dest_portal_dir) {
+                    PortalRotationDifference::None => (),
+                    PortalRotationDifference::LeftDeg90 => todo!(),
+                    PortalRotationDifference::RightDeg90 => todo!(),
+                    PortalRotationDifference::Deg180 => {
+                        ray.origin.x = 2.0*dest_portal.local_position.0 as f32 + 1.0 - ray.origin.x;
+                        ray.origin.z = 2.0*dest_portal.local_position.1 as f32 + 1.0 - ray.origin.z;
+                        ray.dir = -ray.dir;
+                        ray.camera_dir = -ray.camera_dir;
+                        ray.horizontal_plane =
+                        Vec3::cross(DEFAULT_PLANE_V, ray.camera_dir) * cam.aspect / cam.plane_dist;
+                        ray.step_x = -ray.step_x;
+                        ray.step_z = -ray.step_z;
+                    },
+                }
+            }
         }
     })
 }

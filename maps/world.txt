@@ -2,12 +2,15 @@
 
 // Determine the constant settings
 *lvl1 = -90.0
-*lvl2 = -1.0
+*lvl2 = -10.0
 *lvl3 = 20.0
 *lvl4 = 300.0
 
 // Declare the textures
 // You can't have multiple textures with the same name
+#Grass = path:../res/grass.jpg, transparency:false
+#Stone = path:../res/stone.jpg, transparency:false
+#Bricks = path:../res/stone_bricks.jpg, transparency:false
 #BlueBrick = path:../res/blue_brick.png, transparency:false
 #LightPlank = path:../res/light_plank.png, transparency:false
 #Mossy = path:../res/mossy_stone.png, transparency:false
@@ -15,6 +18,6 @@
 
 // Declare the segments
 // You can't have multiple segments with the same name
-!main = src:main.txt, repeatable: false
 !start = src:start.txt, repeatable: false
+//!start = src:main.txt, repeatable: false
 !room = src:room.txt, repeatable: false

@@ -201,11 +201,7 @@ impl Canvas {
     }
     // TODO check out try_fill(rand) for cool effects!
 
-    pub fn buffer_mut(&mut self) -> &mut [u8] {
-        &mut self.buffer
-    }
-
-    pub fn column_iterator(&mut self) -> impl Iterator<Item = &mut [u8]> {
+    pub fn mut_column_iterator(&mut self) -> impl Iterator<Item = &mut [u8]> {
         self.buffer.chunks_exact_mut(self.height as usize * 4)
     }
 

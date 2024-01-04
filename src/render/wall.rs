@@ -1,10 +1,11 @@
 use crate::textures::TextureManager;
 
-use super::{blend, Side, DrawParams};
+use super::{blend, Side, DrawParams, camera::Camera};
 
 // TODO write tests for each draw call function to check for overflows
     // Draws full and transparent walls.
     pub(super) fn draw_bottom_wall(
+        cam: &Camera,
         draw_params: DrawParams,
         column: &mut [u8],
     ) -> usize {
@@ -35,17 +36,17 @@ use super::{blend, Side, DrawParams};
         );
 
         // Calculate wall pixel height for the parts above and below the middle
-        let half_wall_pixel_height = self.f_half_height / wall_dist * self.plane_dist;
+        let half_wall_pixel_height = cam.f_half_height / wall_dist * cam.plane_dist;
         let pixels_to_bottom =
-            half_wall_pixel_height * (-bottom_y_level + ray.origin.y) - self.y_shearing;
+            half_wall_pixel_height * (-bottom_y_level + ray.origin.y) - cam.y_shearing;
         let pixels_to_top =
-            half_wall_pixel_height * (top_y_level - ray.origin.y) + self.y_shearing;
+            half_wall_pixel_height * (top_y_level - ray.origin.y) + cam.y_shearing;
         let full_wall_pixel_height = pixels_to_top + pixels_to_bottom;
 
         // From which pixel to begin drawing and on which to end
-        let draw_from = ((self.f_half_height - pixels_to_bottom) as usize)
+        let draw_from = ((cam.f_half_height - pixels_to_bottom) as usize)
             .clamp(bottom_draw_bound, top_draw_bound);
-        let draw_to = ((self.f_half_height + pixels_to_top) as usize)
+        let draw_to = ((cam.f_half_height + pixels_to_top) as usize)
             .clamp(bottom_draw_bound, top_draw_bound);
 
         let tex_x = match side {
@@ -61,7 +62,7 @@ use super::{blend, Side, DrawParams};
             / full_wall_pixel_height
             / (2.0 / (top_y_level - bottom_y_level));
         let mut tex_y =
-            (draw_from as f32 + pixels_to_bottom - self.f_half_height) * tex_y_step;
+            (draw_from as f32 + pixels_to_bottom - cam.f_half_height) * tex_y_step;
         let draw_fn = match bottom_wall_texture.transparency {
             true => draw_transparent_wall_pixel,
             false => draw_full_wall_pixel,
@@ -104,6 +105,7 @@ use super::{blend, Side, DrawParams};
     }
 
     pub(super) fn draw_top_wall(
+        cam: &Camera,
         draw_params: DrawParams,
         column: &mut [u8],
     ) -> usize {
@@ -138,17 +140,17 @@ use super::{blend, Side, DrawParams};
         };
 
         // Calculate wall pixel height for the parts above and below the middle
-        let half_wall_pixel_height = self.f_half_height / wall_dist * self.plane_dist;
+        let half_wall_pixel_height = cam.f_half_height / wall_dist * cam.plane_dist;
         let pixels_to_bottom =
-            half_wall_pixel_height * (-bottom_y_level + ray.origin.y) - self.y_shearing;
+            half_wall_pixel_height * (-bottom_y_level + ray.origin.y) - cam.y_shearing;
         let pixels_to_top =
-            half_wall_pixel_height * (top_y_level - ray.origin.y) + self.y_shearing;
+            half_wall_pixel_height * (top_y_level - ray.origin.y) + cam.y_shearing;
         let full_wall_pixel_height = pixels_to_top + pixels_to_bottom;
 
         // From which pixel to begin drawing and on which to end
-        let draw_from = ((self.f_half_height - pixels_to_bottom) as usize)
+        let draw_from = ((cam.f_half_height - pixels_to_bottom) as usize)
             .clamp(bottom_draw_bound, top_draw_bound);
-        let draw_to = ((self.f_half_height + pixels_to_top) as usize)
+        let draw_to = ((cam.f_half_height + pixels_to_top) as usize)
             .clamp(bottom_draw_bound, top_draw_bound);
 
         let tex_x = match side {
@@ -164,7 +166,7 @@ use super::{blend, Side, DrawParams};
             / full_wall_pixel_height
             / (2.0 / (top_y_level - bottom_y_level));
         let mut tex_y =
-            (draw_from as f32 + pixels_to_bottom - self.f_half_height) * tex_y_step;
+            (draw_from as f32 + pixels_to_bottom - cam.f_half_height) * tex_y_step;
 
         // Precomputed variables for performance increase
         let four_tex_width = tex_width * 4;
