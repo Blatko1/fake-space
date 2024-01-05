@@ -40,7 +40,7 @@ pub struct Camera {
     /// Raycaster (camera) vertical plane.
     vertical_plane: Vec3,
     /// Angle in radians.
-    yaw_angle: f32,
+    pub(super) yaw_angle: f32,
     /// Width of the output screen/texture.
     pub(super) view_width: u32,
     /// Height of the output screen/texture.
@@ -189,10 +189,6 @@ impl Camera {
     pub fn increase_direction_angle(&mut self, inc_radians: f32) {
         self.yaw_angle += inc_radians;
         self.update();
-    }
-
-    pub fn cast_ray_for(&self, x: usize) -> Ray {
-        Ray::cast_for_column(x, self)
     }
 
     pub fn process_mouse_input(&mut self, event: DeviceEvent) {

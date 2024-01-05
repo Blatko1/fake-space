@@ -20,14 +20,15 @@ pub struct Ray {
 }
 
 impl Ray {
-    pub fn cast_for_column(x: usize, camera: &Camera) -> Self {
-        let origin = camera.origin;
-        let camera_dir = camera.dir;
+    pub fn cast_with_camera(x: usize, camera: &Camera) -> Self {
+        Self::cast(x, camera.origin, camera.dir, camera.view_width, camera.horizontal_plane)
+    }
 
+    pub fn cast(x: usize, origin: Vec3, camera_dir: Vec3, view_width: u32, horizontal_camera_plane: Vec3) -> Self {
         // X-coordinate on the horizontal camera plane (range [-1.0, 1.0])
-        let plane_x = 2.0 * (x as f32 * camera.width_recip) - 1.0;
+        let plane_x = 2.0 * (x as f32 * (view_width as f32).recip()) - 1.0;
         // Ray direction for current pixel column
-        let ray_dir = camera_dir + camera.horizontal_plane * plane_x;
+        let ray_dir = camera_dir + horizontal_camera_plane * plane_x;
         // Length of ray from one x/z side to next x/z side on the tile_map
         let delta_dist_x = 1.0 / ray_dir.x.abs();
         let delta_dist_z = 1.0 / ray_dir.z.abs();
@@ -50,7 +51,7 @@ impl Ray {
             x,
             origin,
             dir: ray_dir,
-            horizontal_plane: camera.horizontal_plane,
+            horizontal_plane: horizontal_camera_plane,
             camera_dir,
             delta_dist_x,
             delta_dist_z,

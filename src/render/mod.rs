@@ -5,11 +5,15 @@ mod platforms;
 mod voxel_model;
 mod wall;
 
+use std::f32::consts::PI;
+
 use glam::Vec3;
 
 use crate::{World, player::{Player}, world::world::{Tile, PortalRotationDifference}, textures::TextureManager};
 
 use self::{ray::Ray, camera::DEFAULT_PLANE_V};
+
+const HALF_PI: f32 = PI * 0.5;
 
 pub fn cast_and_draw<'a, C>(player: &Player, world: &World, column_iter: C) where C: Iterator<Item = &'a mut [u8]> {
     let cam = player.get_camera();
@@ -18,12 +22,11 @@ pub fn cast_and_draw<'a, C>(player: &Player, world: &World, column_iter: C) wher
         //    | LOOP OVER THE RAY PATH AND DRAW HORIZONTAL |
         //    | PLATFORMS AND VERTICAL PLATFORMS (WALLS)   |
         // ====================================================
-        let mut ray = cam.cast_ray_for(x);
+        let mut ray = Ray::cast_with_camera(x, cam);
         let texture_manager = world.texture_manager();
         let mut room = world.get_room_data(player.get_current_room_id());
         let mut segment = room.segment;
 
-        let mut portals_passed = 0;
         let mut previous_perp_wall_dist = 0.0;
         let mut bottom_draw_bound = 0;
         let mut top_draw_bound = cam.view_height as usize;
@@ -91,21 +94,9 @@ pub fn cast_and_draw<'a, C>(player: &Player, world: &World, column_iter: C) wher
                 Some(&t) => t,
                 None => break,
             };
-            params.tile = next_tile;
-            // Drawing top and bottom walls
-            let drawn_to = wall::draw_bottom_wall(&cam, params, column);
-            bottom_draw_bound = drawn_to;
-            let drawn_from = wall::draw_top_wall(&cam, params, column);
-            top_draw_bound = drawn_from;
-
-            previous_perp_wall_dist = perp_wall_dist;
 
             // Switch to the different room if portal is hit
             if let Some(portal) = next_tile.portal {
-                portals_passed += 1;
-                if portals_passed >= 4 {
-                    break;
-                }
                 let Some((dest_room_id, dest_portal_id)) =
                     room.portals[portal.id.0].connection
                 else {
@@ -121,7 +112,7 @@ pub fn cast_and_draw<'a, C>(player: &Player, world: &World, column_iter: C) wher
                 ray.origin.x += (ray.next_tile_x - old_next_x) as f32;
                 ray.origin.z += (ray.next_tile_z - old_next_z) as f32;
                 let old_tile_ground_level = next_tile.level2;
-                let next_tile = match segment.get_tile(ray.next_tile_x as i32, ray.next_tile_z as i32) {
+                next_tile = match segment.get_tile(ray.next_tile_x as i32, ray.next_tile_z as i32) {
                     Some(&t) => t,
                     None => break,
                 };
@@ -131,20 +122,73 @@ pub fn cast_and_draw<'a, C>(player: &Player, world: &World, column_iter: C) wher
                 let dest_portal_dir = dest_portal.direction;
                 match src_portal_dir.rotation_radian_difference(dest_portal_dir) {
                     PortalRotationDifference::None => (),
-                    PortalRotationDifference::LeftDeg90 => todo!(),
-                    PortalRotationDifference::RightDeg90 => todo!(),
+                    PortalRotationDifference::ClockwiseDeg90 => {
+                        let dest_center_x = dest_portal.local_position.0 as f32 + 0.5;
+                        let dest_center_z = dest_portal.local_position.1 as f32 + 0.5;
+                        // Rotate everything 90 degrees clockwise
+                        let origin_x = dest_center_x - (dest_center_z - ray.origin.z);
+                        let origin_z = dest_center_z + (dest_center_x - ray.origin.x);
+                        ray.origin.x = origin_x;
+                        ray.origin.z = origin_z;
+                        ray.dir = Vec3::new(ray.dir.z, 0.0, -ray.dir.x);
+                        ray.camera_dir = Vec3::new(ray.camera_dir.z, 0.0, -ray.camera_dir.x);
+                        ray.horizontal_plane = Vec3::new(ray.horizontal_plane.z, 0.0, -ray.horizontal_plane.x);
+
+                        std::mem::swap(&mut ray.delta_dist_x, &mut ray.delta_dist_z);
+                        std::mem::swap(&mut ray.side_dist_x, &mut ray.side_dist_z);
+                        ray.step_x = ray.dir.x.signum() as i64;
+                        ray.step_z = ray.dir.z.signum() as i64;
+
+                    },
+                    PortalRotationDifference::AnticlockwiseDeg90 => {
+                        let dest_center_x = dest_portal.local_position.0 as f32 + 0.5;
+                        let dest_center_z = dest_portal.local_position.1 as f32 + 0.5;
+                        // Rotate everything 90 degrees anticlockwise
+                        let origin_x = dest_center_x + (dest_center_z - ray.origin.z);
+                        let origin_z = dest_center_z - (dest_center_x - ray.origin.x);
+                        ray.origin.x = origin_x;
+                        ray.origin.z = origin_z;
+                        ray.horizontal_plane = Vec3::new(-ray.horizontal_plane.z, 0.0, ray.horizontal_plane.x);
+                        ray.camera_dir = Vec3::new(-ray.camera_dir.z, 0.0, ray.camera_dir.x);
+                        ray.dir = Vec3::new(-ray.dir.z, 0.0, ray.dir.x);
+
+                        std::mem::swap(&mut ray.delta_dist_x, &mut ray.delta_dist_z);
+                        std::mem::swap(&mut ray.side_dist_x, &mut ray.side_dist_z);
+                        ray.step_x = ray.dir.x.signum() as i64;
+                        ray.step_z = ray.dir.z.signum() as i64;
+                    },
                     PortalRotationDifference::Deg180 => {
-                        ray.origin.x = 2.0*dest_portal.local_position.0 as f32 + 1.0 - ray.origin.x;
-                        ray.origin.z = 2.0*dest_portal.local_position.1 as f32 + 1.0 - ray.origin.z;
+                        let dest_center_x = dest_portal.local_position.0 as f32 + 0.5;
+                        let dest_center_z = dest_portal.local_position.1 as f32 + 0.5;
+                        // Rotate everything 180 degrees and reposition the origin
+                        ray.origin.x = dest_center_x + (dest_center_x - ray.origin.x);
+                        ray.origin.z = dest_center_z + (dest_center_z - ray.origin.z);
                         ray.dir = -ray.dir;
                         ray.camera_dir = -ray.camera_dir;
-                        ray.horizontal_plane =
-                        Vec3::cross(DEFAULT_PLANE_V, ray.camera_dir) * cam.aspect / cam.plane_dist;
+                        ray.horizontal_plane = -ray.horizontal_plane;
                         ray.step_x = -ray.step_x;
                         ray.step_z = -ray.step_z;
                     },
                 }
+                params.ray = ray;
+                if x == 30 {
+                //println!(">>>>>>>>>>>>>>>>>: {:?}", ray);
+                }
+            } else {
+                if x == 30 && player.get_current_room_id() != crate::world::world::RoomID(0) {
+                //println!("_________________: {:?}", ray);
+                //panic!()
+                }
             }
+
+            params.tile = next_tile;
+            // Drawing top and bottom walls
+            let drawn_to = wall::draw_bottom_wall(&cam, params, column);
+            bottom_draw_bound = drawn_to;
+            let drawn_from = wall::draw_top_wall(&cam, params, column);
+            top_draw_bound = drawn_from;
+
+            previous_perp_wall_dist = perp_wall_dist;
         }
     })
 }

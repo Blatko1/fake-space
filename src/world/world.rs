@@ -7,7 +7,7 @@ use super::parser::{error::ParseError, WorldParser};
 
 pub type TileIndex = usize;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RoomID(pub usize);
 
 #[derive(Debug, Clone, Copy)]
@@ -241,24 +241,24 @@ impl PortalDirection {
             PortalDirection::North => match other {
                 PortalDirection::North => PortalRotationDifference::Deg180,
                 PortalDirection::South => PortalRotationDifference::None,
-                PortalDirection::East => PortalRotationDifference::LeftDeg90,
-                PortalDirection::West => PortalRotationDifference::RightDeg90,
+                PortalDirection::East => PortalRotationDifference::AnticlockwiseDeg90,
+                PortalDirection::West => PortalRotationDifference::ClockwiseDeg90,
             },
             PortalDirection::South => match other {
                 PortalDirection::North => PortalRotationDifference::None,
                 PortalDirection::South => PortalRotationDifference::Deg180,
-                PortalDirection::East => PortalRotationDifference::RightDeg90,
-                PortalDirection::West => PortalRotationDifference::LeftDeg90,
+                PortalDirection::East => PortalRotationDifference::ClockwiseDeg90,
+                PortalDirection::West => PortalRotationDifference::AnticlockwiseDeg90,
             },
             PortalDirection::East => match other {
-                PortalDirection::North => PortalRotationDifference::RightDeg90,
-                PortalDirection::South => PortalRotationDifference::LeftDeg90,
+                PortalDirection::North => PortalRotationDifference::ClockwiseDeg90,
+                PortalDirection::South => PortalRotationDifference::AnticlockwiseDeg90,
                 PortalDirection::East => PortalRotationDifference::Deg180,
                 PortalDirection::West => PortalRotationDifference::None,
             },
             PortalDirection::West => match other {
-                PortalDirection::North => PortalRotationDifference::LeftDeg90,
-                PortalDirection::South => PortalRotationDifference::RightDeg90,
+                PortalDirection::North => PortalRotationDifference::AnticlockwiseDeg90,
+                PortalDirection::South => PortalRotationDifference::ClockwiseDeg90,
                 PortalDirection::East => PortalRotationDifference::None,
                 PortalDirection::West => PortalRotationDifference::Deg180,
             },
@@ -268,7 +268,7 @@ impl PortalDirection {
 
 pub enum PortalRotationDifference {
     None,
-    LeftDeg90,
-    RightDeg90,
+    AnticlockwiseDeg90,
+    ClockwiseDeg90,
     Deg180
 }

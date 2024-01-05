@@ -17,9 +17,9 @@ pub struct State {
 impl State {
     pub fn new(canvas: Canvas, world: World) -> Self {
         let camera = Camera::new(
-            10.0,
+            10.5,
             1.0,
-            10.0,
+            14.5,
             90f32.to_radians(),
             90f32.to_radians(),
             canvas.width(),

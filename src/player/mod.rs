@@ -37,20 +37,26 @@ impl Player {
                     if let Some((room_id, portal_id)) = room.portals[src_portal.id.0].connection {
                         self.current_room = room_id;
                         let dest_room = world.get_room_data(room_id);
-                        let dest_room_portal = dest_room.get_portal(portal_id);
-                        let portal_pos =
-                        dest_room_portal.local_position;
-                        let mut x = portal_pos.0 as f32 + position.x.fract(); //position.x + (portal_pos.0 as i64 - position.x as i64) as f32;
-                        let y = position.y + dest_room_portal.ground_level - src_portal.ground_level;
-                        let mut z = portal_pos.1 as f32 + position.z.fract();// position.z + (portal_pos.1 as i64 - position.z as i64) as f32;
-                        match src_portal.direction.rotation_radian_difference(dest_room_portal.direction) {
+                        let dest_portal = dest_room.get_portal(portal_id);
+                        let mut x = dest_portal.local_position.0 as f32 + position.x.fract();
+                        let y = position.y + dest_portal.ground_level - src_portal.ground_level;
+                        let mut z = dest_portal.local_position.1 as f32 + position.z.fract();
+                        match src_portal.direction.rotation_radian_difference(dest_portal.direction) {
                             PortalRotationDifference::None => (),
-                            PortalRotationDifference::LeftDeg90 => todo!(),
-                            PortalRotationDifference::RightDeg90 => todo!(),
+                            PortalRotationDifference::ClockwiseDeg90 => {
+                                self.camera.increase_direction_angle(-PI/2.0);
+                                x = dest_portal.local_position.0 as f32 + 0.5 - (src_portal.local_position.1 as f32 + 0.5 - position.z);
+                                z = dest_portal.local_position.1 as f32 + 0.5 + (src_portal.local_position.0 as f32 + 0.5 - position.x);
+                            },
+                            PortalRotationDifference::AnticlockwiseDeg90 => {
+                                self.camera.increase_direction_angle(PI/2.0);
+                                x = dest_portal.local_position.0 as f32 + 0.5 + (src_portal.local_position.1 as f32 + 0.5 - position.z);
+                                z = dest_portal.local_position.1 as f32 + 0.5 - (src_portal.local_position.0 as f32 + 0.5 - position.x);
+                            },
                             PortalRotationDifference::Deg180 => {
                                 self.camera.increase_direction_angle(PI);
-                                x = portal_pos.0 as f32 + 0.5 + (src_portal.local_position.0 as f32 + 0.5) - position.x;
-                                z = portal_pos.1 as f32 + 0.5 + (src_portal.local_position.1 as f32 + 0.5) - position.z;
+                                x = dest_portal.local_position.0 as f32 + 0.5 + (src_portal.local_position.0 as f32 + 0.5) - position.x;
+                                z = dest_portal.local_position.1 as f32 + 0.5 + (src_portal.local_position.1 as f32 + 0.5) - position.z;
                             },
                         }
                         self.camera.set_origin(x, y, z);

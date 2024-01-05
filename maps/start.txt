@@ -84,4 +84,7 @@ $grass = lvl2:0.0, bottom:Grass,
 310 = lvl2:-0.9, 
 
 329 = lvl2:-2.8, portal_direction:N
+331 = portal_direction:E
+333 = portal_direction:S
+335 = portal_direction:W
 
