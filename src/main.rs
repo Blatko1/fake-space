@@ -36,7 +36,7 @@ fn main() {
 
     let world = World::from_path("maps/world.txt").unwrap();
 
-    let canvas = block_on(Canvas::init(&winit_window, 240 * 8, 135 * 8));
+    let canvas = block_on(Canvas::init(&winit_window, 240 * 2, 135 * 2));
 
     let mut state = State::new(canvas, world);
 
