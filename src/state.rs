@@ -41,6 +41,7 @@ impl State {
 
     pub fn update(&mut self) {
         self.player.update(&self.world);
+        self.world.update(&self.player);
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
