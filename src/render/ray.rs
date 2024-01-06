@@ -1,4 +1,6 @@
 use glam::Vec3;
+use crate::render::PointXZ;
+use crate::world::portal::{Portal, PortalRotationDifference};
 
 use super::camera::Camera;
 
@@ -13,8 +15,7 @@ pub struct Ray {
     pub delta_dist_z: f32,
     pub side_dist_x: f32,
     pub side_dist_z: f32,
-    pub next_tile_x: i64,
-    pub next_tile_z: i64,
+    pub next_tile: PointXZ<i64>,
     pub step_x: i64,
     pub step_z: i64,
 }
@@ -35,17 +36,17 @@ impl Ray {
         // Distance to nearest x side
         let side_dist_x = delta_dist_x
             * if ray_dir.x < 0.0 {
-            origin.x.fract()
-        } else {
-            1.0 - origin.x.fract()
-        };
+                origin.x.fract()
+            } else {
+                1.0 - origin.x.fract()
+            };
         // Distance to nearest z side
         let side_dist_z = delta_dist_z
             * if ray_dir.z < 0.0 {
-            origin.z.fract()
-        } else {
-            1.0 - origin.z.fract()
-        };
+                origin.z.fract()
+            } else {
+                1.0 - origin.z.fract()
+            };
 
         Self {
             x,
@@ -57,11 +58,74 @@ impl Ray {
             delta_dist_z,
             side_dist_x,
             side_dist_z,
-            // Coordinates of the map tile the camera is in
-            next_tile_x: origin.x as i64,
-            next_tile_z: origin.z as i64,
+            // Coordinates of the tile from which the ray starts
+            next_tile: PointXZ {x: origin.x as i64, z: origin.z as i64},
             step_x: ray_dir.x.signum() as i64,
             step_z: ray_dir.z.signum() as i64,
+        }
+    }
+
+    pub fn portal_teleport(&mut self, src: Portal, dest: Portal) {
+        self.origin.x += (dest.position.x as i64 - self.next_tile.x) as f32;
+        self.origin.z += (dest.position.z as i64 - self.next_tile.z) as f32;
+        self.origin.y -= src.ground_level - dest.ground_level;
+        self.next_tile = PointXZ {x: dest.position.x as i64, z: dest.position.z as i64};
+
+        match src
+            .direction
+            .rotation_difference(dest.direction)
+        {
+            PortalRotationDifference::None => (),
+            PortalRotationDifference::ClockwiseDeg90 => {
+                // Rotate 90 degrees clockwise and reposition the origin
+                let origin_x = dest.center.x - (dest.center.z - self.origin.z);
+                let origin_z = dest.center.z + (dest.center.x - self.origin.x);
+                self.origin.x = origin_x;
+                self.origin.z = origin_z;
+                self.dir = Vec3::new(self.dir.z, 0.0, -self.dir.x);
+                self.camera_dir =
+                    Vec3::new(self.camera_dir.z, 0.0, -self.camera_dir.x);
+                self.horizontal_plane = Vec3::new(
+                    self.horizontal_plane.z,
+                    0.0,
+                    -self.horizontal_plane.x,
+                );
+
+                std::mem::swap(&mut self.delta_dist_x, &mut self.delta_dist_z);
+                std::mem::swap(&mut self.side_dist_x, &mut self.side_dist_z);
+                self.step_x = self.dir.x.signum() as i64;
+                self.step_z = self.dir.z.signum() as i64;
+            }
+            PortalRotationDifference::AnticlockwiseDeg90 => {
+                // Rotate 90 degrees anticlockwise and reposition the origin
+                let origin_x = dest.center.x + (dest.center.z - self.origin.z);
+                let origin_z = dest.center.z - (dest.center.x - self.origin.x);
+                self.origin.x = origin_x;
+                self.origin.z = origin_z;
+                self.horizontal_plane = Vec3::new(
+                    -self.horizontal_plane.z,
+                    0.0,
+                    self.horizontal_plane.x,
+                );
+                self.camera_dir =
+                    Vec3::new(-self.camera_dir.z, 0.0, self.camera_dir.x);
+                self.dir = Vec3::new(-self.dir.z, 0.0, self.dir.x);
+
+                std::mem::swap(&mut self.delta_dist_x, &mut self.delta_dist_z);
+                std::mem::swap(&mut self.side_dist_x, &mut self.side_dist_z);
+                self.step_x = self.dir.x.signum() as i64;
+                self.step_z = self.dir.z.signum() as i64;
+            }
+            PortalRotationDifference::Deg180 => {
+                // Rotate 180 degrees and reposition the origin
+                self.origin.x = dest.center.x + (dest.center.x - self.origin.x);
+                self.origin.z = dest.center.z + (dest.center.z - self.origin.z);
+                self.dir = -self.dir;
+                self.camera_dir = -self.camera_dir;
+                self.horizontal_plane = -self.horizontal_plane;
+                self.step_x = -self.step_x;
+                self.step_z = -self.step_z;
+            }
         }
     }
 }

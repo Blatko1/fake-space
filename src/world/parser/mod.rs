@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use hashbrown::HashMap;
 use image::{io::Reader as ImageReader, EncodableLayout};
 
-use crate::textures::{Texture, TextureData};
+use super::{Texture, TextureData};
 
 use self::error::{ParseError, SegmentError, SettingError, TextureError};
 use self::segment_parser::SegmentDataParser;

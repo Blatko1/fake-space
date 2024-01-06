@@ -1,8 +1,8 @@
 use std::f32::consts::{PI, TAU};
 
+use crate::world::portal::{Portal, PortalRotationDifference};
 use glam::Vec3;
 use winit::event::{DeviceEvent, ElementState, KeyboardInput, VirtualKeyCode};
-use crate::world::portal::{Portal, PortalRotationDifference};
 
 // TODO rotation control with mouse and/or keyboard
 const MOVEMENT_SPEED: f32 = 0.1;
@@ -166,54 +166,38 @@ impl Camera {
         self.origin.x += self.dir.x * (self.forward - self.backward) * MOVEMENT_SPEED;
         self.origin.z += self.dir.z * (self.forward - self.backward) * MOVEMENT_SPEED;
         let horizontal_plane_norm = self.horizontal_plane.normalize();
-        self.origin.x += horizontal_plane_norm.x * (self.strafe_right - self.strafe_left) * MOVEMENT_SPEED;
-        self.origin.z += horizontal_plane_norm.z * (self.strafe_right - self.strafe_left) * MOVEMENT_SPEED;
+        self.origin.x += horizontal_plane_norm.x
+            * (self.strafe_right - self.strafe_left)
+            * MOVEMENT_SPEED;
+        self.origin.z += horizontal_plane_norm.z
+            * (self.strafe_right - self.strafe_left)
+            * MOVEMENT_SPEED;
         self.origin.y += (self.fly_up - self.fly_down) * FLY_UP_DOWN_SPEED;
     }
 
     pub fn portal_teleport(&mut self, src: Portal, dest: Portal) {
-        let src_center_x = src.position.x as f32 + 0.5;
-        let src_center_z = src.position.z as f32 + 0.5;
-        let dest_center_x = dest.position.x as f32 + 0.5;
-        let dest_center_z = dest.position.z as f32 + 0.5;
-
-        let mut x;
+        let x;
         let y = self.origin.y + dest.ground_level - src.ground_level;
-        let mut z;
-        match src
-            .direction
-            .rotation_difference(dest.direction)
-        {
+        let z;
+        match src.direction.rotation_difference(dest.direction) {
             PortalRotationDifference::None => {
                 x = dest.position.x as f32 + self.origin.x.fract();
                 z = dest.position.z as f32 + self.origin.z.fract();
-            },
+            }
             PortalRotationDifference::ClockwiseDeg90 => {
-                self.yaw_angle -= PI/2.0;
-                x = dest_center_x
-                    - (src_center_z
-                    - self.origin.z);
-                z = dest_center_z
-                    + (src_center_x
-                    - self.origin.x);
+                self.yaw_angle -= PI / 2.0;
+                x = dest.center.x - (src.center.z - self.origin.z);
+                z = dest.center.z + (src.center.x - self.origin.x);
             }
             PortalRotationDifference::AnticlockwiseDeg90 => {
-                self.yaw_angle += PI/2.0;
-                x = dest_center_x
-                    + (src_center_z
-                    - self.origin.z);
-                z = dest_center_z
-                    - (src_center_x
-                    - self.origin.x);
+                self.yaw_angle += PI / 2.0;
+                x = dest.center.x + (src.center.z - self.origin.z);
+                z = dest.center.z - (src.center.x - self.origin.x);
             }
             PortalRotationDifference::Deg180 => {
                 self.yaw_angle += PI;
-                x = dest_center_x
-                    + (src_center_x)
-                    - self.origin.x;
-                z = dest_center_z
-                    + (src_center_z)
-                    - self.origin.z;
+                x = dest.center.x + (src.center.x) - self.origin.x;
+                z = dest.center.z + (src.center.z) - self.origin.z;
             }
         }
         self.origin = Vec3::new(x, y, z);
@@ -222,12 +206,6 @@ impl Camera {
 
     pub fn get_origin(&self) -> Vec3 {
         self.origin
-    }
-
-    pub fn set_origin(&mut self, x: f32, y: f32, z: f32) {
-        self.origin.x = x;
-        self.origin.y = y;
-        self.origin.z = z;
     }
 
     pub fn process_mouse_input(&mut self, event: DeviceEvent) {

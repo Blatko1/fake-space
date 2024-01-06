@@ -6,12 +6,12 @@ mod backend;
 mod player;
 mod render;
 mod state;
-mod textures;
 mod voxel;
 mod world;
 
 use std::time::{Duration, Instant};
 
+use crate::world::World;
 use backend::Canvas;
 use pollster::block_on;
 use state::State;
@@ -20,7 +20,6 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder as WinitWindowBuilder,
 };
-use crate::world::World;
 
 const FPS: u32 = 60;
 

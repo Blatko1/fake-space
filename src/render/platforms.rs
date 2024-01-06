@@ -68,12 +68,6 @@ pub(super) fn draw_bottom_platform(
             let color = &texture[i..i + 4];
             rgba.copy_from_slice(color);
         });
-    /*if let Some(first) = column.chunks_exact_mut(4).nth(draw_to) {
-        first.copy_from_slice(&[255, 255, 255, 255]);
-    };
-    if let Some(first) = column.chunks_exact_mut(4).nth(draw_from) {
-        first.copy_from_slice(&[255, 0, 0, 255]);
-    };*/
 
     draw_to
 }
@@ -137,12 +131,6 @@ pub(super) fn draw_top_platform(
             let color = &texture[i..i + 4];
             rgba.copy_from_slice(color);
         });
-    /*if let Some(first) = column.chunks_exact_mut(4).nth(draw_to) {
-        first.copy_from_slice(&[255, 255, 255, 255]);
-    };
-    if let Some(first) = column.chunks_exact_mut(4).nth(draw_from) {
-        first.copy_from_slice(&[255, 0, 0, 255]);
-    };*/
 
     draw_from
 }

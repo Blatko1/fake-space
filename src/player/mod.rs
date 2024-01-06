@@ -1,13 +1,9 @@
-use std::f32::consts::PI;
-
 use winit::event::{DeviceEvent, KeyboardInput};
 
 use crate::{
     render::{self, camera::Camera},
     world::{RoomID, World},
 };
-
-const ONE_DEGREE_RAD: f32 = PI / 180.0;
 
 pub struct Player {
     camera: Camera,
@@ -39,12 +35,11 @@ impl Player {
                 if !self.in_portal {
                     // Check if portal has a linked portal
                     let src_portal = room.get_portal(src_dummy_portal.id);
-                    if let Some((room_id, portal_id)) =
-                        src_portal.link
-                    {
+                    if let Some((room_id, portal_id)) = src_portal.link {
                         // Teleport the player
                         self.current_room = room_id;
-                        let dest_portal = world.get_room_data(room_id).get_portal(portal_id);
+                        let dest_portal =
+                            world.get_room_data(room_id).get_portal(portal_id);
                         self.camera.portal_teleport(src_portal, dest_portal);
                         self.in_portal = true;
                     }

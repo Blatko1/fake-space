@@ -1,3 +1,4 @@
+use crate::render::PointXZ;
 use crate::world::{RoomID, TilePosition};
 
 #[derive(Debug, Clone, Copy)]
@@ -14,6 +15,7 @@ pub struct Portal {
     pub id: PortalID,
     pub direction: PortalDirection,
     pub position: TilePosition,
+    pub center: PointXZ<f32>,
     pub ground_level: f32,
     pub link: Option<(RoomID, PortalID)>,
 }
@@ -57,6 +59,7 @@ impl PortalDirection {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum PortalRotationDifference {
     None,
     AnticlockwiseDeg90,

@@ -1,15 +1,14 @@
 mod parser;
 pub mod portal;
+pub mod textures;
 
 use rand::{rngs::ThreadRng, seq::SliceRandom, Rng};
-
-use crate::textures::{Texture, TextureData, TextureManager};
 use std::path::PathBuf;
 
-use parser::{error::ParseError, WorldParser};
 use crate::world::portal::{DummyPortal, Portal, PortalID};
-
-pub type TileIndex = usize;
+use parser::{error::ParseError, WorldParser};
+use crate::render::PointXZ;
+use textures::{Texture, TextureData, TextureManager};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RoomID(pub usize);
@@ -89,7 +88,7 @@ impl World {
         // Append the room at the end of the list.
         let room_id = RoomID(self.rooms.len());
         let segment = &self.segments[segment_id.0];
-        let mut starting_room = Room {
+        let starting_room = Room {
             id: room_id,
             segment_id: segment.id,
             portals: segment.portals.clone(),
@@ -162,15 +161,21 @@ impl Segment {
         repeatable: bool,
     ) -> Self {
         // Create unlinked Portals from DummyPortals
-        let portals = tiles.iter().filter(|tile| tile.portal.is_some()).map(|tile| {
-            let dummy = tile.portal.unwrap();
-            Portal {
-                id: dummy.id,
-                direction: dummy.direction,
-                position: tile.position,
-                ground_level: tile.ground_level,
-                link: None,
-            }}).collect();
+        let portals = tiles
+            .iter()
+            .filter(|tile| tile.portal.is_some())
+            .map(|tile| {
+                let dummy = tile.portal.unwrap();
+                Portal {
+                    id: dummy.id,
+                    direction: dummy.direction,
+                    position: tile.position,
+                    center: PointXZ { x: tile.position.x as f32 + 0.5, z: tile.position.z as f32 + 0.5 },
+                    ground_level: tile.ground_level,
+                    link: None,
+                }
+            })
+            .collect();
         Self {
             id,
             name,

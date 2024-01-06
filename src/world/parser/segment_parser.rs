@@ -2,15 +2,13 @@ use std::{ops::RangeInclusive, str::FromStr};
 
 use hashbrown::HashMap;
 
-use crate::
-    textures::Texture
-;
 use crate::world::portal::{DummyPortal, PortalDirection, PortalID};
 use crate::world::{Tile, TilePosition};
+use crate::world::textures::Texture;
 
 use super::{
     error::{DimensionError, PresetError, SegmentParseError, TileError},
-    Settings,
+    Settings
 };
 
 #[derive(Debug)]
@@ -38,9 +36,7 @@ impl<'a> SegmentDataParser<'a> {
             tiles: Vec::new(),
         }
     }
-    pub(super) fn parse(
-        mut self,
-    ) -> Result<((u64, u64), Vec<Tile>), SegmentParseError> {
+    pub(super) fn parse(mut self) -> Result<((u64, u64), Vec<Tile>), SegmentParseError> {
         // Remove comments, remove empty lines and trim data
         let mut lines = self
             .data

@@ -76,24 +76,12 @@ pub(super) fn draw_bottom_wall(
             let src = &texture[i..i + 4];
 
             // Draw the pixel:
-            draw_fn(dest, src);
+            //draw_fn(dest, src);
+            dest.copy_from_slice(src);
             //}
             // TODO maybe make it so `tex_y_step` is being subtracted.
             tex_y += tex_y_step;
         });
-
-    /*if let Some(first) = column
-    .chunks_exact_mut(4)
-    .nth(draw_from)
-    {
-        first.copy_from_slice(&[255, 100, 255, 255]);
-    };
-    if let Some(first) = column
-        .chunks_exact_mut(4)
-        .nth(draw_to)
-    {
-        first.copy_from_slice(&[255, 100, 0, 255]);
-    };*/
 
     draw_to
 }
@@ -172,24 +160,12 @@ pub(super) fn draw_top_wall(
             let src = &texture[i..i + 4];
 
             // Draw the pixel:
-            draw_fn(dest, src);
+            //draw_fn(dest, src);
+            dest.copy_from_slice(src);
             //}
             // TODO maybe make it so `tex_y_step` is being subtracted.
             tex_y += tex_y_step;
         });
-
-    /*if let Some(first) = column
-    .chunks_exact_mut(4)
-    .nth(draw_from)
-    {
-        first.copy_from_slice(&[255, 100, 255, 255]);
-    };
-    if let Some(first) = column
-        .chunks_exact_mut(4)
-        .nth(draw_to)
-    {
-        first.copy_from_slice(&[255, 100, 0, 255]);
-    };*/
 
     draw_from
 }
