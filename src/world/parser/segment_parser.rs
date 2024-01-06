@@ -2,10 +2,11 @@ use std::{ops::RangeInclusive, str::FromStr};
 
 use hashbrown::HashMap;
 
-use crate::{
-    textures::Texture,
-    world::world::{Portal, PortalDirection, PortalLocalID, Tile},
-};
+use crate::
+    textures::Texture
+;
+use crate::world::portal::{DummyPortal, PortalDirection, PortalID};
+use crate::world::{Tile, TilePosition};
 
 use super::{
     error::{DimensionError, PresetError, SegmentParseError, TileError},
@@ -39,7 +40,7 @@ impl<'a> SegmentDataParser<'a> {
     }
     pub(super) fn parse(
         mut self,
-    ) -> Result<((u64, u64), Vec<Tile>, Vec<Portal>), SegmentParseError> {
+    ) -> Result<((u64, u64), Vec<Tile>), SegmentParseError> {
         // Remove comments, remove empty lines and trim data
         let mut lines = self
             .data
@@ -76,60 +77,61 @@ impl<'a> SegmentDataParser<'a> {
         }
 
         let mut tiles = Vec::with_capacity(self.tiles.len());
-        let mut portals = Vec::new();
         let mut portal_id = 0;
         for (i, tile) in self.tiles.into_iter().enumerate() {
             // Fill the `None` values with default ones and convert to [`Tile`], then
             // compare levels to each other to find error (lvl1 <= lvl2 < lvl3 <= lvl4)
-            let level1 = tile.lvl1.unwrap_or(self.settings.lvl1);
-            let level2 = tile.lvl2.unwrap_or(self.settings.lvl2);
-            let level3 = tile.lvl3.unwrap_or(self.settings.lvl3);
-            let level4 = tile.lvl4.unwrap_or(self.settings.lvl4);
-            if !(level1 <= level2 && level2 < level3 && level3 <= level4) {
+            let bottom_level = tile.bottom_level.unwrap_or(self.settings.bottom_level);
+            let ground_level = tile.ground_level.unwrap_or(self.settings.ground_level);
+            let ceiling_level = tile.ceiling_level.unwrap_or(self.settings.ceiling_level);
+            let top_level = tile.top_level.unwrap_or(self.settings.top_level);
+            if !(bottom_level <= ground_level
+                && ground_level < ceiling_level
+                && ceiling_level <= top_level)
+            {
                 return Err(SegmentParseError::InvalidLevels(
                     i + 1,
-                    level1,
-                    level2,
-                    level3,
-                    level4,
+                    bottom_level,
+                    ground_level,
+                    ceiling_level,
+                    top_level,
                 ));
             }
             let portal = match tile.portal_dir {
-                Some(dir) => {
-                    let local_pos_x = i as u64 % dimensions.0;
-                    let local_pos_y = i as u64 / dimensions.0;
-                    let portal = Portal {
-                        id: PortalLocalID(portal_id),
-                        direction: dir,
-                        local_position: (local_pos_x, local_pos_y),
-                        ground_level: level2,
-                        connection: None,
+                Some(direction) => {
+                    let dummy = DummyPortal {
+                        id: PortalID(portal_id),
+                        direction,
                     };
-                    portals.push(portal);
                     portal_id += 1;
-                    Some(portal)
+                    Some(dummy)
                 }
                 None => None,
             };
+            let position = TilePosition {
+                x: i as u64 % dimensions.0,
+                z: i as u64 / dimensions.0,
+            };
             let t = Tile {
-                pillar1_tex: tile.pillar1_tex.unwrap_or_default(),
-                pillar2_tex: tile.pillar2_tex.unwrap_or_default(),
-                bottom_platform_tex: tile.bottom_platform.unwrap_or_default(),
-                top_platform_tex: tile.top_platform.unwrap_or_default(),
-                level1,
-                level2,
-                level3,
-                level4,
+                position,
+                bottom_pillar_tex: tile.bottom_pillar_tex.unwrap_or_default(),
+                top_pillar_tex: tile.top_pillar_tex.unwrap_or_default(),
+                ground_tex: tile.ground_tex.unwrap_or_default(),
+                ceiling_tex: tile.ceiling_tex.unwrap_or_default(),
+                bottom_level,
+                ground_level,
+                ceiling_level,
+                top_level,
                 portal,
             };
 
             tiles.push(t);
         }
-        if portals.is_empty() {
-            return Err(SegmentParseError::NoPortalsSpecified)
+        if portal_id == 0 {
+            return Err(SegmentParseError::NoPortalsSpecified);
         }
 
-        Ok((dimensions, tiles, portals))
+        Ok((dimensions, tiles))
     }
 
     fn parse_dimensions(&mut self, line: &str) -> Result<(u64, u64), DimensionError> {
@@ -261,33 +263,33 @@ impl<'a> SegmentDataParser<'a> {
             // Identify the parameter and act accordingly
             match parameter {
                 // If the parameter is one of these, the value should be a *texture name*
-                "pillar1" | "pillar2" | "bottom" | "top" => {
+                "bottomT" | "topT" | "groundT" | "ceilingT" => {
                     let Some(&texture) = self.texture_map.get(value) else {
                         return Err(TileError::UnknownTexture(value.to_owned()));
                     };
                     match parameter {
-                        "pillar1" => preset.pillar1_tex = Some(texture),
-                        "pillar2" => preset.pillar2_tex = Some(texture),
-                        "bottom" => preset.bottom_platform = Some(texture),
-                        "top" => preset.top_platform = Some(texture),
+                        "bottomT" => preset.bottom_pillar_tex = Some(texture),
+                        "topT" => preset.top_pillar_tex = Some(texture),
+                        "groundT" => preset.ground_tex = Some(texture),
+                        "ceilingT" => preset.ceiling_tex = Some(texture),
                         _ => unreachable!(),
                     }
                 }
                 // If the parameter is one of these, the value should be a *number*
-                "lvl1" | "lvl2" | "lvl3" | "lvl4" => {
+                "bottomL" | "groundL" | "ceilingL" | "topL" => {
                     let Ok(parsed) = value.parse::<f32>() else {
                         return Err(TileError::FloatParseFail(value.to_string()));
                     };
 
                     match parameter {
-                        "lvl1" => preset.lvl1 = Some(parsed),
-                        "lvl2" => preset.lvl2 = Some(parsed),
-                        "lvl3" => preset.lvl3 = Some(parsed),
-                        "lvl4" => preset.lvl4 = Some(parsed),
+                        "bottomL" => preset.bottom_level = Some(parsed),
+                        "groundL" => preset.ground_level = Some(parsed),
+                        "ceilingL" => preset.ceiling_level = Some(parsed),
+                        "topL" => preset.top_level = Some(parsed),
                         _ => unreachable!(),
                     }
                 }
-                "portal_direction" => {
+                "portalDir" => {
                     let parsed = value.parse::<PortalDirection>()?;
                     preset.portal_dir = Some(parsed);
                 }
@@ -300,14 +302,14 @@ impl<'a> SegmentDataParser<'a> {
 
 #[derive(Debug, Default, Clone)]
 struct TilePreset {
-    pillar1_tex: Option<Texture>,
-    pillar2_tex: Option<Texture>,
-    bottom_platform: Option<Texture>,
-    top_platform: Option<Texture>,
-    lvl1: Option<f32>,
-    lvl2: Option<f32>,
-    lvl3: Option<f32>,
-    lvl4: Option<f32>,
+    bottom_pillar_tex: Option<Texture>,
+    top_pillar_tex: Option<Texture>,
+    ground_tex: Option<Texture>,
+    ceiling_tex: Option<Texture>,
+    bottom_level: Option<f32>,
+    ground_level: Option<f32>,
+    ceiling_level: Option<f32>,
+    top_level: Option<f32>,
     portal_dir: Option<PortalDirection>,
 }
 
@@ -315,29 +317,29 @@ impl TilePreset {
     /// Overwrites all old values with new ones.
     /// Doesn't replace if the new value is `None`.
     fn overwrite_with(&mut self, other: &Self) {
-        if let Some(pillar1) = other.pillar1_tex {
-            self.pillar1_tex.replace(pillar1);
+        if let Some(bottom_pillar_tex) = other.bottom_pillar_tex {
+            self.bottom_pillar_tex.replace(bottom_pillar_tex);
         }
-        if let Some(pillar2) = other.pillar2_tex {
-            self.pillar2_tex.replace(pillar2);
+        if let Some(top_pillar_tex) = other.top_pillar_tex {
+            self.top_pillar_tex.replace(top_pillar_tex);
         }
-        if let Some(bottom_platform) = other.bottom_platform {
-            self.bottom_platform.replace(bottom_platform);
+        if let Some(ground_tex) = other.ground_tex {
+            self.ground_tex.replace(ground_tex);
         }
-        if let Some(top_platform) = other.top_platform {
-            self.top_platform.replace(top_platform);
+        if let Some(ceiling_tex) = other.ceiling_tex {
+            self.ceiling_tex.replace(ceiling_tex);
         }
-        if let Some(lvl1) = other.lvl1 {
-            self.lvl1.replace(lvl1);
+        if let Some(bottom_level) = other.bottom_level {
+            self.bottom_level.replace(bottom_level);
         }
-        if let Some(lvl2) = other.lvl2 {
-            self.lvl2.replace(lvl2);
+        if let Some(ground_level) = other.ground_level {
+            self.ground_level.replace(ground_level);
         }
-        if let Some(lvl3) = other.lvl3 {
-            self.lvl3.replace(lvl3);
+        if let Some(ceiling_level) = other.ceiling_level {
+            self.ceiling_level.replace(ceiling_level);
         }
-        if let Some(lvl4) = other.lvl4 {
-            self.lvl4.replace(lvl4);
+        if let Some(top_level) = other.top_level {
+            self.top_level.replace(top_level);
         }
         if let Some(portal_dir) = other.portal_dir {
             self.portal_dir.replace(portal_dir);

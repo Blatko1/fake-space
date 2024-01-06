@@ -34,7 +34,7 @@ pub enum SegmentParseError {
     TileErr(TileError, u64),
 
     InvalidLevels(usize, f32, f32, f32, f32),
-    NoPortalsSpecified
+    NoPortalsSpecified,
 }
 
 #[derive(Debug)]

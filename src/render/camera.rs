@@ -1,9 +1,8 @@
 use std::f32::consts::{PI, TAU};
 
 use glam::Vec3;
-use winit::event::{ElementState, VirtualKeyCode, KeyboardInput, DeviceEvent};
-
-use super::ray::Ray;
+use winit::event::{DeviceEvent, ElementState, KeyboardInput, VirtualKeyCode};
+use crate::world::portal::{Portal, PortalRotationDifference};
 
 // TODO rotation control with mouse and/or keyboard
 const MOVEMENT_SPEED: f32 = 0.1;
@@ -14,8 +13,6 @@ const MAX_FOV_RAD: f32 = 119.0 * ONE_DEGREE_RAD;
 pub(super) const DEFAULT_PLANE_V: Vec3 = Vec3::new(0.0, 0.5, 0.0);
 const Y_SHEARING_SENSITIVITY: f32 = 0.8;
 const MOUSE_ROTATION_SPEED: f32 = 0.08;
-const MAX_Y: f32 = 50.0;
-const MIN_Y: f32 = -50.0;
 
 #[derive(Debug)]
 /// Draws the player view on the screen framebuffer.
@@ -160,7 +157,7 @@ impl Camera {
         );
         self.dir = Vec3::new(self.yaw_angle.cos(), 0.0, self.yaw_angle.sin());
 
-        // Rotate raycaster (camera) planes
+        // Rotate camera planes
         self.vertical_plane = DEFAULT_PLANE_V / self.plane_dist;
         self.horizontal_plane =
             Vec3::cross(DEFAULT_PLANE_V, self.dir) * self.aspect / self.plane_dist;
@@ -168,12 +165,59 @@ impl Camera {
         // Update origin position
         self.origin.x += self.dir.x * (self.forward - self.backward) * MOVEMENT_SPEED;
         self.origin.z += self.dir.z * (self.forward - self.backward) * MOVEMENT_SPEED;
-        self.origin += self.horizontal_plane.normalize()
-            * (self.strafe_right - self.strafe_left)
-            * MOVEMENT_SPEED;
-        self.origin.y = (self.origin.y
-            + (self.fly_up - self.fly_down) * FLY_UP_DOWN_SPEED)
-            .clamp(MIN_Y, MAX_Y);
+        let horizontal_plane_norm = self.horizontal_plane.normalize();
+        self.origin.x += horizontal_plane_norm.x * (self.strafe_right - self.strafe_left) * MOVEMENT_SPEED;
+        self.origin.z += horizontal_plane_norm.z * (self.strafe_right - self.strafe_left) * MOVEMENT_SPEED;
+        self.origin.y += (self.fly_up - self.fly_down) * FLY_UP_DOWN_SPEED;
+    }
+
+    pub fn portal_teleport(&mut self, src: Portal, dest: Portal) {
+        let src_center_x = src.position.x as f32 + 0.5;
+        let src_center_z = src.position.z as f32 + 0.5;
+        let dest_center_x = dest.position.x as f32 + 0.5;
+        let dest_center_z = dest.position.z as f32 + 0.5;
+
+        let mut x;
+        let y = self.origin.y + dest.ground_level - src.ground_level;
+        let mut z;
+        match src
+            .direction
+            .rotation_difference(dest.direction)
+        {
+            PortalRotationDifference::None => {
+                x = dest.position.x as f32 + self.origin.x.fract();
+                z = dest.position.z as f32 + self.origin.z.fract();
+            },
+            PortalRotationDifference::ClockwiseDeg90 => {
+                self.yaw_angle -= PI/2.0;
+                x = dest_center_x
+                    - (src_center_z
+                    - self.origin.z);
+                z = dest_center_z
+                    + (src_center_x
+                    - self.origin.x);
+            }
+            PortalRotationDifference::AnticlockwiseDeg90 => {
+                self.yaw_angle += PI/2.0;
+                x = dest_center_x
+                    + (src_center_z
+                    - self.origin.z);
+                z = dest_center_z
+                    - (src_center_x
+                    - self.origin.x);
+            }
+            PortalRotationDifference::Deg180 => {
+                self.yaw_angle += PI;
+                x = dest_center_x
+                    + (src_center_x)
+                    - self.origin.x;
+                z = dest_center_z
+                    + (src_center_z)
+                    - self.origin.z;
+            }
+        }
+        self.origin = Vec3::new(x, y, z);
+        self.update();
     }
 
     pub fn get_origin(&self) -> Vec3 {
@@ -184,11 +228,6 @@ impl Camera {
         self.origin.x = x;
         self.origin.y = y;
         self.origin.z = z;
-    }
-
-    pub fn increase_direction_angle(&mut self, inc_radians: f32) {
-        self.yaw_angle += inc_radians;
-        self.update();
     }
 
     pub fn process_mouse_input(&mut self, event: DeviceEvent) {

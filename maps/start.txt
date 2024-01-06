@@ -7,19 +7,19 @@
 // top->texture of top platform
 
 // Declare the presets used in modifying the tiles
-$noRoof = lvl3:100000.0, lvl4:100000.0
-$pillar = lvl2:5.0, pillar1:Stone, bottom:Stone
-$tallPillar = $pillar, lvl2:100.0, lvl3:100.1
-$pillarsTopBottom1 = $pillar, lvl2:9.8, lvl3:11.7, top:Stone, pillar2:Stone
-$pillarsTopBottom2 = $pillar, lvl2:9.0, lvl3:12.0, top:Stone, pillar2:Stone
-$pillarsTopBottom3 = $pillar, lvl2:8.0, lvl3:13.0, top:Stone, pillar2:Stone
-$pillarsTopBottom4 = $pillar, lvl2:6.0, lvl3:18.0, top:Stone, pillar2:Stone
-$pillarsTopBottom5 = $pillar, lvl2:2.3, lvl3:24.0, top:Stone, pillar2:Stone
+$noRoof = ceilingL:100000.0, topL:100000.0
+$pillar = groundL:5.0, bottomT:Stone, groundT:Stone
+$tallPillar = $pillar, groundL:100.0, ceilingL:100.1
+$pillarsTopBottom1 = $pillar, groundL:9.8, ceilingL:11.7, ceilingT:Stone, topT:Stone
+$pillarsTopBottom2 = $pillar, groundL:9.0, ceilingL:12.0, ceilingT:Stone, topT:Stone
+$pillarsTopBottom3 = $pillar, groundL:8.0, ceilingL:13.0, ceilingT:Stone, topT:Stone
+$pillarsTopBottom4 = $pillar, groundL:6.0, ceilingL:18.0, ceilingT:Stone, topT:Stone
+$pillarsTopBottom5 = $pillar, groundL:2.3, ceilingL:24.0, ceilingT:Stone, topT:Stone
 
-$tower = lvl2:5.0, pillar1:Bricks, bottom:Grass
-$topTower = lvl2:5.0, pillar2:Bricks, top:Bricks
+$tower = groundL:5.0, bottomT:Bricks, groundT:Grass
+$topTower = groundL:5.0, topT:Bricks, ceilingT:Bricks
 
-$grass = lvl2:0.0, bottom:Grass,
+$grass = groundL:0.0, groundT:Grass,
 
 // Modifying the tiles
 // Add surrounding pillars
@@ -60,31 +60,31 @@ $grass = lvl2:0.0, bottom:Grass,
 61 = $tallPillar
 
 // Entrance mountain
-226 = $tower, lvl2:5.0,
-227 = $tower, lvl2:5.9, $topTower, lvl3: 10.0
+226 = $tower, groundL:5.0,
+227 = $tower, groundL:5.9, $topTower, ceilingL: 10.0
 
 
 
 
 // Stairs down
-248 = lvl2:-0.3, 
-249 = lvl2:-0.8, 
-250 = lvl2:-0.3,
+248 = groundL:-0.3,
+249 = groundL:-0.8,
+250 = groundL:-0.3,
 
-268 = lvl2:-1.0, 
-269 = lvl2:-1.1, 
-270 = lvl2:-1.0, 
+268 = groundL:-1.0,
+269 = groundL:-1.1,
+270 = groundL:-1.0,
 
-288 = lvl2:-1.7, 
-289 = lvl2:-1.74, 
-290 = lvl2:-0.7, 
+288 = groundL:-1.7,
+289 = groundL:-1.74,
+290 = groundL:-0.7,
 
-308 = lvl2:-2.6, 
-309 = lvl2:-2.7, 
-310 = lvl2:-0.9, 
+308 = groundL:-2.6,
+309 = groundL:-2.7,
+310 = groundL:-0.9,
 
-329 = lvl2:-2.8, portal_direction:N
-331 = portal_direction:E
-333 = portal_direction:S
-335 = portal_direction:W
+329 = groundL:-2.8, portalDir:N
+331 = portalDir:E
+333 = portalDir:S
+335 = portalDir:W
 

@@ -49,7 +49,7 @@ impl Gfx {
         let caps = surface.get_capabilities(&adapter);
         let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            format: *caps.formats.get(0).unwrap(),
+            format: *caps.formats.first().unwrap(),
             width: size.width,
             height: size.height,
             present_mode: wgpu::PresentMode::Fifo,

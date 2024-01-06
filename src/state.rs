@@ -1,5 +1,9 @@
 use crate::{
-    backend::Canvas, voxel::VoxelModelManager, world::{world::{World, RoomID}}, player::{Player}, render::camera::Camera,
+    backend::Canvas,
+    player::Player,
+    render::camera::Camera,
+    voxel::VoxelModelManager,
+    world::{RoomID, World},
 };
 use winit::{
     dpi::PhysicalSize,
@@ -31,7 +35,7 @@ impl State {
             models: VoxelModelManager::init(),
 
             world,
-            player: Player::new(camera, RoomID(0))
+            player: Player::new(camera, RoomID(0)),
         }
     }
 

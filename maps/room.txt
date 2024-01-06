@@ -7,13 +7,13 @@
 // top->texture of top platform
 
 // Declare the presets used in modifying the tiles
-$groundLevel = lvl1:-1.0
-$border = pillar1:Mossy, lvl2:2.0, top:Mossy, $groundLevel
-$pillars = $border, pillar2:Mossy, lvl3:3.0, lvl4:100
-$grass = pillar1:Mossy, $groundLevel, lvl2:0.0, bottom:Mossy, top:Mossy
+$groundLevel = groundL:0.0
+$border = bottomT:Mossy, groundL:2.0, ceilingT:Mossy
+$pillars = $border, topT:Mossy, ceilingL:3.0, topL:100
+$grass = bottomT:Mossy, groundT:Mossy, ceilingT:Mossy
 
 // Modifying the tiles
-1-400 = $grass
+1-400 = $grass, $groundLevel,
 1-21 = $border
 40-41 = $border
 60-61 = $border
@@ -34,10 +34,10 @@ $grass = pillar1:Mossy, $groundLevel, lvl2:0.0, bottom:Mossy, top:Mossy
 360-361 = $border
 380-400 = $border
 
-250 = $pillars, lvl2:0.5, lvl3:3.5, lvl4:4.0, portal_direction:N
-251 = $pillars, lvl2:3.0, lvl3:4.0, lvl4:5.0
-252 = $pillars, lvl2:3.5, lvl3:4.5, lvl4:5.5
-253 = $pillars, lvl2:4.0, lvl3:5.0, lvl4:6.0
-254 = $pillars, lvl2:4.5, lvl3:5.5, lvl4:5.6
-275 = $pillars, lvl2:6.0, lvl3:100,
-276 = $pillars, lvl2:0.5, lvl3:3.0, //portal_direction:S
+250 = $pillars, groundL:0.5, ceilingL:3.5, topL:4.0, portalDir:N
+251 = $pillars, groundL:3.0, ceilingL:4.0, topL:5.0
+252 = $pillars, groundL:3.5, ceilingL:4.5, topL:5.5
+253 = $pillars, groundL:4.0, ceilingL:5.0, topL:6.0
+254 = $pillars, groundL:4.5, ceilingL:5.5, topL:5.6
+275 = $pillars, groundL:6.0, ceilingL:100,
+276 = $pillars, groundL:0.5, ceilingL:3.0, //portalDir:S

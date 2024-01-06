@@ -3,12 +3,12 @@
 /// output, have tried MSAA but it doesn't work on textures, have tried applying
 /// bilinear texture filtering but unnoticeable.
 mod backend;
+mod player;
 mod render;
 mod state;
 mod textures;
 mod voxel;
 mod world;
-mod player;
 
 use std::time::{Duration, Instant};
 
@@ -20,7 +20,7 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder as WinitWindowBuilder,
 };
-use world::world::World;
+use crate::world::World;
 
 const FPS: u32 = 60;
 
@@ -36,7 +36,7 @@ fn main() {
 
     let world = World::from_path("maps/world.txt").unwrap();
 
-    let canvas = block_on(Canvas::init(&winit_window, 240, 180));
+    let canvas = block_on(Canvas::init(&winit_window, 240 * 8, 135 * 8));
 
     let mut state = State::new(canvas, world);
 

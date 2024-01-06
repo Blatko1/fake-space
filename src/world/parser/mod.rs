@@ -10,12 +10,11 @@ use hashbrown::HashMap;
 use image::{io::Reader as ImageReader, EncodableLayout};
 
 use crate::textures::{Texture, TextureData};
-use crate::world::world::{Segment, World};
 
 use self::error::{ParseError, SegmentError, SettingError, TextureError};
 use self::segment_parser::SegmentDataParser;
 
-use super::world::SegmentID;
+use super::{Segment, SegmentID, World};
 
 pub struct WorldParser {
     data: String,
@@ -96,7 +95,7 @@ impl WorldParser {
         let name = split[0].trim();
         let expressions = split[1].trim();
 
-        let mut segment_tiles = None;
+        let mut segment_data = None;
         let mut repeatable = None;
         for expr in expressions.split(',') {
             // Split the expression and check for formatting errors
@@ -127,7 +126,7 @@ impl WorldParser {
                             ))
                         }
                     };
-                    segment_tiles = Some(parsed);
+                    segment_data = Some(parsed);
                 }
                 "repeatable" => {
                     repeatable = match value.parse::<bool>() {
@@ -141,7 +140,7 @@ impl WorldParser {
             }
         }
         // Check if all needed information has been acquired
-        let Some((dimensions, tiles, portals)) = segment_tiles else {
+        let Some((dimensions, tiles)) = segment_data else {
             return Err(SegmentError::UnspecifiedSrc);
         };
         let Some(repeatable) = repeatable else {
@@ -153,7 +152,6 @@ impl WorldParser {
             name.to_owned(),
             dimensions,
             tiles,
-            portals,
             repeatable,
         ))
     }
@@ -170,29 +168,29 @@ impl WorldParser {
 
         // Identify the setting parameter and act accordingly
         match setting {
-            "lvl1" => {
+            "bottomL" => {
                 let Ok(value) = val.parse::<f32>() else {
                     return Err(SettingError::InvalidF32Value(val.to_owned()));
                 };
-                self.settings.lvl1 = value;
+                self.settings.bottom_level = value;
             }
-            "lvl2" => {
+            "groundL" => {
                 let Ok(value) = val.parse::<f32>() else {
                     return Err(SettingError::InvalidF32Value(val.to_owned()));
                 };
-                self.settings.lvl2 = value;
+                self.settings.ground_level = value;
             }
-            "lvl3" => {
+            "ceilingL" => {
                 let Ok(value) = val.parse::<f32>() else {
                     return Err(SettingError::InvalidF32Value(val.to_owned()));
                 };
-                self.settings.lvl3 = value;
+                self.settings.ceiling_level = value;
             }
-            "lvl4" => {
+            "topL" => {
                 let Ok(value) = val.parse::<f32>() else {
                     return Err(SettingError::InvalidF32Value(val.to_owned()));
                 };
-                self.settings.lvl4 = value;
+                self.settings.top_level = value;
             }
             _ => return Err(SettingError::UnknownSetting(setting.to_owned())),
         }
@@ -269,19 +267,19 @@ impl WorldParser {
 
 #[derive(Debug)]
 pub(super) struct Settings {
-    pub lvl1: f32,
-    pub lvl2: f32,
-    pub lvl3: f32,
-    pub lvl4: f32,
+    pub bottom_level: f32,
+    pub ground_level: f32,
+    pub ceiling_level: f32,
+    pub top_level: f32,
 }
 
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            lvl1: -1.0,
-            lvl2: -0.5,
-            lvl3: 0.5,
-            lvl4: 1.0,
+            bottom_level: -1.0,
+            ground_level: -0.5,
+            ceiling_level: 0.5,
+            top_level: 1.0,
         }
     }
 }

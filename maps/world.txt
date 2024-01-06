@@ -1,10 +1,10 @@
 // The world file and segment files are read and processed in the line by line order.
 
 // Determine the constant settings
-*lvl1 = -90.0
-*lvl2 = -10.0
-*lvl3 = 20.0
-*lvl4 = 300.0
+*bottomL = -90.0
+*groundL = -10.0
+*ceilingL = 20.0
+*topL = 300.0
 
 // Declare the textures
 // You can't have multiple textures with the same name
