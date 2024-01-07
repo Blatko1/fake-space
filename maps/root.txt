@@ -1,5 +1,5 @@
 // Declare the segment dimensions
-12x7
+11x17
 
 //Parameters: pillar1->bottom pillar, pillar2->top pillar, lvl1->bottom starting bound of bottom pillar,
 // lvl2->top ending bound of bottom pillar, lvl3->bottom starting bound of top pillar,
@@ -7,18 +7,37 @@
 // top->texture of top platform
 
 // Declare the presets used in modifying the tiles
-$ground = groundL:0.0, bottomL:-100.0, //groundT:Metal
-$ceiling = ceilingL:10.0, topL:100.0, ceilingT:Bricks
-$wall = groundL:9.0, bottomT:Stone
+$ground = groundL:0.0, bottomL:-100.0, groundT:MetalFloor
+$ceiling = ceilingL:6.0, topL:100.0, ceilingT:Bricks, topT:Bricks
+$wall = groundL:9.0, ceilingL:10.0, bottomT:Stone
+$NPortal = $ground, portalDir:N, ceilingL:3.0
 $SPortal = $ground, portalDir:S, ceilingL:3.0
+$EPortal = $ground, portalDir:E, ceilingL:3.0
+$WPortal = $ground, portalDir:W, ceilingL:3.0
 
 // Modifying the tiles
 // Add surrounding pillars
-1-74 = $ground, $ceiling
+1-187 = $ground, $ceiling
 1-24 = $wall
-25-26 = $wall
-35-38 = $wall
-47-50 = $wall
-50-74 = $wall
+32-35 = $wall
+43-46 = $wall
+54-57 = $wall
+65-68 = $wall
+76-79 = $wall
+87-90 = $wall
+98-101 = $wall
+109-112 = $wall
+120-123 = $wall
+131-134 = $wall
+142-145 = $wall
+153-156 = $wall
+164-187 = $wall
 
-20 = $SPortal
+17 = $NPortal
+46 = $EPortal
+54 = $WPortal
+90 = $EPortal
+98 = $WPortal
+134 = $EPortal
+142 = $WPortal
+171 = $SPortal

@@ -11,7 +11,7 @@
 #Grass = path:../res/grass.jpg, transparency:false
 #Stone = path:../res/stone.jpg, transparency:false
 #Bricks = path:../res/stone_bricks.jpg, transparency:false
-#Metal = path:../res/metal.jpg, transparency:false
+#MetalFloor = path:../res/metal_floor.jpg, transparency:false
 
 #BlueBrick = path:../res/blue_brick.png, transparency:false
 #LightPlank = path:../res/light_plank.png, transparency:false
@@ -23,4 +23,4 @@
 !start = src:start.txt, repeatable: false
 !root = src:root.txt, repeatable: false
 //!start = src:main.txt, repeatable: false
-!room = src:room.txt, repeatable: false
+//!room = src:room.txt, repeatable: false

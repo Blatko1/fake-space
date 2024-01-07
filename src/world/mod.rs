@@ -241,7 +241,7 @@ impl Segment {
         // TODO do something about i64 arguments and 'if' conditions
         if x >= self.dimensions.0 as i64
             || x < 0
-            || z >= self.dimensions.0 as i64
+            || z >= self.dimensions.1 as i64
             || z < 0
         {
             return None;

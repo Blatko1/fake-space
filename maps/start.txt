@@ -83,10 +83,10 @@ $grass = groundL:0.0, groundT:Grass,
 309 = groundL:-2.7,
 310 = groundL:-0.9,
 
-329 = groundL:-2.8, portalDir:N
+329 = groundL:-2.8, portalDir:S, ceilingL:3.0, topT:Bricks
 
 
-331 = portalDir:E
-333 = portalDir:S
-335 = portalDir:W
+//331 = portalDir:E
+//333 = portalDir:S
+//335 = portalDir:W
 
