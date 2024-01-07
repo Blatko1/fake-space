@@ -4,7 +4,6 @@ use crate::world::portal::{Portal, PortalRotationDifference};
 use glam::Vec3;
 use winit::event::{DeviceEvent, ElementState, KeyboardInput, VirtualKeyCode};
 
-// TODO rotation control with mouse and/or keyboard
 const MOVEMENT_SPEED: f32 = 0.1;
 const ROTATION_SPEED: f32 = 0.035;
 const FLY_UP_DOWN_SPEED: f32 = 0.05;
@@ -69,7 +68,6 @@ pub struct Camera {
     fly_down: f32,
     forward: f32,
     backward: f32,
-    in_portal: bool,
 }
 
 impl Camera {
@@ -128,17 +126,8 @@ impl Camera {
             fly_down: 0.0,
             forward: 0.0,
             backward: 0.0,
-            in_portal: false,
         }
     }
-
-    /*pub fn cast_and_draw(&self, world: &mut World, data: &mut [u8]) {
-        let canvas_column_iterator =
-            data.chunks_exact_mut(self.height as usize * 4).enumerate();
-        canvas_column_iterator.for_each(|(x, column)| {
-            self.draw_column(x, world, column);
-        });
-    }*/
 
     pub fn update(&mut self) {
         // Change FOV and vertical FOV
@@ -204,10 +193,6 @@ impl Camera {
         self.update();
     }
 
-    pub fn get_origin(&self) -> Vec3 {
-        self.origin
-    }
-
     pub fn process_mouse_input(&mut self, event: DeviceEvent) {
         match event {
             DeviceEvent::MouseMotion { delta } => {
@@ -255,6 +240,22 @@ impl Camera {
                 _ => (),
             }
         }
+    }
+
+    pub fn get_origin(&self) -> Vec3 {
+        self.origin
+    }
+
+    pub fn get_direction(&self) -> Vec3 {
+        self.dir
+    }
+
+    pub fn get_yaw_angle(&self) -> f32 {
+        self.yaw_angle
+    }
+
+    pub fn get_y_shearing(&self) -> f32 {
+        self.y_shearing
     }
 }
 

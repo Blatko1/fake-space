@@ -1,5 +1,6 @@
-mod gfx;
+pub mod gfx;
 
+use crate::hud::Hud;
 use gfx::Gfx;
 use wgpu::util::DeviceExt;
 use winit::dpi::PhysicalSize;
@@ -205,7 +206,7 @@ impl Canvas {
         self.buffer.chunks_exact_mut(self.height as usize * 4)
     }
 
-    pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+    pub fn render(&mut self, hud: &Hud) -> Result<(), wgpu::SurfaceError> {
         // Flip the buffer texture to correct position (90 degrees to left)
         self.frame
             .chunks_exact_mut(self.width as usize * 4)
@@ -262,7 +263,6 @@ impl Canvas {
                             b: 0.3,
                             a: 1.0,
                         }),
-                        // TODO maybe this can be Discard???
                         store: wgpu::StoreOp::Store,
                     },
                 })],
@@ -281,6 +281,7 @@ impl Canvas {
                 self.region.height,
             );
             rpass.draw(0..3, 0..1);
+            hud.render(&mut rpass);
         }
 
         self.gfx.queue().submit(Some(encoder.finish()));
@@ -339,10 +340,18 @@ impl Canvas {
     pub fn height(&self) -> u32 {
         self.height
     }
+
+    pub fn gfx(&self) -> &Gfx {
+        &self.gfx
+    }
+
+    pub fn region(&self) -> ScissorRegion {
+        self.region
+    }
 }
 
-#[derive(Debug, Default)]
-struct ScissorRegion {
+#[derive(Debug, Default, Copy, Clone)]
+pub struct ScissorRegion {
     pub x: u32,
     pub y: u32,
     pub width: u32,

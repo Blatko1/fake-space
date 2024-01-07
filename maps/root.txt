@@ -1,0 +1,24 @@
+// Declare the segment dimensions
+12x7
+
+//Parameters: pillar1->bottom pillar, pillar2->top pillar, lvl1->bottom starting bound of bottom pillar,
+// lvl2->top ending bound of bottom pillar, lvl3->bottom starting bound of top pillar,
+// lvl4->top ending bound of top pillar, bottom->texture of bottom platform,
+// top->texture of top platform
+
+// Declare the presets used in modifying the tiles
+$ground = groundL:0.0, bottomL:-100.0, //groundT:Metal
+$ceiling = ceilingL:10.0, topL:100.0, ceilingT:Bricks
+$wall = groundL:9.0, bottomT:Stone
+$SPortal = $ground, portalDir:S, ceilingL:3.0
+
+// Modifying the tiles
+// Add surrounding pillars
+1-74 = $ground, $ceiling
+1-24 = $wall
+25-26 = $wall
+35-38 = $wall
+47-50 = $wall
+50-74 = $wall
+
+20 = $SPortal

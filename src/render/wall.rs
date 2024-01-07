@@ -1,26 +1,20 @@
-use super::{blend, camera::Camera, DrawParams, Side};
+use super::{blend, DrawParams, Side};
 
 // TODO write tests for each draw call function to check for overflows
 // Draws full and transparent walls.
-pub(super) fn draw_bottom_wall(
-    cam: &Camera,
-    draw_params: DrawParams,
-    column: &mut [u8],
-) -> usize {
+pub(super) fn draw_bottom_wall(draw_params: DrawParams, column: &mut [u8]) -> usize {
     let bottom_draw_bound = draw_params.bottom_draw_bound;
     let top_draw_bound = draw_params.top_draw_bound;
+    let cam = draw_params.camera;
     let ray = draw_params.ray;
     let tile = draw_params.tile;
-    let wall_dist = draw_params.further_wall_dist;
-    let side = draw_params.side;
-    let wall_offset = draw_params.wall_offset;
 
     let bottom_wall_texture = draw_params.texture_manager.get(tile.bottom_pillar_tex);
     if bottom_wall_texture.is_empty() {
         return bottom_draw_bound;
     }
 
-    let texture = match side {
+    let texture = match ray.wall_side_hit {
         Side::Vertical => bottom_wall_texture.light_shade,
         Side::Horizontal => bottom_wall_texture.medium_shade,
     };
@@ -30,7 +24,7 @@ pub(super) fn draw_bottom_wall(
     );
 
     // Calculate wall pixel height for the parts above and below the middle
-    let half_wall_pixel_height = cam.f_half_height / wall_dist * cam.plane_dist;
+    let half_wall_pixel_height = cam.f_half_height / ray.wall_dist * cam.plane_dist;
     let pixels_to_bottom =
         half_wall_pixel_height * (ray.origin.y - tile.bottom_level) - cam.y_shearing;
     let pixels_to_top =
@@ -43,14 +37,14 @@ pub(super) fn draw_bottom_wall(
     let draw_to = ((cam.f_half_height + pixels_to_top) as usize)
         .clamp(bottom_draw_bound, top_draw_bound);
 
-    let tex_x = match side {
+    let tex_x = match ray.wall_side_hit {
         Side::Vertical if ray.dir.x > 0.0 => {
-            tex_width - (wall_offset * tex_width as f32) as usize - 1
+            tex_width - (ray.wall_offset * tex_width as f32) as usize - 1
         }
         Side::Horizontal if ray.dir.z < 0.0 => {
-            tex_width - (wall_offset * tex_width as f32) as usize - 1
+            tex_width - (ray.wall_offset * tex_width as f32) as usize - 1
         }
-        _ => (wall_offset * tex_width as f32) as usize,
+        _ => (ray.wall_offset * tex_width as f32) as usize,
     };
     let tex_y_step = tex_height as f32
         / full_wall_pixel_height
@@ -86,25 +80,19 @@ pub(super) fn draw_bottom_wall(
     draw_to
 }
 
-pub(super) fn draw_top_wall(
-    cam: &Camera,
-    draw_params: DrawParams,
-    column: &mut [u8],
-) -> usize {
+pub(super) fn draw_top_wall(draw_params: DrawParams, column: &mut [u8]) -> usize {
     let bottom_draw_bound = draw_params.bottom_draw_bound;
     let top_draw_bound = draw_params.top_draw_bound;
+    let cam = draw_params.camera;
     let ray = draw_params.ray;
     let tile = draw_params.tile;
-    let wall_dist = draw_params.further_wall_dist;
-    let side = draw_params.side;
-    let wall_offset = draw_params.wall_offset;
 
     let top_wall_texture = draw_params.texture_manager.get(tile.top_pillar_tex);
     if top_wall_texture.is_empty() {
         return top_draw_bound;
     }
 
-    let texture = match side {
+    let texture = match ray.wall_side_hit {
         Side::Vertical => top_wall_texture.light_shade,
         Side::Horizontal => top_wall_texture.medium_shade,
     };
@@ -118,7 +106,7 @@ pub(super) fn draw_top_wall(
     };
 
     // Calculate wall pixel height for the parts above and below the middle
-    let half_wall_pixel_height = cam.f_half_height / wall_dist * cam.plane_dist;
+    let half_wall_pixel_height = cam.f_half_height / ray.wall_dist * cam.plane_dist;
     let pixels_to_bottom =
         half_wall_pixel_height * (-tile.ceiling_level + ray.origin.y) - cam.y_shearing;
     let pixels_to_top =
@@ -131,14 +119,14 @@ pub(super) fn draw_top_wall(
     let draw_to = ((cam.f_half_height + pixels_to_top) as usize)
         .clamp(bottom_draw_bound, top_draw_bound);
 
-    let tex_x = match side {
+    let tex_x = match ray.wall_side_hit {
         Side::Vertical if ray.dir.x > 0.0 => {
-            tex_width - (wall_offset * tex_width as f32) as usize - 1
+            tex_width - (ray.wall_offset * tex_width as f32) as usize - 1
         }
         Side::Horizontal if ray.dir.z < 0.0 => {
-            tex_width - (wall_offset * tex_width as f32) as usize - 1
+            tex_width - (ray.wall_offset * tex_width as f32) as usize - 1
         }
-        _ => (wall_offset * tex_width as f32) as usize,
+        _ => (ray.wall_offset * tex_width as f32) as usize,
     };
     let tex_y_step = tex_height as f32
         / full_wall_pixel_height

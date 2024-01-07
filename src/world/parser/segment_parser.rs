@@ -3,12 +3,12 @@ use std::{ops::RangeInclusive, str::FromStr};
 use hashbrown::HashMap;
 
 use crate::world::portal::{DummyPortal, PortalDirection, PortalID};
-use crate::world::{Tile, TilePosition};
 use crate::world::textures::Texture;
+use crate::world::{Tile, TilePosition};
 
 use super::{
     error::{DimensionError, PresetError, SegmentParseError, TileError},
-    Settings
+    Settings,
 };
 
 #[derive(Debug)]

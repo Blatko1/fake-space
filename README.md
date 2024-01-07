@@ -26,9 +26,9 @@ Excellent explanations about the raycaster [here](https://lodev.org/cgtutor/rayc
 - [ ] Add shading effects
 - [ ] Add removable object walls (cool opening or moving animation with voxels)
 - [ ] Add collision detection (circle-rectangle collision detection)
-- [ ] Draw a skybox when outside of the map (looking at out of bound parts or at transparent ceiling)
+- [ ] Draw a skybox when outside the map (looking at out of bound parts or at transparent ceiling)
 - [ ] Add different height walls while also their tops sides (floor), if seen from above, and bottom sides (ceilings), if seen from below
 - [ ] Add special tiles through which the player would fall to their demise
-- [ ] Add an UI
+- [ ] Add a UI
 - [ ] Go unsafe for performance increase after most of the project is finished
 - [ ] Maybe: Add an option to switch between CPU only graphics with lower quality (no 3D objects) and GPU accelerated graphics with higher quality (3D objects)

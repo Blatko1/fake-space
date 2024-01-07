@@ -5,21 +5,16 @@
 // and their fully transparent parts
 // TODO problem! adding unsafe could improve performance
 
-use super::{camera::Camera, DrawParams};
+use super::DrawParams;
 
-pub(super) fn draw_bottom_platform(
-    cam: &Camera,
-    draw_params: DrawParams,
-    column: &mut [u8],
-) -> usize {
+pub(super) fn draw_bottom_platform(draw_params: DrawParams, column: &mut [u8]) -> usize {
     let bottom_draw_bound = draw_params.bottom_draw_bound;
     let top_draw_bound = draw_params.top_draw_bound;
+    let cam = draw_params.camera;
     let ray = draw_params.ray;
     let tile = draw_params.tile;
-    let closer_wall_dist = draw_params.closer_wall_dist;
-    let further_wall_dist = draw_params.further_wall_dist;
-    let tile_x = draw_params.tile_x;
-    let tile_z = draw_params.tile_z;
+    //let tile_x = draw_params.tile_x;
+    //let tile_z = draw_params.tile_z;
 
     let ground_texture = draw_params.texture_manager.get(tile.ground_tex);
     if ground_texture.is_empty() {
@@ -32,14 +27,15 @@ pub(super) fn draw_bottom_platform(
     );
 
     // Draw from (always drawing from bottom to top):
-    let half_wall_pixel_height = cam.f_half_height / closer_wall_dist * cam.plane_dist;
+    let half_wall_pixel_height =
+        cam.f_half_height / ray.previous_wall_dist * cam.plane_dist;
     let pixels_to_top =
         half_wall_pixel_height * (tile.ground_level - ray.origin.y) + cam.y_shearing;
     let draw_from = ((cam.f_half_height + pixels_to_top) as usize)
         .clamp(bottom_draw_bound, top_draw_bound);
 
     // Draw to:
-    let half_wall_pixel_height = cam.f_half_height / further_wall_dist * cam.plane_dist;
+    let half_wall_pixel_height = cam.f_half_height / ray.wall_dist * cam.plane_dist;
 
     let pixels_to_top =
         half_wall_pixel_height * (tile.ground_level - ray.origin.y) + cam.y_shearing;
@@ -59,11 +55,14 @@ pub(super) fn draw_bottom_platform(
                 / (y as f32 - cam.f_height / 2.0 + cam.y_shearing)
                 * cam.plane_dist;
             let step = tile_step_factor * row_dist;
-            let pos = ray.origin + ray_dir * row_dist + step * ray.x as f32;
-            let tex_x = ((tex_width as f32 * (pos.x - tile_x as f32)) as usize)
-                .min(tex_width - 1);
-            let tex_y = ((tex_height as f32 * (pos.z - tile_z as f32)) as usize)
-                .min(tex_height - 1);
+            let pos = ray.origin + ray_dir * row_dist + step * ray.column_index as f32;
+            //let tex_x = ((tex_width as f32 * (pos.x - tile_x as f32)) as usize)
+            //    .min(tex_width - 1);
+            //let tex_y = ((tex_height as f32 * (pos.z - tile_z as f32)) as usize)
+            //    .min(tex_height - 1);
+            let tex_x = ((tex_width as f32 * pos.x.fract()) as usize).min(tex_width - 1);
+            let tex_y =
+                ((tex_height as f32 * pos.z.fract()) as usize).min(tex_height - 1);
             let i = tex_width * 4 * tex_y + tex_x * 4;
             let color = &texture[i..i + 4];
             rgba.copy_from_slice(color);
@@ -72,19 +71,14 @@ pub(super) fn draw_bottom_platform(
     draw_to
 }
 
-pub(super) fn draw_top_platform(
-    cam: &Camera,
-    draw_params: DrawParams,
-    column: &mut [u8],
-) -> usize {
+pub(super) fn draw_top_platform(draw_params: DrawParams, column: &mut [u8]) -> usize {
     let bottom_draw_bound = draw_params.bottom_draw_bound;
     let top_draw_bound = draw_params.top_draw_bound;
+    let cam = draw_params.camera;
     let ray = draw_params.ray;
     let tile = draw_params.tile;
-    let closer_wall_dist = draw_params.closer_wall_dist;
-    let further_wall_dist = draw_params.further_wall_dist;
-    let tile_x = draw_params.tile_x;
-    let tile_z = draw_params.tile_z;
+    //let tile_x = draw_params.tile_x;
+    //let tile_z = draw_params.tile_z;
 
     let top_platform_texture = draw_params.texture_manager.get(tile.ceiling_tex);
     if top_platform_texture.is_empty() {
@@ -97,14 +91,15 @@ pub(super) fn draw_top_platform(
     );
 
     // Draw from:
-    let half_wall_pixel_height = cam.f_half_height / further_wall_dist * cam.plane_dist;
+    let half_wall_pixel_height = cam.f_half_height / ray.wall_dist * cam.plane_dist;
     let pixels_to_bottom =
         half_wall_pixel_height * (-tile.ceiling_level + ray.origin.y) - cam.y_shearing;
     let draw_from = ((cam.f_half_height - pixels_to_bottom) as usize)
         .clamp(bottom_draw_bound, top_draw_bound);
 
     // Draw to:
-    let half_wall_pixel_height = cam.f_half_height / closer_wall_dist * cam.plane_dist;
+    let half_wall_pixel_height =
+        cam.f_half_height / ray.previous_wall_dist * cam.plane_dist;
     let pixels_to_bottom =
         half_wall_pixel_height * (-tile.ceiling_level + ray.origin.y) - cam.y_shearing;
     let draw_to = ((cam.f_half_height - pixels_to_bottom) as usize)
@@ -122,11 +117,14 @@ pub(super) fn draw_top_platform(
                 / (y as f32 - cam.f_height / 2.0 - cam.y_shearing)
                 * cam.plane_dist;
             let step = tile_step_factor * row_dist;
-            let pos = ray.origin + ray_dir * row_dist + step * ray.x as f32;
-            let tex_x = ((tex_width as f32 * (pos.x - tile_x as f32)) as usize)
-                .min(tex_width - 1);
-            let tex_y = ((tex_height as f32 * (pos.z - tile_z as f32)) as usize)
-                .min(tex_height - 1);
+            let pos = ray.origin + ray_dir * row_dist + step * ray.column_index as f32;
+            //let tex_x = ((tex_width as f32 * (pos.x - tile_x as f32)) as usize)
+            //    .min(tex_width - 1);
+            //let tex_y = ((tex_height as f32 * (pos.z - tile_z as f32)) as usize)
+            //    .min(tex_height - 1);
+            let tex_x = ((tex_width as f32 * pos.x.fract()) as usize).min(tex_width - 1);
+            let tex_y =
+                ((tex_height as f32 * pos.z.fract()) as usize).min(tex_height - 1);
             let i = tex_width * 4 * tex_y + tex_x * 4;
             let color = &texture[i..i + 4];
             rgba.copy_from_slice(color);

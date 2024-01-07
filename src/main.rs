@@ -2,12 +2,13 @@
 /// I have tried adding FXAA in the fragment shader, which ended up in a weird
 /// output, have tried MSAA but it doesn't work on textures, have tried applying
 /// bilinear texture filtering but unnoticeable.
-mod backend;
+pub mod backend;
 mod player;
 mod render;
 mod state;
 mod voxel;
 mod world;
+pub mod hud;
 
 use std::time::{Duration, Instant};
 

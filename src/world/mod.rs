@@ -5,11 +5,11 @@ pub mod textures;
 use rand::{rngs::ThreadRng, seq::SliceRandom, Rng};
 use std::path::PathBuf;
 
+use crate::player::Player;
+use crate::render::PointXZ;
 use crate::world::portal::{DummyPortal, Portal, PortalID};
 use parser::{error::ParseError, WorldParser};
-use crate::render::PointXZ;
 use textures::{Texture, TextureData, TextureManager};
-use crate::player::Player;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RoomID(pub usize);
@@ -18,15 +18,13 @@ pub struct RoomID(pub usize);
 pub struct SegmentID(pub usize);
 
 pub struct World {
-    // TODO maybe store these two into Assets struct
-    // TODO remove this 'pub'
-    pub segments: Vec<Segment>,
+    segments: Vec<Segment>,
     segment_count: usize,
     texture_manager: TextureManager,
 
     rng: ThreadRng,
     // Each room has index which is the position in this Vec
-    pub rooms: Vec<Room>,
+    rooms: Vec<Room>,
 }
 
 impl World {
@@ -46,7 +44,7 @@ impl World {
             id: RoomID(room_counter),
             segment_id: segment.id,
             portals: segment.portals.clone(),
-            is_fully_generated: true
+            is_fully_generated: true,
         };
         room_counter += 1;
 
@@ -60,7 +58,7 @@ impl World {
                     id: RoomID(room_counter),
                     segment_id: rand_segment.id,
                     portals: rand_segment.portals.clone(),
-                    is_fully_generated: false
+                    is_fully_generated: false,
                 };
                 let room_rand_portal = new_room.portals.choose_mut(&mut rng).unwrap();
 
@@ -91,29 +89,34 @@ impl World {
         let mut next_id = self.rooms.len();
         let current_room = &mut self.rooms[player.get_current_room_id().0];
         if !current_room.is_fully_generated {
-            let mut adjacent_rooms: Vec<Room> = current_room.portals.iter_mut().filter(|portal| portal.link.is_none()).map(|portal| {
-                let rand_segment = self.segments[1..].choose(&mut self.rng).unwrap();
-                let mut new_room = Room {
-                    id: RoomID(next_id),
-                    segment_id: rand_segment.id,
-                    portals: rand_segment.portals.clone(),
-                    is_fully_generated: false
-                };
-                let room_rand_portal = new_room.portals.choose_mut(&mut self.rng).unwrap();
+            let mut adjacent_rooms: Vec<Room> = current_room
+                .portals
+                .iter_mut()
+                .filter(|portal| portal.link.is_none())
+                .map(|portal| {
+                    let rand_segment = self.segments[1..].choose(&mut self.rng).unwrap();
+                    let mut new_room = Room {
+                        id: RoomID(next_id),
+                        segment_id: rand_segment.id,
+                        portals: rand_segment.portals.clone(),
+                        is_fully_generated: false,
+                    };
+                    let room_rand_portal =
+                        new_room.portals.choose_mut(&mut self.rng).unwrap();
 
-                // Connect the two portals:
-                // Connect the starting room with new random room
-                portal.link = Some((new_room.id, room_rand_portal.id));
-                // Connect the new random room with the starting room
-                room_rand_portal.link = Some((current_room.id, portal.id));
-                next_id += 1;
-                new_room
-            }).collect();
+                    // Connect the two portals:
+                    // Connect the starting room with new random room
+                    portal.link = Some((new_room.id, room_rand_portal.id));
+                    // Connect the new random room with the starting room
+                    room_rand_portal.link = Some((current_room.id, portal.id));
+                    next_id += 1;
+                    new_room
+                })
+                .collect();
             current_room.is_fully_generated = true;
 
             self.rooms.append(&mut adjacent_rooms);
         }
-
     }
 
     fn add_new_room(&mut self, segment_id: SegmentID) -> &mut Room {
@@ -124,7 +127,7 @@ impl World {
             id: room_id,
             segment_id: segment.id,
             portals: segment.portals.clone(),
-            is_fully_generated: false
+            is_fully_generated: false,
         };
         self.rooms.push(starting_room);
         self.rooms.last_mut().unwrap()
@@ -148,6 +151,10 @@ impl World {
         }
     }
 
+    pub fn room_count(&self) -> usize {
+        self.rooms.len()
+    }
+
     pub fn texture_manager(&self) -> &TextureManager {
         &self.texture_manager
     }
@@ -169,10 +176,10 @@ impl<'a> RoomDataRef<'a> {
 #[derive(Debug)]
 pub struct Room {
     id: RoomID,
-    pub segment_id: SegmentID,
+    segment_id: SegmentID,
     // Each portal has its own index which is the position in this Vec
-    pub portals: Vec<Portal>,
-    pub is_fully_generated: bool
+    portals: Vec<Portal>,
+    is_fully_generated: bool,
 }
 
 // TODO Use a struct or type for dimensions instead
@@ -204,7 +211,10 @@ impl Segment {
                     id: dummy.id,
                     direction: dummy.direction,
                     position: tile.position,
-                    center: PointXZ { x: tile.position.x as f32 + 0.5, z: tile.position.z as f32 + 0.5 },
+                    center: PointXZ {
+                        x: tile.position.x as f32 + 0.5,
+                        z: tile.position.z as f32 + 0.5,
+                    },
                     ground_level: tile.ground_level,
                     link: None,
                 }
