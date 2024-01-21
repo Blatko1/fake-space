@@ -1,7 +1,8 @@
+use std::sync::Arc;
 use winit::{dpi::PhysicalSize, window::Window as WinitWindow};
 
 pub struct Gfx {
-    surface: wgpu::Surface,
+    surface: wgpu::Surface<'static>,
     device: wgpu::Device,
     config: wgpu::SurfaceConfiguration,
     queue: wgpu::Queue,
@@ -9,8 +10,9 @@ pub struct Gfx {
 
 impl Gfx {
     pub async fn init(
-        winit_window: &WinitWindow,
+        winit_window: Arc<WinitWindow>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
+        let size = winit_window.inner_size();
         let backends =
             wgpu::util::backend_bits_from_env().unwrap_or(wgpu::Backends::PRIMARY);
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
@@ -20,7 +22,7 @@ impl Gfx {
             gles_minor_version: wgpu::Gles3MinorVersion::Automatic,
         });
 
-        let surface = unsafe { instance.create_surface(&winit_window) }?;
+        let surface = unsafe { instance.create_surface(winit_window) }?;
 
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
@@ -35,14 +37,13 @@ impl Gfx {
             .request_device(
                 &wgpu::DeviceDescriptor {
                     label: Some("Request Device"),
-                    features: wgpu::Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES,
-                    limits: wgpu::Limits::default(),
+                    required_features: wgpu::Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES,
+                    required_limits: wgpu::Limits::default(),
                 },
                 None,
             )
             .await?;
 
-        let size = winit_window.inner_size();
         //let config = surface
         //    .get_default_config(&adapter, size.width, size.height)
         //    .expect("Surface isn't supported by the adapter.");
@@ -53,6 +54,7 @@ impl Gfx {
             width: size.width,
             height: size.height,
             present_mode: wgpu::PresentMode::Fifo,
+            desired_maximum_frame_latency: 2,
             alpha_mode: wgpu::CompositeAlphaMode::Auto,
             view_formats: vec![],
         };

@@ -2,7 +2,8 @@ use std::f32::consts::{PI, TAU};
 
 use crate::world::portal::{Portal, PortalRotationDifference};
 use glam::Vec3;
-use winit::event::{DeviceEvent, ElementState, KeyboardInput, VirtualKeyCode};
+use winit::event::{DeviceEvent, ElementState, KeyEvent};
+use winit::keyboard::{KeyCode, PhysicalKey};
 
 const MOVEMENT_SPEED: f32 = 0.1;
 const ROTATION_SPEED: f32 = 0.035;
@@ -204,42 +205,42 @@ impl Camera {
         }
     }
 
-    pub fn process_keyboard_input(&mut self, event: KeyboardInput) {
-        if let Some(key) = event.virtual_keycode {
+    pub fn process_keyboard_input(&mut self, event: KeyEvent) {
             let value = match event.state {
                 ElementState::Pressed => 1.0,
                 ElementState::Released => 0.0,
             };
-            match key {
-                // Turn left:
-                VirtualKeyCode::Q => self.turn_left = value,
-                // Turn right:
-                VirtualKeyCode::E => self.turn_right = value,
-                // Move forward:
-                VirtualKeyCode::W => self.forward = value,
-                // Move backward:
-                VirtualKeyCode::S => self.backward = value,
-                // Strafe left:
-                VirtualKeyCode::A => self.strafe_left = value,
-                // Strafe right:
-                VirtualKeyCode::D => self.strafe_right = value,
-                // Increase FOV:
-                VirtualKeyCode::Up => self.increase_fov = value,
-                // Increase FOV:
-                VirtualKeyCode::Down => self.decrease_fov = value,
-                // Look more up (y_shearing):
-                VirtualKeyCode::PageUp => self.increase_y_shearing = value,
-                // Look more down (y_shearing):
-                VirtualKeyCode::PageDown => self.decrease_y_shearing = value,
-                // Reset look (y_shearing):
-                VirtualKeyCode::Home => self.y_shearing = 0.0,
-                // Reset look (y_shearing):
-                VirtualKeyCode::Space => self.fly_up = value,
-                // Reset look (y_shearing):
-                VirtualKeyCode::LShift => self.fly_down = value,
-                _ => (),
+            if let PhysicalKey::Code(key) = event.physical_key {
+                match key {
+                    // Turn left:
+                    KeyCode::KeyQ => self.turn_left = value,
+                    // Turn right:
+                    KeyCode::KeyE => self.turn_right = value,
+                    // Move forward:
+                    KeyCode::KeyW => self.forward = value,
+                    // Move backward:
+                    KeyCode::KeyS => self.backward = value,
+                    // Strafe left:
+                    KeyCode::KeyA => self.strafe_left = value,
+                    // Strafe right:
+                    KeyCode::KeyD => self.strafe_right = value,
+                    // Increase FOV:
+                    KeyCode::ArrowUp => self.increase_fov = value,
+                    // Increase FOV:
+                    KeyCode::ArrowDown => self.decrease_fov = value,
+                    // Look more up (y_shearing):
+                    KeyCode::PageUp => self.increase_y_shearing = value,
+                    // Look more down (y_shearing):
+                    KeyCode::PageDown => self.decrease_y_shearing = value,
+                    // Reset look (y_shearing):
+                    KeyCode::Home => self.y_shearing = 0.0,
+                    // Reset look (y_shearing):
+                    KeyCode::Space => self.fly_up = value,
+                    // Reset look (y_shearing):
+                    KeyCode::ShiftLeft => self.fly_down = value,
+                    _ => (),
+                }
             }
-        }
     }
 
     pub fn get_origin(&self) -> Vec3 {

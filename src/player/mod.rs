@@ -1,4 +1,4 @@
-use winit::event::{DeviceEvent, KeyboardInput};
+use winit::event::{DeviceEvent, KeyEvent};
 
 use crate::{
     render::{self, camera::Camera},
@@ -69,7 +69,7 @@ impl Player {
         self.camera.process_mouse_input(event)
     }
 
-    pub fn process_keyboard_input(&mut self, event: KeyboardInput) {
+    pub fn process_keyboard_input(&mut self, event: KeyEvent) {
         self.camera.process_keyboard_input(event)
     }
 }

@@ -1,9 +1,10 @@
 pub mod gfx;
 
-use crate::hud::Hud;
+use std::sync::Arc;
 use gfx::Gfx;
 use wgpu::util::DeviceExt;
 use winit::dpi::PhysicalSize;
+use crate::dbg::Dbg;
 
 const TRIANGLE_VERTICES: [[f32; 2]; 3] = [
     [-1.0, -1.0], // bottom-left
@@ -33,7 +34,7 @@ impl Canvas {
     const CANVAS_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
 
     pub async fn init(
-        winit_window: &winit::window::Window,
+        winit_window: Arc<winit::window::Window>,
         canvas_width: u32,
         canvas_height: u32,
     ) -> Self {
@@ -206,7 +207,7 @@ impl Canvas {
         self.buffer.chunks_exact_mut(self.height as usize * 4)
     }
 
-    pub fn render(&mut self, hud: &Hud) -> Result<(), wgpu::SurfaceError> {
+    pub fn render(&mut self, dbg: &Dbg) -> Result<(), wgpu::SurfaceError> {
         // Flip the buffer texture to correct position (90 degrees to left)
         self.frame
             .chunks_exact_mut(self.width as usize * 4)
@@ -281,7 +282,7 @@ impl Canvas {
                 self.region.height,
             );
             rpass.draw(0..3, 0..1);
-            hud.render(&mut rpass);
+            dbg.render(&mut rpass);
         }
 
         self.gfx.queue().submit(Some(encoder.finish()));

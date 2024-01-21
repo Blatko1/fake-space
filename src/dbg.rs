@@ -1,21 +1,19 @@
+use glam::Vec3;
 use crate::backend::gfx::Gfx;
-use crate::render::camera::Camera;
 use wgpu::RenderPass;
 use wgpu_text::glyph_brush::ab_glyph::FontVec;
 use wgpu_text::glyph_brush::{BuiltInLineBreaker, Extra, Layout, OwnedSection, Section, Text, VerticalAlign};
 use wgpu_text::{BrushBuilder, BrushError, TextBrush};
 use crate::backend::Canvas;
-use crate::player::Player;
-use crate::world::World;
+use crate::state::State;
 
-/// Heads-up display. In-game user interface.
-pub struct Hud {
+pub struct Dbg {
     screen_position: (f32, f32),
     brush: TextBrush<FontVec>,
     content: OwnedSection<Extra>,
 }
 
-impl Hud {
+impl Dbg {
     pub fn new(gfx: &Gfx, font: FontVec) -> Self {
         let config = gfx.config();
         let brush = BrushBuilder::using_font(font).build(
@@ -34,7 +32,9 @@ impl Hud {
         }
     }
 
-    pub fn update(&mut self, world: &World, player: &Player) {
+    pub fn update(&mut self, state: &State, avg_fps_time: f32, fps: i32) {
+        let world = state.get_world();
+        let player = state.get_player();
         let camera = player.get_camera();
         let position = camera.get_origin();
         let direction = camera.get_direction();
@@ -43,15 +43,18 @@ impl Hud {
         self.content = Section::default()
             .with_text(vec![
                 Text::new(&format!(
-                    "Position: x: {:.3}, y: {:.3}, z: {:.3}\n\
+                    "FPS: {}\n\
+                    Average frame time: {:.2} ms\n\
+                    Position: x: {:.3}, y: {:.3}, z: {:.3}\n\
                     Direction: Vec3[{:.3}, {:.3}, {:.3}]\n\
                     Angle: {:.2} degrees\n\
                     RoomID: {}\n\
                     Room count: {}",
+                    fps, avg_fps_time,
                     position.x, position.y, position.z,
                     direction.x, direction.y, direction.z,
                     angle, player.get_current_room_id().0, world.room_count()
-                )).with_scale(30.0).with_color([0.9, 0.5, 0.5, 1.0]),
+                )).with_scale(30.0).with_color([0.9, 0.2, 0.3, 1.0]),
             ])
             .with_screen_position(self.screen_position)
             .with_layout(Layout::default()
@@ -60,7 +63,7 @@ impl Hud {
             .to_owned();
     }
 
-    pub fn on_resize(&mut self, canvas: &Canvas) {
+    pub fn resize(&mut self, canvas: &Canvas) {
         let region = canvas.region();
         let gfx = canvas.gfx();
         let config = gfx.config();
