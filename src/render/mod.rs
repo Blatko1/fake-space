@@ -4,10 +4,12 @@ mod platforms;
 mod ray;
 mod voxel_model;
 mod wall;
+mod background;
 
 use crate::render::camera::Camera;
 use crate::world::{Tile, World};
 use crate::{player::Player, world::textures::TextureManager};
+use crate::world::textures::Texture;
 
 use self::ray::Ray;
 
@@ -22,16 +24,23 @@ where
     C: Iterator<Item = &'a mut [u8]>,
 {
     let camera = player.get_camera();
+    let texture_manager = world.texture_manager();
     column_iter.enumerate().for_each(|(column_index, column)| {
-        let mut ray = Ray::cast_with_camera(column_index, camera);
-        let texture_manager = world.texture_manager();
         let mut room = world.get_room_data(player.get_current_room_id());
         let mut segment = room.segment;
 
-        let mut bottom_draw_bound = 0;
-        let mut top_draw_bound = camera.view_height as usize;
+        let mut params = DrawParams {
+            bottom_draw_bound: 0,
+            top_draw_bound: camera.view_height as usize,
+            tile: Tile::EMPTY,
+            ray: Ray::cast_with_camera(column_index, camera),
+            background_tex: Texture::ID(0),
+            texture_manager,
+            camera,
+        };
         // DDA loop
         loop {
+            let mut ray = params.ray;
             let current_tile_x = ray.next_tile.x;
             let current_tile_z = ray.next_tile.z;
 
@@ -51,33 +60,25 @@ where
                 let wall_offset = ray.origin.x + ray.wall_dist * ray.dir.x;
                 ray.wall_offset = wall_offset - wall_offset.floor();
             };
+            params.ray = ray;
 
             // Tile which the ray just traveled over before hitting a wall.
-            let Some(&current_tile) = segment.get_tile(current_tile_x, current_tile_z)
-            else {
-                break;
-            };
-
-            let mut params = DrawParams {
-                bottom_draw_bound,
-                top_draw_bound,
-                tile: current_tile,
-                ray,
-                texture_manager,
-                camera,
+            match segment.get_tile(current_tile_x, current_tile_z) {
+                Some(&current_tile) => params.tile = current_tile,
+                None => {
+                    background::draw_background(params, column);
+                    break; },
             };
 
             // Drawing top and bottom platforms
             let drawn_to = platforms::draw_bottom_platform(params, column);
-            bottom_draw_bound = drawn_to;
-            params.bottom_draw_bound = bottom_draw_bound;
+            params.bottom_draw_bound = drawn_to;
             let drawn_from = platforms::draw_top_platform(params, column);
-            top_draw_bound = drawn_from;
-            params.top_draw_bound = top_draw_bound;
+            params.top_draw_bound = drawn_from;
 
             let mut next_tile = match segment.get_tile(ray.next_tile.x, ray.next_tile.z) {
                 Some(&t) => t,
-                None => break,
+                None => {background::draw_background(params, column); break},
             };
 
             // Switch to the different room if portal is hit
@@ -100,20 +101,19 @@ where
                     Some(&t) => t,
                     None => break,
                 };
-
                 ray.portal_teleport(src_portal, dest_portal);
-
                 params.ray = ray;
             }
 
             params.tile = next_tile;
             // Drawing top and bottom walls
             let drawn_to = wall::draw_bottom_wall(params, column);
-            bottom_draw_bound = drawn_to;
+            params.bottom_draw_bound = drawn_to;
             let drawn_from = wall::draw_top_wall(params, column);
-            top_draw_bound = drawn_from;
+            params.top_draw_bound = drawn_from;
 
             ray.previous_wall_dist = ray.wall_dist;
+            params.ray = ray;
         }
     })
 }
@@ -124,9 +124,8 @@ pub struct DrawParams<'a> {
     pub bottom_draw_bound: usize,
     pub top_draw_bound: usize,
     pub tile: Tile,
-    //pub tile_x: i64,
-    //pub tile_z: i64,
     pub ray: Ray,
+    pub background_tex: Texture,
     pub texture_manager: &'a TextureManager,
     pub camera: &'a Camera,
 }

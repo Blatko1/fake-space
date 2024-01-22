@@ -283,3 +283,18 @@ pub struct Tile {
     /// If the current tile should be a portal to different segment (map).
     pub portal: Option<DummyPortal>,
 }
+
+impl Tile {
+    pub const EMPTY: Self = Self {
+        position: TilePosition { x: 0, z: 0},
+        bottom_pillar_tex: Texture::Default,
+        top_pillar_tex: Texture::Default,
+        ground_tex: Texture::Default,
+        ceiling_tex: Texture::Default,
+        bottom_level: -2.0,
+        ground_level: -1.0,
+        ceiling_level: 1.0,
+        top_level: 2.0,
+        portal: None,
+    };
+}
