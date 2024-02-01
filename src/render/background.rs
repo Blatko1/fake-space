@@ -1,5 +1,7 @@
 use std::f32::consts::PI;
+use glam::{Vec2, Vec3};
 use crate::render::{DrawParams, Side};
+use crate::world::textures::Texture;
 
 const QUARTER_PI: f32 = PI / 4.0;
 const THREE_QUARTER_PI: f32 = PI * 3.0 / 4.0;
@@ -8,29 +10,76 @@ pub fn draw_background(draw_params: DrawParams, column: &mut[u8]) {
     let bottom_draw_bound = draw_params.bottom_draw_bound;
     let top_draw_bound = draw_params.top_draw_bound;
     let cam = draw_params.camera;
-    let ray = draw_params.ray;
+    let mut ray = draw_params.ray;
+    ray.wall_dist = 1.0;
 
-    let texture = draw_params.texture_manager.get(draw_params.background_tex);
-    let (tex_width, tex_height) = (
-        texture.width as usize,
-        texture.height as usize,
-    );
-    let texture = texture.data;
+    let (tex_width, tex_height, texture);
 
+    // TODO sky box is temporarily hard-coded
+    let half_wall_pixel_height;
+    // Skybox wall to the north
+    if ray.dir.z >= 0.0 && ray.dir.x.abs() <= ray.dir.z {
+        let t = 0.5 / ray.dir.z;
+        ray.wall_offset = 0.5 + t * ray.dir.x;
+        ray.wall_side_hit = Side::Horizontal;
+        half_wall_pixel_height = cam.f_half_height / (ray.delta_dist_z * 0.5) * cam.plane_dist;
 
-    let half_wall_pixel_height = if ray.angle <= QUARTER_PI || ray.angle >= THREE_QUARTER_PI {
-        cam.f_half_height / (ray.delta_dist_x * 0.5) * cam.plane_dist
-    } else {
-        cam.f_half_height / (ray.delta_dist_z * 0.5) * cam.plane_dist
-    };
-    let pixels_to_bottom =
-        half_wall_pixel_height * (1.0) - cam.y_shearing;
-    let pixels_to_top =
-        half_wall_pixel_height * (1.0) + cam.y_shearing;
-    let full_wall_pixel_height = pixels_to_top + pixels_to_bottom;
-    if ray.column_index == 0 {
-        println!("ray: {}", ray.delta_dist_x);
+        let tex = draw_params.texture_manager.get(Texture::ID(8));
+        (tex_width, tex_height) = (
+            tex.width as usize,
+            tex.height as usize,
+        );
+        texture = tex.data;
     }
+    // Skybox wall to the east
+    else if ray.dir.x >= 0.0 && ray.dir.z.abs() <= ray.dir.x {
+        let t = 0.5 / ray.dir.x;
+        ray.wall_offset = 1.0 - (0.5 + t * ray.dir.z);
+        ray.wall_side_hit = Side::Vertical;
+        half_wall_pixel_height = cam.f_half_height / (ray.delta_dist_x * 0.5) * cam.plane_dist;
+
+        let tex = draw_params.texture_manager.get(Texture::ID(9));
+        (tex_width, tex_height) = (
+            tex.width as usize,
+            tex.height as usize,
+        );
+        texture = tex.data;
+    }
+    // Skybox wall to the west
+    else if ray.dir.x < 0.0 && ray.dir.z.abs() <= -ray.dir.x {
+        let t = 0.5 / ray.dir.x;
+        ray.wall_offset = 1.0 - (0.5 + t * ray.dir.z);
+        ray.wall_side_hit = Side::Vertical;
+        half_wall_pixel_height = cam.f_half_height / (ray.delta_dist_x * 0.5) * cam.plane_dist;
+
+        let tex = draw_params.texture_manager.get(Texture::ID(11));
+        (tex_width, tex_height) = (
+            tex.width as usize,
+            tex.height as usize,
+        );
+        texture = tex.data;
+    }
+    // Skybox wall to the south
+    else {
+        let t = 0.5 / ray.dir.z;
+        ray.wall_offset = 0.5 + t * ray.dir.x;
+        ray.wall_side_hit = Side::Horizontal;
+        half_wall_pixel_height = cam.f_half_height / (ray.delta_dist_z * 0.5) * cam.plane_dist;
+
+        let tex = draw_params.texture_manager.get(Texture::ID(10));
+        (tex_width, tex_height) = (
+            tex.width as usize,
+            tex.height as usize,
+        );
+        texture = tex.data;
+    };
+
+
+    let pixels_to_bottom =
+        half_wall_pixel_height - cam.y_shearing;
+    let pixels_to_top =
+        half_wall_pixel_height + cam.y_shearing;
+    let full_wall_pixel_height = pixels_to_top + pixels_to_bottom;
 
     // From which pixel to begin drawing and on which to end
     let draw_from = ((cam.f_half_height - pixels_to_bottom) as usize)
@@ -38,18 +87,9 @@ pub fn draw_background(draw_params: DrawParams, column: &mut[u8]) {
     let draw_to = ((cam.f_half_height + pixels_to_top) as usize)
         .clamp(bottom_draw_bound, top_draw_bound);
 
-    let tex_x = match ray.wall_side_hit {
-        Side::Vertical if ray.dir.x > 0.0 => {
-            tex_width - (ray.wall_offset * tex_width as f32) as usize - 1
-        }
-        Side::Horizontal if ray.dir.z < 0.0 => {
-            tex_width - (ray.wall_offset * tex_width as f32) as usize - 1
-        }
-        _ => (ray.wall_offset * tex_width as f32) as usize,
-    };
+    let tex_x = (ray.wall_offset * tex_width as f32) as usize;
     let tex_y_step = tex_height as f32
-        / full_wall_pixel_height
-        / (2.0 / (1.0));
+        / full_wall_pixel_height;
     let mut tex_y =
         (draw_from as f32 + pixels_to_bottom - cam.f_half_height) * tex_y_step;
     // Precomputed variables for performance increase

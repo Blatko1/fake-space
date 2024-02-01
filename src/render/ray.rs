@@ -10,8 +10,6 @@ pub struct Ray {
     pub column_index: usize,
     /// Direction of the Ray.
     pub dir: Vec3,
-    /// Angle of the Ray.
-    pub angle: f32,
     /// Distance the Ray needs to cover to reach a new
     /// vertical wall from the previous vertical wall.
     pub delta_dist_x: f32,
@@ -62,7 +60,6 @@ impl Ray {
         let plane_x = 2.0 * (column_index as f32 * cam.width_recip) - 1.0;
         // Ray direction for current pixel column
         let dir = camera_dir + cam.horizontal_plane * plane_x;
-        let angle = dir.normalize().x.acos();
         // Length of ray from one x/z side to next x/z side on the tile_map
         let delta_dist_x = 1.0 / dir.x.abs();
         let delta_dist_z = 1.0 / dir.z.abs();
@@ -93,7 +90,6 @@ impl Ray {
         Self {
             column_index,
             dir,
-            angle,
             delta_dist_x,
             delta_dist_z,
             step_x: dir.x.signum() as i64,

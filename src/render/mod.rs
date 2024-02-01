@@ -78,7 +78,10 @@ where
 
             let mut next_tile = match segment.get_tile(ray.next_tile.x, ray.next_tile.z) {
                 Some(&t) => t,
-                None => {background::draw_background(params, column); break},
+                None => {
+                    background::draw_background(params, column);
+                    break;
+                },
             };
 
             // Switch to the different room if portal is hit

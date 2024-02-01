@@ -18,6 +18,11 @@
 #Mossy = path:../res/mossy_stone.png, transparency:false
 #Glass = path:../res/blue_glass.png, transparency:true
 
+#BoxNorth = path:../res/SkyBoxNorth.png, transparency:false
+#BoxEast = path:../res/SkyBoxEast.png, transparency:false
+#BoxSouth = path:../res/SkyBoxSouth.png, transparency:false
+#BoxWest = path:../res/SkyBoxWest.png, transparency:false
+
 // Declare the segments
 // You can't have multiple segments with the same name
 !start = src:start.txt, repeatable: false
