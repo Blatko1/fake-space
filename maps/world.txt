@@ -24,7 +24,7 @@
 *groundL = -10.0
 *ceilingL = 20.0
 *topL = 300.0
-*skyboxNorth = BlueBrick
+*skyboxNorth = BoxNorth
 *skyboxEast = BoxEast
 *skyboxSouth = BoxSouth
 *skyboxWest = BoxWest
@@ -35,5 +35,3 @@
 // You can't have multiple segments with the same name
 !start = src:start.txt, repeatable: false
 !root = src:root.txt, repeatable: false
-//!start = src:main.txt, repeatable: false
-//!room = src:room.txt, repeatable: false
