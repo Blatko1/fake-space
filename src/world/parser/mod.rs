@@ -8,8 +8,9 @@ use std::path::PathBuf;
 
 use hashbrown::HashMap;
 use image::{io::Reader as ImageReader, EncodableLayout};
+use crate::world::parser::error::TileError;
 
-use super::{Texture, TextureData};
+use super::{SkyboxTextures, Texture, TextureData};
 
 use self::error::{ParseError, SegmentError, SettingError, TextureError};
 use self::segment_parser::SegmentDataParser;
@@ -147,11 +148,21 @@ impl WorldParser {
             return Err(SegmentError::UnspecifiedRepetition);
         };
 
+        let skybox = SkyboxTextures {
+            north: self.settings.skybox_north,
+            east: self.settings.skybox_east,
+            south: self.settings.skybox_south,
+            west: self.settings.skybox_west,
+            top: self.settings.skybox_top,
+            bottom: self.settings.skybox_bottom,
+        };
+
         Ok(Segment::new(
             id,
             name.to_owned(),
             dimensions,
             tiles,
+            skybox,
             repeatable,
         ))
     }
@@ -191,6 +202,42 @@ impl WorldParser {
                     return Err(SettingError::InvalidF32Value(val.to_owned()));
                 };
                 self.settings.top_level = value;
+            }
+            "skyboxNorth" => {
+                let Some(&texture_id) = self.texture_map.get(val) else {
+                    return Err(SettingError::UnknownTexture(val.to_owned()));
+                };
+                self.settings.skybox_north = texture_id;
+            }
+            "skyboxEast" => {
+                let Some(&texture_id) = self.texture_map.get(val) else {
+                    return Err(SettingError::UnknownTexture(val.to_owned()));
+                };
+                self.settings.skybox_east = texture_id;
+            }
+            "skyboxSouth" => {
+                let Some(&texture_id) = self.texture_map.get(val) else {
+                    return Err(SettingError::UnknownTexture(val.to_owned()));
+                };
+                self.settings.skybox_south = texture_id;
+            }
+            "skyboxWest" => {
+                let Some(&texture_id) = self.texture_map.get(val) else {
+                    return Err(SettingError::UnknownTexture(val.to_owned()));
+                };
+                self.settings.skybox_west = texture_id;
+            }
+            "skyboxTop" => {
+                let Some(&texture_id) = self.texture_map.get(val) else {
+                    return Err(SettingError::UnknownTexture(val.to_owned()));
+                };
+                self.settings.skybox_top = texture_id;
+            }
+            "skyboxBottom" => {
+                let Some(&texture_id) = self.texture_map.get(val) else {
+                    return Err(SettingError::UnknownTexture(val.to_owned()));
+                };
+                self.settings.skybox_bottom = texture_id;
             }
             _ => return Err(SettingError::UnknownSetting(setting.to_owned())),
         }
@@ -271,6 +318,12 @@ pub(super) struct Settings {
     pub ground_level: f32,
     pub ceiling_level: f32,
     pub top_level: f32,
+    pub skybox_north: Texture,
+    pub skybox_east: Texture,
+    pub skybox_south: Texture,
+    pub skybox_west: Texture,
+    pub skybox_top: Texture,
+    pub skybox_bottom: Texture,
 }
 
 impl Default for Settings {
@@ -280,6 +333,12 @@ impl Default for Settings {
             ground_level: -0.5,
             ceiling_level: 0.5,
             top_level: 1.0,
+            skybox_north: Texture::Empty,
+            skybox_east: Texture::Empty,
+            skybox_south: Texture::Empty,
+            skybox_west: Texture::Empty,
+            skybox_top: Texture::Empty,
+            skybox_bottom: Texture::Empty,
         }
     }
 }

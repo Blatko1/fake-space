@@ -1,5 +1,5 @@
 struct Global {
-    matrix: mat4x4<f32>
+    mtrx: mat4x4<f32>
 }
 @group(0) @binding(2)
 var<uniform> global: Global;
@@ -13,7 +13,7 @@ struct VertexOutput {
 fn vs_main(@location(0) pos: vec2<f32>) -> VertexOutput {
     var out: VertexOutput;
 
-    out.clip_position = global.matrix * vec4<f32>(pos, 0.0, 1.0);
+    out.clip_position = global.mtrx * vec4<f32>(pos, 0.0, 1.0);
     out.tex_pos = fma(pos, vec2<f32>(0.5, -0.5), vec2<f32>(0.5, 0.5));
 
     return out;   

@@ -1,6 +1,7 @@
 pub mod gfx;
 
 use std::sync::Arc;
+use rand::Fill;
 use gfx::Gfx;
 use wgpu::util::DeviceExt;
 use winit::dpi::PhysicalSize;
@@ -200,8 +201,10 @@ impl Canvas {
 
     pub fn clear_buffer(&mut self) {
         self.buffer.fill(0);
+
+        // TODO cool effects!
+        //self.buffer.try_fill(&mut rand::thread_rng()).unwrap();
     }
-    // TODO check out try_fill(rand) for cool effects!
 
     pub fn mut_column_iterator(&mut self) -> impl Iterator<Item = &mut [u8]> {
         self.buffer.chunks_exact_mut(self.height as usize * 4)

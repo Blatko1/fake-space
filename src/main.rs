@@ -20,7 +20,7 @@ use pollster::block_on;
 use wgpu_text::glyph_brush::ab_glyph::FontVec;
 use state::State;
 use winit::{
-    event::{ElementState, Event, WindowEvent},
+    event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder as WinitWindowBuilder,
 };

@@ -1,11 +1,5 @@
 // The world file and segment files are read and processed in the line by line order.
 
-// Determine the constant settings
-*bottomL = -90.0
-*groundL = -10.0
-*ceilingL = 20.0
-*topL = 300.0
-
 // Declare the textures
 // You can't have multiple textures with the same name
 #Grass = path:../res/grass.jpg, transparency:false
@@ -18,10 +12,24 @@
 #Mossy = path:../res/mossy_stone.png, transparency:false
 #Glass = path:../res/blue_glass.png, transparency:true
 
-#BoxNorth = path:../res/SkyBoxNorth.png, transparency:false
+#BoxNorth = path:../res/SkyBoxNorth.png, transparency:false //8
 #BoxEast = path:../res/SkyBoxEast.png, transparency:false
 #BoxSouth = path:../res/SkyBoxSouth.png, transparency:false
 #BoxWest = path:../res/SkyBoxWest.png, transparency:false
+#BoxTop = path:../res/SkyBoxTop.png, transparency:false
+#BoxBot = path:../res/SkyBoxBottom.png, transparency:false
+
+// Determine the constant settings
+*bottomL = -90.0
+*groundL = -10.0
+*ceilingL = 20.0
+*topL = 300.0
+*skyboxNorth = BlueBrick
+*skyboxEast = BoxEast
+*skyboxSouth = BoxSouth
+*skyboxWest = BoxWest
+*skyboxTop = BoxTop
+*skyboxBottom = BoxBot
 
 // Declare the segments
 // You can't have multiple segments with the same name

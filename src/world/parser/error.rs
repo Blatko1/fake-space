@@ -48,6 +48,7 @@ pub enum DimensionError {
 pub enum SettingError {
     InvalidFormat(String),
     UnknownSetting(String),
+    UnknownTexture(String),
     InvalidF32Value(String),
 }
 

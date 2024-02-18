@@ -4,12 +4,11 @@ mod platforms;
 mod ray;
 mod voxel_model;
 mod wall;
-mod background;
+mod skybox;
 
 use crate::render::camera::Camera;
-use crate::world::{Tile, World};
+use crate::world::{SkyboxTextures, Tile, World};
 use crate::{player::Player, world::textures::TextureManager};
-use crate::world::textures::Texture;
 
 use self::ray::Ray;
 
@@ -34,7 +33,7 @@ where
             top_draw_bound: camera.view_height as usize,
             tile: Tile::EMPTY,
             ray: Ray::cast_with_camera(column_index, camera),
-            background_tex: Texture::ID(0),
+            skybox: room.segment.get_skybox(),
             texture_manager,
             camera,
         };
@@ -66,7 +65,7 @@ where
             match segment.get_tile(current_tile_x, current_tile_z) {
                 Some(&current_tile) => params.tile = current_tile,
                 None => {
-                    background::draw_background(params, column);
+                    skybox::draw_skybox(params, column);
                     break; },
             };
 
@@ -79,7 +78,7 @@ where
             let mut next_tile = match segment.get_tile(ray.next_tile.x, ray.next_tile.z) {
                 Some(&t) => t,
                 None => {
-                    background::draw_background(params, column);
+                    skybox::draw_skybox(params, column);
                     break;
                 },
             };
@@ -93,7 +92,10 @@ where
                         let dest_portal = dest_room.get_portal(portal_id);
                         (dest_room, dest_portal)
                     }
-                    None => break,
+                    None => {
+                        skybox::draw_skybox(params, column);
+                        break;
+                    },
                 };
                 room = dest_room;
                 segment = room.segment;
@@ -102,7 +104,10 @@ where
                     dest_portal.position.z as i64,
                 ) {
                     Some(&t) => t,
-                    None => break,
+                    None => {
+                        skybox::draw_skybox(params, column);
+                        break;
+                    },
                 };
                 ray.portal_teleport(src_portal, dest_portal);
                 params.ray = ray;
@@ -128,7 +133,7 @@ pub struct DrawParams<'a> {
     pub top_draw_bound: usize,
     pub tile: Tile,
     pub ray: Ray,
-    pub background_tex: Texture,
+    pub skybox: SkyboxTextures,
     pub texture_manager: &'a TextureManager,
     pub camera: &'a Camera,
 }
@@ -140,7 +145,7 @@ pub enum Side {
     Horizontal,
 }
 
-// TODO convert to unsafe for speed
+// TODO switch to unsafe for speed
 #[inline(always)]
 fn blend(background: &[u8], foreground: &[u8]) -> [u8; 4] {
     let alpha = foreground[3] as f32 / 255.0;

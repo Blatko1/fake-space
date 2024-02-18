@@ -43,7 +43,7 @@ impl World {
         let mut starting_room = Room {
             id: RoomID(room_counter),
             segment_id: segment.id,
-            portals: segment.portals.clone(),
+            portals: segment.unlinked_portals.clone(),
             is_fully_generated: true,
         };
         room_counter += 1;
@@ -57,7 +57,7 @@ impl World {
                 let mut new_room = Room {
                     id: RoomID(room_counter),
                     segment_id: rand_segment.id,
-                    portals: rand_segment.portals.clone(),
+                    portals: rand_segment.unlinked_portals.clone(),
                     is_fully_generated: false,
                 };
                 let room_rand_portal = new_room.portals.choose_mut(&mut rng).unwrap();
@@ -98,7 +98,7 @@ impl World {
                     let mut new_room = Room {
                         id: RoomID(next_id),
                         segment_id: rand_segment.id,
-                        portals: rand_segment.portals.clone(),
+                        portals: rand_segment.unlinked_portals.clone(),
                         is_fully_generated: false,
                     };
                     let room_rand_portal =
@@ -126,7 +126,7 @@ impl World {
         let starting_room = Room {
             id: room_id,
             segment_id: segment.id,
-            portals: segment.portals.clone(),
+            portals: segment.unlinked_portals.clone(),
             is_fully_generated: false,
         };
         self.rooms.push(starting_room);
@@ -183,13 +183,16 @@ pub struct Room {
 }
 
 // TODO Use a struct or type for dimensions instead
+/// A map segment (room) with immutable data.
+/// You can mutate room data in a [`Room`] struct.
 #[derive(Debug)]
 pub struct Segment {
     id: SegmentID,
     name: String,
     dimensions: (u64, u64),
     tiles: Vec<Tile>,
-    portals: Vec<Portal>,
+    unlinked_portals: Vec<Portal>,
+    skybox: SkyboxTextures,
     repeatable: bool,
 }
 
@@ -199,10 +202,11 @@ impl Segment {
         name: String,
         dimensions: (u64, u64),
         tiles: Vec<Tile>,
+        skybox: SkyboxTextures,
         repeatable: bool,
     ) -> Self {
         // Create unlinked Portals from DummyPortals
-        let portals = tiles
+        let unlinked_portals = tiles
             .iter()
             .filter(|tile| tile.portal.is_some())
             .map(|tile| {
@@ -224,8 +228,9 @@ impl Segment {
             id,
             name,
             dimensions,
-            portals,
+            unlinked_portals,
             tiles,
+            skybox,
             repeatable,
         }
     }
@@ -248,6 +253,10 @@ impl Segment {
         }
         self.tiles
             .get(z as usize * self.dimensions.0 as usize + x as usize)
+    }
+
+    pub fn get_skybox(&self) -> SkyboxTextures {
+        self.skybox
     }
 }
 
@@ -297,4 +306,14 @@ impl Tile {
         top_level: 2.0,
         portal: None,
     };
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct SkyboxTextures {
+    pub north: Texture,
+    pub east: Texture,
+    pub south: Texture,
+    pub west: Texture,
+    pub top: Texture,
+    pub bottom: Texture,
 }

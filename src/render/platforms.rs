@@ -51,8 +51,8 @@ pub(super) fn draw_bottom_platform(draw_params: DrawParams, column: &mut [u8]) -
         .skip(cam.view_height as usize - draw_to)
         .take(draw_to - draw_from)
         .for_each(|(y, rgba)| {
-            let row_dist = ((ray.origin.y - tile.ground_level) / 2.0) * cam.f_height
-                / (y as f32 - cam.f_height / 2.0 + cam.y_shearing)
+            let row_dist = ((ray.origin.y - tile.ground_level) * 0.5) * cam.f_height
+                / (y as f32 - cam.f_half_height + cam.y_shearing)
                 * cam.plane_dist;
             let step = tile_step_factor * row_dist;
             let pos = ray.origin + ray_dir * row_dist + step * ray.column_index as f32;
@@ -90,6 +90,7 @@ pub(super) fn draw_top_platform(draw_params: DrawParams, column: &mut [u8]) -> u
         top_platform_texture.height as usize,
     );
 
+    // TODO WRONG NAMES: pixels_to_bottom, etc.
     // Draw from:
     let half_wall_pixel_height = cam.f_half_height / ray.wall_dist * cam.plane_dist;
     let pixels_to_bottom =
@@ -113,8 +114,8 @@ pub(super) fn draw_top_platform(draw_params: DrawParams, column: &mut [u8]) -> u
         .skip(draw_from)
         .take(draw_to - draw_from)
         .for_each(|(y, rgba)| {
-            let row_dist = ((-ray.origin.y + tile.ceiling_level) / 2.0) * cam.f_height
-                / (y as f32 - cam.f_height / 2.0 - cam.y_shearing)
+            let row_dist = ((-ray.origin.y + tile.ceiling_level) * 0.5) * cam.f_height
+                / (y as f32 - cam.f_half_height - cam.y_shearing)
                 * cam.plane_dist;
             let step = tile_step_factor * row_dist;
             let pos = ray.origin + ray_dir * row_dist + step * ray.column_index as f32;
