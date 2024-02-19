@@ -1,8 +1,12 @@
 use super::{blend, DrawParams, Side};
+use crate::render::skybox::draw_skybox;
 
 // TODO write tests for each draw call function to check for overflows
 // Draws full and transparent walls.
-pub(super) fn draw_bottom_wall(draw_params: DrawParams, column: &mut [u8]) -> usize {
+pub(super) fn draw_bottom_wall(
+    draw_params: DrawParams,
+    column: &mut [u8],
+) -> usize {
     let bottom_draw_bound = draw_params.bottom_draw_bound;
     let top_draw_bound = draw_params.top_draw_bound;
     let cam = draw_params.camera;
@@ -11,7 +15,7 @@ pub(super) fn draw_bottom_wall(draw_params: DrawParams, column: &mut [u8]) -> us
 
     let bottom_wall_texture = draw_params.texture_manager.get(tile.bottom_pillar_tex);
     if bottom_wall_texture.is_empty() {
-        return bottom_draw_bound;
+        return top_draw_bound;
     }
 
     let texture = match ray.wall_side_hit {
@@ -89,7 +93,7 @@ pub(super) fn draw_top_wall(draw_params: DrawParams, column: &mut [u8]) -> usize
 
     let top_wall_texture = draw_params.texture_manager.get(tile.top_pillar_tex);
     if top_wall_texture.is_empty() {
-        return top_draw_bound;
+        return bottom_draw_bound;
     }
 
     let texture = match ray.wall_side_hit {

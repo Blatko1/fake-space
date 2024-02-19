@@ -1,3 +1,4 @@
+use crate::dbg::Dbg;
 use crate::{
     backend::Canvas,
     player::Player,
@@ -5,11 +6,8 @@ use crate::{
     voxel::VoxelModelManager,
     world::{RoomID, World},
 };
-use winit::{
-    event::{DeviceEvent},
-};
+use winit::event::DeviceEvent;
 use winit::event::KeyEvent;
-use crate::dbg::Dbg;
 
 pub struct State {
     models: VoxelModelManager,
@@ -36,15 +34,16 @@ impl State {
         }
     }
 
-    pub fn update(&mut self) {
-        self.player.update(&self.world);
+    pub fn update(&mut self, frame_time: f32) {
+        self.player.update(&self.world, frame_time);
         self.world.update(&self.player);
     }
 
-    pub fn draw<'a, C>(&mut self, canvas_column_iter: C) where
-        C: Iterator<Item = &'a mut [u8]> {
-        self.player
-            .cast_and_draw(&self.world, canvas_column_iter);
+    pub fn draw<'a, C>(&mut self, canvas_column_iter: C)
+    where
+        C: Iterator<Item = &'a mut [u8]>,
+    {
+        self.player.cast_and_draw(&self.world, canvas_column_iter);
     }
 
     pub fn process_keyboard_input(&mut self, event: KeyEvent) {

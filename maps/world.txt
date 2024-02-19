@@ -12,7 +12,7 @@
 #Mossy = path:../res/mossy_stone.png, transparency:false
 #Glass = path:../res/blue_glass.png, transparency:true
 
-#BoxNorth = path:../res/SkyBoxNorth.png, transparency:false //8
+#BoxNorth = path:../res/SkyBoxNorth.png, transparency:false
 #BoxEast = path:../res/SkyBoxEast.png, transparency:false
 #BoxSouth = path:../res/SkyBoxSouth.png, transparency:false
 #BoxWest = path:../res/SkyBoxWest.png, transparency:false
@@ -35,3 +35,5 @@
 // You can't have multiple segments with the same name
 !start = src:start.txt, repeatable: false
 !root = src:root.txt, repeatable: false
+!l_turn = src:hall_turn.txt, repeatable: true
+!t_turn = src:t_turn.txt, repeatable: true

@@ -1,0 +1,35 @@
+// Declare the segment dimensions
+7x7
+
+//Parameters: pillar1->bottom pillar, pillar2->top pillar, lvl1->bottom starting bound of bottom pillar,
+// lvl2->top ending bound of bottom pillar, lvl3->bottom starting bound of top pillar,
+// lvl4->top ending bound of top pillar, bottom->texture of bottom platform,
+// top->texture of top platform
+
+// Declare the presets used in modifying the tiles
+$ground = groundL:0, bottomL:-1, groundT:MetalFloor
+$ceiling = ceilingL:5, topL:20, ceilingT:Mossy, topT:Mossy
+$wall = groundL:7, ceilingL:8, bottomT:BlueBrick
+$portalTile = ceilingL:3, topL:11
+$NPortal = portalDir:N, $portalTile
+$SPortal = portalDir:S, $portalTile
+$EPortal = portalDir:E, $portalTile
+$WPortal = portalDir:W, $portalTile
+$fall = bottomL:-100, groundL:-99
+
+// Modifying the tiles
+// Add surrounding pillars
+1-49 = $ground, $ceiling
+1-10 = $wall
+12-17 = $wall
+19-23 = $wall
+27-29 = $wall
+35-36 = $wall
+38-40 = $wall
+42-49 = $wall
+
+11 = $NPortal
+37 = $SPortal
+41 = $SPortal
+
+// Small room

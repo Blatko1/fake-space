@@ -18,7 +18,7 @@ pub(super) fn draw_bottom_platform(draw_params: DrawParams, column: &mut [u8]) -
 
     let ground_texture = draw_params.texture_manager.get(tile.ground_tex);
     if ground_texture.is_empty() {
-        return bottom_draw_bound;
+        return top_draw_bound;
     }
     let (texture, tex_width, tex_height) = (
         ground_texture.data,
@@ -42,20 +42,21 @@ pub(super) fn draw_bottom_platform(draw_params: DrawParams, column: &mut [u8]) -
     let draw_to =
         ((cam.f_half_height + pixels_to_top) as usize).clamp(draw_from, top_draw_bound);
 
+    // Variables used for reducing the amount of calculations and for optimization
     let ray_dir = ray.camera_dir - ray.horizontal_plane;
     let tile_step_factor = ray.horizontal_plane * 2.0 * cam.width_recip;
+    let pos_factor = ray_dir + tile_step_factor * ray.column_index as f32;
+    let row_dist_factor = cam.f_half_height * cam.plane_dist;
+    let shearing_plus_half_height = cam.y_shearing + cam.f_half_height;
     column
         .chunks_exact_mut(4)
-        .rev()
         .enumerate()
-        .skip(cam.view_height as usize - draw_to)
+        .skip(draw_from)
         .take(draw_to - draw_from)
         .for_each(|(y, rgba)| {
-            let row_dist = ((ray.origin.y - tile.ground_level) * 0.5) * cam.f_height
-                / (y as f32 - cam.f_half_height + cam.y_shearing)
-                * cam.plane_dist;
-            let step = tile_step_factor * row_dist;
-            let pos = ray.origin + ray_dir * row_dist + step * ray.column_index as f32;
+            let row_dist = (ray.origin.y - tile.ground_level) * row_dist_factor
+                / (y as f32 - shearing_plus_half_height);
+            let pos = ray.origin - row_dist * pos_factor;
             //let tex_x = ((tex_width as f32 * (pos.x - tile_x as f32)) as usize)
             //    .min(tex_width - 1);
             //let tex_y = ((tex_height as f32 * (pos.z - tile_z as f32)) as usize)
@@ -63,7 +64,7 @@ pub(super) fn draw_bottom_platform(draw_params: DrawParams, column: &mut [u8]) -
             let tex_x = ((tex_width as f32 * pos.x.fract()) as usize).min(tex_width - 1);
             let tex_y =
                 ((tex_height as f32 * pos.z.fract()) as usize).min(tex_height - 1);
-            let i = tex_width * 4 * tex_y + tex_x * 4;
+            let i = 4 * (tex_width * tex_y + tex_x); //tex_width * 4 * tex_y + tex_x * 4
             let color = &texture[i..i + 4];
             rgba.copy_from_slice(color);
         });
@@ -82,7 +83,7 @@ pub(super) fn draw_top_platform(draw_params: DrawParams, column: &mut [u8]) -> u
 
     let top_platform_texture = draw_params.texture_manager.get(tile.ceiling_tex);
     if top_platform_texture.is_empty() {
-        return top_draw_bound;
+        return bottom_draw_bound;
     }
     let (texture, tex_width, tex_height) = (
         top_platform_texture.data,
@@ -108,17 +109,18 @@ pub(super) fn draw_top_platform(draw_params: DrawParams, column: &mut [u8]) -> u
 
     let ray_dir = ray.camera_dir - ray.horizontal_plane;
     let tile_step_factor = ray.horizontal_plane * 2.0 * cam.width_recip;
+    let pos_factor = ray_dir + tile_step_factor * ray.column_index as f32;
+    let row_dist_factor = cam.f_half_height * cam.plane_dist;
+    let shearing_plus_half_height = cam.y_shearing + cam.f_half_height;
     column
         .chunks_exact_mut(4)
         .enumerate()
         .skip(draw_from)
         .take(draw_to - draw_from)
         .for_each(|(y, rgba)| {
-            let row_dist = ((-ray.origin.y + tile.ceiling_level) * 0.5) * cam.f_height
-                / (y as f32 - cam.f_half_height - cam.y_shearing)
-                * cam.plane_dist;
-            let step = tile_step_factor * row_dist;
-            let pos = ray.origin + ray_dir * row_dist + step * ray.column_index as f32;
+            let row_dist = (-ray.origin.y + tile.ceiling_level) * row_dist_factor
+                / (y as f32 - shearing_plus_half_height);
+            let pos = ray.origin + row_dist * pos_factor;
             //let tex_x = ((tex_width as f32 * (pos.x - tile_x as f32)) as usize)
             //    .min(tex_width - 1);
             //let tex_y = ((tex_height as f32 * (pos.z - tile_z as f32)) as usize)
@@ -126,7 +128,7 @@ pub(super) fn draw_top_platform(draw_params: DrawParams, column: &mut [u8]) -> u
             let tex_x = ((tex_width as f32 * pos.x.fract()) as usize).min(tex_width - 1);
             let tex_y =
                 ((tex_height as f32 * pos.z.fract()) as usize).min(tex_height - 1);
-            let i = tex_width * 4 * tex_y + tex_x * 4;
+            let i = 4 * (tex_width * tex_y + tex_x); //tex_width * 4 * tex_y + tex_x * 4
             let color = &texture[i..i + 4];
             rgba.copy_from_slice(color);
         });

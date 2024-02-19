@@ -1,11 +1,11 @@
 pub mod gfx;
 
-use std::sync::Arc;
-use rand::Fill;
+use crate::dbg::Dbg;
 use gfx::Gfx;
+use rand::Fill;
+use std::sync::Arc;
 use wgpu::util::DeviceExt;
 use winit::dpi::PhysicalSize;
-use crate::dbg::Dbg;
 
 const TRIANGLE_VERTICES: [[f32; 2]; 3] = [
     [-1.0, -1.0], // bottom-left
@@ -200,7 +200,8 @@ impl Canvas {
     }
 
     pub fn clear_buffer(&mut self) {
-        self.buffer.fill(0);
+        // Clearing the buffer isn't needed since everything is being overwritten
+        //self.buffer.fill(0);
 
         // TODO cool effects!
         //self.buffer.try_fill(&mut rand::thread_rng()).unwrap();

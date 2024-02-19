@@ -295,7 +295,7 @@ pub struct Tile {
 
 impl Tile {
     pub const EMPTY: Self = Self {
-        position: TilePosition { x: 0, z: 0},
+        position: TilePosition { x: 0, z: 0 },
         bottom_pillar_tex: Texture::Default,
         top_pillar_tex: Texture::Default,
         ground_tex: Texture::Default,

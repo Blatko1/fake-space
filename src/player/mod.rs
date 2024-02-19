@@ -22,8 +22,8 @@ impl Player {
         }
     }
 
-    pub fn update(&mut self, world: &World) {
-        self.camera.update();
+    pub fn update(&mut self, world: &World, frame_time: f32) {
+        self.camera.update(frame_time);
         // Teleportation between rooms
         let room = world.get_room_data(self.current_room);
         let position = self.camera.get_origin();

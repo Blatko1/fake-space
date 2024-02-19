@@ -1,13 +1,13 @@
-use std::f32::consts::PI;
-use glam::Vec3;
 use crate::render::{DrawParams, Side};
-use crate::world::textures::{Texture, TextureDataRef};
+use crate::world::textures::TextureDataRef;
+use glam::Vec3;
+use std::f32::consts::PI;
 
 const QUARTER_PI: f32 = PI / 4.0;
 const THREE_QUARTER_PI: f32 = PI * 3.0 / 4.0;
 
 // TODO solve maybe? entering new rooms rotates camera which rotates the skybox
-pub fn draw_skybox(mut draw_params: DrawParams, column: &mut[u8]) {
+pub fn draw_skybox(mut draw_params: DrawParams, column: &mut [u8]) {
     let cam = draw_params.camera;
     let ray = &mut draw_params.ray;
     ray.wall_dist = 1.0;
@@ -21,7 +21,8 @@ pub fn draw_skybox(mut draw_params: DrawParams, column: &mut[u8]) {
         let t = 0.5 / ray.dir.z;
         ray.wall_offset = 0.5 + t * ray.dir.x;
         ray.wall_side_hit = Side::Horizontal;
-        half_wall_pixel_height = cam.f_half_height / (ray.delta_dist_z * 0.5) * cam.plane_dist;
+        half_wall_pixel_height =
+            cam.f_half_height / (ray.delta_dist_z * 0.5) * cam.plane_dist;
 
         wall_texture = draw_params.texture_manager.get(draw_params.skybox.north);
     }
@@ -30,7 +31,8 @@ pub fn draw_skybox(mut draw_params: DrawParams, column: &mut[u8]) {
         let t = 0.5 / ray.dir.x;
         ray.wall_offset = 1.0 - (0.5 + t * ray.dir.z);
         ray.wall_side_hit = Side::Vertical;
-        half_wall_pixel_height = cam.f_half_height / (ray.delta_dist_x * 0.5) * cam.plane_dist;
+        half_wall_pixel_height =
+            cam.f_half_height / (ray.delta_dist_x * 0.5) * cam.plane_dist;
 
         wall_texture = draw_params.texture_manager.get(draw_params.skybox.east);
     }
@@ -39,7 +41,8 @@ pub fn draw_skybox(mut draw_params: DrawParams, column: &mut[u8]) {
         let t = 0.5 / ray.dir.x;
         ray.wall_offset = 1.0 - (0.5 + t * ray.dir.z);
         ray.wall_side_hit = Side::Vertical;
-        half_wall_pixel_height = cam.f_half_height / (ray.delta_dist_x * 0.5) * cam.plane_dist;
+        half_wall_pixel_height =
+            cam.f_half_height / (ray.delta_dist_x * 0.5) * cam.plane_dist;
 
         wall_texture = draw_params.texture_manager.get(draw_params.skybox.west);
     }
@@ -48,7 +51,8 @@ pub fn draw_skybox(mut draw_params: DrawParams, column: &mut[u8]) {
         let t = 0.5 / ray.dir.z;
         ray.wall_offset = 0.5 + t * ray.dir.x;
         ray.wall_side_hit = Side::Horizontal;
-        half_wall_pixel_height = cam.f_half_height / (ray.delta_dist_z * 0.5) * cam.plane_dist;
+        half_wall_pixel_height =
+            cam.f_half_height / (ray.delta_dist_z * 0.5) * cam.plane_dist;
 
         wall_texture = draw_params.texture_manager.get(draw_params.skybox.south);
     };
@@ -58,7 +62,11 @@ pub fn draw_skybox(mut draw_params: DrawParams, column: &mut[u8]) {
     draw_skybox_wall(draw_params, half_wall_pixel_height, wall_texture, column);
 }
 
-fn draw_skybox_top(draw_params: DrawParams, half_wall_pixel_height: f32, column: &mut[u8]) {
+fn draw_skybox_top(
+    draw_params: DrawParams,
+    half_wall_pixel_height: f32,
+    column: &mut [u8],
+) {
     let bottom_draw_bound = draw_params.bottom_draw_bound;
     let top_draw_bound = draw_params.top_draw_bound;
     let cam = draw_params.camera;
@@ -74,37 +82,42 @@ fn draw_skybox_top(draw_params: DrawParams, half_wall_pixel_height: f32, column:
 
     // TODO wrong names
     // Draw from:
-    let pixels_to_bottom =
-        half_wall_pixel_height * 0.5 - cam.y_shearing;
+    let pixels_to_bottom = half_wall_pixel_height * 0.5 - cam.y_shearing;
     let draw_from = ((cam.f_half_height - pixels_to_bottom) as usize)
         .clamp(bottom_draw_bound, top_draw_bound);
 
     // Draw to:
     let draw_to = top_draw_bound;
 
+    // Variables used for reducing the amount of calculations and for optimization
     let ray_dir = ray.camera_dir - ray.horizontal_plane;
     let tile_step_factor = ray.horizontal_plane * 2.0 * cam.width_recip;
+    let pos_factor = ray_dir + tile_step_factor * ray.column_index as f32;
+    let row_dist_factor = cam.f_half_height * cam.plane_dist;
+    let half_h_plus_shearing = cam.f_half_height + cam.y_shearing;
     column
         .chunks_exact_mut(4)
         .enumerate()
         .skip(draw_from)
         .take(draw_to - draw_from)
         .for_each(|(y, rgba)| {
-            let row_dist = cam.f_half_height
-                / (y as f32 - cam.f_half_height - cam.y_shearing)
-                * cam.plane_dist;
-            let step = tile_step_factor * row_dist;
-            let pos = Vec3::new(0.5, 0.5, 0.5) + ray_dir * row_dist + step * ray.column_index as f32;
+            let row_dist = row_dist_factor
+                / (y as f32 - half_h_plus_shearing);
+            let pos = Vec3::new(0.5, 0.5, 0.5) + row_dist
+                * pos_factor;
             let tex_x = ((tex_width as f32 * pos.x) as usize).min(tex_width - 1);
-            let tex_y =
-                ((tex_height as f32 * pos.z) as usize).min(tex_height - 1);
+            let tex_y = ((tex_height as f32 * pos.z) as usize).min(tex_height - 1);
             let i = tex_width * 4 * tex_y + tex_x * 4;
             let color = &texture[i..i + 4];
             rgba.copy_from_slice(color);
         });
 }
 
-fn draw_skybox_bottom(draw_params: DrawParams, half_wall_pixel_height: f32, column: &mut[u8]) {
+fn draw_skybox_bottom(
+    draw_params: DrawParams,
+    half_wall_pixel_height: f32,
+    column: &mut [u8],
+) {
     let bottom_draw_bound = draw_params.bottom_draw_bound;
     let top_draw_bound = draw_params.top_draw_bound;
     let cam = draw_params.camera;
@@ -123,34 +136,40 @@ fn draw_skybox_bottom(draw_params: DrawParams, half_wall_pixel_height: f32, colu
     let draw_from = bottom_draw_bound;
 
     // Draw to:
-    let pixels_to_bottom =
-        half_wall_pixel_height * 0.5 + cam.y_shearing;
+    let pixels_to_bottom = half_wall_pixel_height * 0.5 + cam.y_shearing;
     let draw_to = ((cam.f_half_height + pixels_to_bottom) as usize)
         .clamp(draw_from, top_draw_bound);
 
+    // Variables used for reducing the amount of calculations and for optimization
     let ray_dir = ray.camera_dir - ray.horizontal_plane;
     let tile_step_factor = ray.horizontal_plane * 2.0 * cam.width_recip;
+    let pos_factor = ray_dir + tile_step_factor * ray.column_index as f32;
+    let row_dist_factor = cam.f_half_height * cam.plane_dist;
+    let half_h_plus_shearing = cam.f_half_height + cam.y_shearing;
     column
         .chunks_exact_mut(4)
         .enumerate()
         .skip(draw_from)
         .take(draw_to - draw_from)
         .for_each(|(y, rgba)| {
-            let row_dist = cam.f_half_height
-                / (y as f32 - cam.f_half_height - cam.y_shearing)
-                * cam.plane_dist;
-            let step = tile_step_factor * row_dist;
-            let pos = Vec3::new(0.5, 0.5, 0.5) + ray_dir * row_dist + step * ray.column_index as f32;
+            let row_dist = row_dist_factor
+                / (y as f32 - half_h_plus_shearing);
+            let pos = Vec3::new(0.5, 0.5, 0.5) + row_dist
+                * pos_factor;
             let tex_x = ((tex_width as f32 * pos.x) as usize).min(tex_width - 1);
-            let tex_y =
-                ((tex_height as f32 * pos.z) as usize).min(tex_height - 1);
+            let tex_y = ((tex_height as f32 * pos.z) as usize).min(tex_height - 1);
             let i = tex_width * 4 * tex_y + tex_x * 4;
             let color = &texture[i..i + 4];
             rgba.copy_from_slice(color);
         });
 }
 
-fn draw_skybox_wall(draw_params: DrawParams, half_wall_pixel_height: f32, texture: TextureDataRef, column: &mut[u8]) {
+fn draw_skybox_wall(
+    draw_params: DrawParams,
+    half_wall_pixel_height: f32,
+    texture: TextureDataRef,
+    column: &mut [u8],
+) {
     let bottom_draw_bound = draw_params.bottom_draw_bound;
     let top_draw_bound = draw_params.top_draw_bound;
     let cam = draw_params.camera;
@@ -162,10 +181,8 @@ fn draw_skybox_wall(draw_params: DrawParams, half_wall_pixel_height: f32, textur
         texture.height as usize,
     );
 
-    let pixels_to_bottom =
-        half_wall_pixel_height - cam.y_shearing;
-    let pixels_to_top =
-        half_wall_pixel_height + cam.y_shearing;
+    let pixels_to_bottom = half_wall_pixel_height - cam.y_shearing;
+    let pixels_to_top = half_wall_pixel_height + cam.y_shearing;
     let full_wall_pixel_height = pixels_to_top + pixels_to_bottom;
 
     // From which pixel to begin drawing and on which to end
@@ -175,8 +192,7 @@ fn draw_skybox_wall(draw_params: DrawParams, half_wall_pixel_height: f32, textur
         .clamp(bottom_draw_bound, top_draw_bound);
 
     let tex_x = (ray.wall_offset * tex_width as f32) as usize;
-    let tex_y_step = tex_height as f32
-        / full_wall_pixel_height;
+    let tex_y_step = tex_height as f32 / full_wall_pixel_height;
     let mut tex_y =
         (draw_from as f32 + pixels_to_bottom - cam.f_half_height) * tex_y_step;
     // Precomputed variables for performance increase

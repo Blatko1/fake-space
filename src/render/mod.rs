@@ -2,9 +2,9 @@ pub mod camera;
 mod colors;
 mod platforms;
 mod ray;
+mod skybox;
 mod voxel_model;
 mod wall;
-mod skybox;
 
 use crate::render::camera::Camera;
 use crate::world::{SkyboxTextures, Tile, World};
@@ -31,12 +31,15 @@ where
         let mut params = DrawParams {
             bottom_draw_bound: 0,
             top_draw_bound: camera.view_height as usize,
+            outer_bottom_draw_bound: camera.view_height as usize,
+            outer_top_draw_bound: 0,
             tile: Tile::EMPTY,
             ray: Ray::cast_with_camera(column_index, camera),
             skybox: room.segment.get_skybox(),
             texture_manager,
             camera,
         };
+        skybox::draw_skybox(params, column);
         // DDA loop
         loop {
             let mut ray = params.ray;
@@ -64,9 +67,7 @@ where
             // Tile which the ray just traveled over before hitting a wall.
             match segment.get_tile(current_tile_x, current_tile_z) {
                 Some(&current_tile) => params.tile = current_tile,
-                None => {
-                    skybox::draw_skybox(params, column);
-                    break; },
+                None => break,
             };
 
             // Drawing top and bottom platforms
@@ -77,10 +78,7 @@ where
 
             let mut next_tile = match segment.get_tile(ray.next_tile.x, ray.next_tile.z) {
                 Some(&t) => t,
-                None => {
-                    skybox::draw_skybox(params, column);
-                    break;
-                },
+                None => break,
             };
 
             // Switch to the different room if portal is hit
@@ -92,10 +90,7 @@ where
                         let dest_portal = dest_room.get_portal(portal_id);
                         (dest_room, dest_portal)
                     }
-                    None => {
-                        skybox::draw_skybox(params, column);
-                        break;
-                    },
+                    None => break,
                 };
                 room = dest_room;
                 segment = room.segment;
@@ -104,10 +99,7 @@ where
                     dest_portal.position.z as i64,
                 ) {
                     Some(&t) => t,
-                    None => {
-                        skybox::draw_skybox(params, column);
-                        break;
-                    },
+                    None => break,
                 };
                 ray.portal_teleport(src_portal, dest_portal);
                 params.ray = ray;
@@ -131,6 +123,8 @@ where
 pub struct DrawParams<'a> {
     pub bottom_draw_bound: usize,
     pub top_draw_bound: usize,
+    pub outer_bottom_draw_bound: usize,
+    pub outer_top_draw_bound: usize,
     pub tile: Tile,
     pub ray: Ray,
     pub skybox: SkyboxTextures,

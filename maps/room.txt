@@ -11,6 +11,7 @@ $groundLevel = groundL:0.0
 $border = bottomT:Mossy, groundL:2.0, ceilingT:Mossy
 $pillars = $border, topT:Mossy, ceilingL:3.0, topL:100
 $grass = bottomT:Mossy, groundT:Mossy, ceilingT:Mossy
+$fall = bottomL:-100.0, groundL:-99
 
 // Modifying the tiles
 1-400 = $grass, $groundLevel,
@@ -33,6 +34,8 @@ $grass = bottomT:Mossy, groundT:Mossy, ceilingT:Mossy
 340-341 = $border
 360-361 = $border
 380-400 = $border
+
+
 
 250 = $pillars, groundL:0.5, ceilingL:3.5, topL:4.0, portalDir:N
 251 = $pillars, groundL:3.0, ceilingL:4.0, topL:5.0

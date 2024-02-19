@@ -142,7 +142,7 @@ impl Ray {
                 self.step_z = self.dir.z.signum() as i64;
                 self.wall_side_hit = match self.wall_side_hit {
                     Side::Vertical => Side::Horizontal,
-                    Side::Horizontal => Side::Vertical
+                    Side::Horizontal => Side::Vertical,
                 };
             }
             PortalRotationDifference::AnticlockwiseDeg90 => {
@@ -162,7 +162,7 @@ impl Ray {
                 self.step_z = self.dir.z.signum() as i64;
                 self.wall_side_hit = match self.wall_side_hit {
                     Side::Vertical => Side::Horizontal,
-                    Side::Horizontal => Side::Vertical
+                    Side::Horizontal => Side::Vertical,
                 };
             }
             PortalRotationDifference::Deg180 => {

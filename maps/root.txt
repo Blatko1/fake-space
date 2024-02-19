@@ -7,13 +7,14 @@
 // top->texture of top platform
 
 // Declare the presets used in modifying the tiles
-$ground = groundL:0.0, bottomL:-100.0, groundT:MetalFloor
-$ceiling = ceilingL:6.0, topL:100.0, ceilingT:Bricks, topT:Bricks
-$wall = groundL:9.0, ceilingL:10.0, bottomT:Stone
-$NPortal = $ground, portalDir:N, ceilingL:3.0
-$SPortal = $ground, portalDir:S, ceilingL:3.0
-$EPortal = $ground, portalDir:E, ceilingL:3.0
-$WPortal = $ground, portalDir:W, ceilingL:3.0
+$ground = groundL:0, bottomL:-1, groundT:MetalFloor, bottomT:MetalFloor
+$ceiling = ceilingL:6, topL:100, ceilingT:Bricks, topT:Bricks
+$wall = groundL:9, ceilingL:10, bottomT:Stone
+$NPortal = $ground, portalDir:N, ceilingL:3
+$SPortal = $ground, portalDir:S, ceilingL:3
+$EPortal = $ground, portalDir:E, ceilingL:3
+$WPortal = $ground, portalDir:W, ceilingL:3
+$fall = bottomL:-100, groundL:-99
 
 // Modifying the tiles
 // Add surrounding pillars
@@ -32,6 +33,30 @@ $WPortal = $ground, portalDir:W, ceilingL:3.0
 142-145 = $wall
 153-156 = $wall
 164-187 = $wall
+
+25-26 = $fall
+30-31 = $fall
+36-37 = $fall
+41-42 = $fall
+
+58-59 = $fall
+63-64 = $fall
+69-70 = $fall
+74-75 = $fall
+80-81 = $fall
+85-86 = $fall
+
+102-103 = $fall
+107-108 = $fall
+113-114 = $fall
+118-119 = $fall
+124-125 = $fall
+129-130 = $fall
+
+146-147 = $fall
+151-152 = $fall
+157-158 = $fall
+162-163 = $fall
 
 17 = $NPortal
 46 = $EPortal

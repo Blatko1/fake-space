@@ -3,32 +3,32 @@
 /// output, have tried MSAA but it doesn't work on textures, have tried applying
 /// bilinear texture filtering but unnoticeable.
 pub mod backend;
+mod dbg;
 mod player;
 mod render;
 mod state;
 mod voxel;
 mod world;
-mod dbg;
 
 use std::fs;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use crate::dbg::Dbg;
 use crate::world::World;
 use backend::Canvas;
 use pollster::block_on;
-use wgpu_text::glyph_brush::ab_glyph::FontVec;
 use state::State;
+use wgpu_text::glyph_brush::ab_glyph::FontVec;
+use winit::event::KeyEvent;
+use winit::keyboard::{Key, NamedKey};
 use winit::{
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder as WinitWindowBuilder,
 };
-use winit::event::KeyEvent;
-use winit::keyboard::{Key, NamedKey};
-use crate::dbg::Dbg;
 
-const FPS: u32 = 60;
+const FPS_CAP: u32 = 500;
 
 fn main() {
     if std::env::var("RUST_LOG").is_err() {
@@ -50,78 +50,80 @@ fn main() {
 
     let mut state = State::new(&canvas, world);
 
-    let framerate_delta = Duration::from_secs_f64(1.0 / FPS as f64);
+    let framerate_delta = Duration::from_secs_f64(1.0 / FPS_CAP as f64);
     let mut time_delta = Instant::now();
     let mut fps_update_delta = Instant::now();
     let mut framerate = 0;
-    let mut fps_avg = 0;
-    let mut last_fps = 0;
-    let mut last_fps_avg_time_ms = 0.0;
+    let mut frame_time = 0.0;
+    let mut current_fps = 0;
+    //let mut fps_avg_time_ms = 0.0;
 
-    event_loop.run(move |event, elwt| {
-        match event {
-            Event::NewEvents(_) => {
-                let elapsed = time_delta.elapsed();
+    event_loop
+        .run(move |event, elwt| {
+            elwt.set_control_flow(ControlFlow::Poll);
+            match event {
+                Event::NewEvents(_) => {
+                    let elapsed = time_delta.elapsed();
 
-                if framerate_delta <= elapsed {
-                    winit_window.request_redraw();
-                    time_delta = Instant::now();
-                    framerate += 1;
-                    fps_avg += elapsed.as_micros();
-                    if fps_update_delta.elapsed().as_millis() >= 1000 {
-                        fps_update_delta = Instant::now();
-                        last_fps = framerate;
-                        last_fps_avg_time_ms = (fps_avg / framerate as u128) as f32 / 1000.0;
-                        framerate = 0;
-                        fps_avg = 0;
+                    if elapsed >= framerate_delta {
+                        time_delta = Instant::now();
+                        winit_window.request_redraw();
+                        framerate += 1;
+                        frame_time = elapsed.as_secs_f32();
+                        if fps_update_delta.elapsed().as_micros() >= 1000000 {
+                            fps_update_delta = Instant::now();
+                            current_fps = framerate;
+                            framerate = 0;
+                        }
                     }
-                } else {
-                    elwt.set_control_flow(ControlFlow::WaitUntil(
-                        Instant::now() + framerate_delta - elapsed,
-                    ));
                 }
-            }
-            Event::WindowEvent { event, .. } => match event {
-                WindowEvent::CloseRequested | WindowEvent::Destroyed => {
-                    elwt.exit();
-                }
-                WindowEvent::KeyboardInput {
-                    event: KeyEvent {
-                        logical_key: Key::Named(NamedKey::Escape),
+                Event::WindowEvent { event, .. } => match event {
+                    WindowEvent::CloseRequested | WindowEvent::Destroyed => {
+                        elwt.exit();
+                    }
+                    WindowEvent::KeyboardInput {
+                        event:
+                            KeyEvent {
+                                logical_key: Key::Named(NamedKey::Escape),
+                                ..
+                            },
                         ..
-                    },
-                    ..
-                } => elwt.exit(),
-                WindowEvent::KeyboardInput { event, .. } => {
-                    state.process_keyboard_input(event)
-                }
-                WindowEvent::Resized(new_size) => {
-                    canvas.resize(new_size);
-                    dbg.resize(&canvas);
-                },
-                WindowEvent::RedrawRequested => {
-                    state.update();
-                    dbg.update(&state, last_fps_avg_time_ms, last_fps);
-
-                    // TODO check result instead of unwrap
-                    dbg.queue_data(canvas.gfx()).unwrap();
-                    canvas.clear_buffer();
-                    state.draw(canvas.mut_column_iterator());
-
-                    match canvas.render(&dbg) {
-                        Ok(_) => (),
-                        Err(wgpu::SurfaceError::Lost) => canvas.on_surface_lost(),
-                        // The system is out of memory, we should probably quit
-                        Err(wgpu::SurfaceError::OutOfMemory) => {println!("Out of memory!"); elwt.exit()},
-                        // All other errors (Outdated, Timeout) should be resolved by the next frame
-                        Err(e) => eprintln!("{:?}", e),
+                    } => elwt.exit(),
+                    WindowEvent::KeyboardInput { event, .. } => {
+                        state.process_keyboard_input(event)
                     }
-                }
+                    WindowEvent::Resized(new_size) => {
+                        canvas.resize(new_size);
+                        dbg.resize(&canvas);
+                        winit_window.request_redraw();
+                    }
+                    WindowEvent::RedrawRequested => {
+                        state.update(frame_time);
+                        dbg.update(&state, 1000.0 / current_fps as f64, current_fps);
+
+                        // TODO check result instead of unwrap
+                        dbg.queue_data(canvas.gfx()).unwrap();
+                        canvas.clear_buffer();
+                        state.draw(canvas.mut_column_iterator());
+
+                        match canvas.render(&dbg) {
+                            Ok(_) => (),
+                            Err(wgpu::SurfaceError::Lost) => canvas.on_surface_lost(),
+                            // The system is out of memory, we should probably quit
+                            Err(wgpu::SurfaceError::OutOfMemory) => {
+                                println!("Out of memory!");
+                                elwt.exit()
+                            }
+                            // All other errors (Outdated, Timeout) should be resolved by the next frame
+                            Err(e) => eprintln!("{:?}", e),
+                        }
+                    }
+                    _ => (),
+                },
+                Event::DeviceEvent { event, .. } => state.process_mouse_input(event),
+                Event::LoopExiting => println!("Exited!"),
                 _ => (),
-            },
-            Event::DeviceEvent { event, ..} => state.process_mouse_input(event),
-            Event::LoopExiting => println!("Exited!"),
-            _ => (),
-        }
-    }).unwrap();
+            }
+        })
+        .unwrap();
 }
