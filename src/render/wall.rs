@@ -50,9 +50,10 @@ pub(super) fn draw_bottom_wall(
         }
         _ => (ray.wall_offset * tex_width as f32) as usize,
     };
-    let tex_y_step = tex_height as f32
-        / full_wall_pixel_height
-        / (2.0 / (tile.ground_level - tile.bottom_level));
+    //let tex_y_step = tex_height as f32
+    //    / full_wall_pixel_height
+    //    / (2.0 / (tile.ground_level - tile.bottom_level));
+    let tex_y_step = (tile.ground_level - tile.bottom_level) * tex_height as f32 / full_wall_pixel_height * 0.5;
     let mut tex_y =
         (draw_from as f32 + pixels_to_bottom - cam.f_half_height) * tex_y_step;
     let draw_fn = match bottom_wall_texture.transparency {
@@ -135,9 +136,7 @@ pub(super) fn draw_top_wall(draw_params: DrawParams, column: &mut [u8]) -> usize
         }
         _ => (ray.wall_offset * tex_width as f32) as usize,
     };
-    let tex_y_step = tex_height as f32
-        / full_wall_pixel_height
-        / (2.0 / (tile.top_level - tile.ceiling_level));
+    let tex_y_step = (tile.top_level - tile.ceiling_level) * tex_height as f32 / full_wall_pixel_height * 0.5;
     let mut tex_y =
         (draw_from as f32 + pixels_to_bottom - cam.f_half_height) * tex_y_step;
 
