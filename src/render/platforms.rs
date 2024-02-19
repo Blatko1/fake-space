@@ -7,6 +7,8 @@
 
 use super::DrawParams;
 
+const COLOR_INTENSITY_FACTOR: f32 = 0.7;
+
 pub(super) fn draw_bottom_platform(draw_params: DrawParams, column: &mut [u8]) -> usize {
     let bottom_draw_bound = draw_params.bottom_draw_bound;
     let top_draw_bound = draw_params.top_draw_bound;
@@ -54,9 +56,9 @@ pub(super) fn draw_bottom_platform(draw_params: DrawParams, column: &mut [u8]) -
         .skip(draw_from)
         .take(draw_to - draw_from)
         .for_each(|(y, rgba)| {
-            let row_dist = (ray.origin.y - tile.ground_level) * row_dist_factor
+            let row_dist = -(ray.origin.y - tile.ground_level) * row_dist_factor
                 / (y as f32 - shearing_plus_half_height);
-            let pos = ray.origin - row_dist * pos_factor;
+            let pos = ray.origin + row_dist * pos_factor;
             //let tex_x = ((tex_width as f32 * (pos.x - tile_x as f32)) as usize)
             //    .min(tex_width - 1);
             //let tex_y = ((tex_height as f32 * (pos.z - tile_z as f32)) as usize)
@@ -67,6 +69,9 @@ pub(super) fn draw_bottom_platform(draw_params: DrawParams, column: &mut [u8]) -
             let i = 4 * (tex_width * tex_y + tex_x); //tex_width * 4 * tex_y + tex_x * 4
             let color = &texture[i..i + 4];
             rgba.copy_from_slice(color);
+            for color in &mut rgba[0..3] {
+                *color = (*color as f32 / (row_dist * COLOR_INTENSITY_FACTOR).clamp(1.0, 6.0)) as u8;
+            }
         });
 
     draw_to
@@ -131,6 +136,9 @@ pub(super) fn draw_top_platform(draw_params: DrawParams, column: &mut [u8]) -> u
             let i = 4 * (tex_width * tex_y + tex_x); //tex_width * 4 * tex_y + tex_x * 4
             let color = &texture[i..i + 4];
             rgba.copy_from_slice(color);
+            for color in &mut rgba[0..3] {
+                *color = (*color as f32 / (row_dist * COLOR_INTENSITY_FACTOR).clamp(1.0, 6.0)) as u8;
+            }
         });
 
     draw_from

@@ -63,6 +63,7 @@ pub(super) fn draw_bottom_wall(
     // Precomputed variables for performance increase
     let four_tex_width = tex_width * 4;
     let four_tex_x = tex_x * 4;
+    let intensity_factor = (ray.wall_dist * 0.5).clamp(1.0, 6.0).recip();
     column
         .chunks_exact_mut(4)
         .skip(draw_from)
@@ -76,14 +77,13 @@ pub(super) fn draw_bottom_wall(
             // Draw the pixel:
             //draw_fn(dest, src);
             dest.copy_from_slice(src);
-            dest[0] = (dest[0] as f32 / ray.wall_dist * 2.0) as u8;
-            dest[1] = (dest[1] as f32 / ray.wall_dist * 2.0) as u8;
-            dest[2] = (dest[2] as f32 / ray.wall_dist * 2.0) as u8;
+            for color in &mut dest[0..3] {
+                *color = (*color as f32 * intensity_factor) as u8;
+            }
             //}
             // TODO maybe make it so `tex_y_step` is being subtracted.
             tex_y += tex_y_step;
         });
-
     draw_to
 }
 
@@ -144,6 +144,7 @@ pub(super) fn draw_top_wall(draw_params: DrawParams, column: &mut [u8]) -> usize
     // Precomputed variables for performance increase
     let four_tex_width = tex_width * 4;
     let four_tex_x = tex_x * 4;
+    let intensity_factor = (ray.wall_dist * 0.5).clamp(1.0, 6.0).recip();
     column
         .chunks_exact_mut(4)
         .skip(draw_from)
@@ -157,6 +158,9 @@ pub(super) fn draw_top_wall(draw_params: DrawParams, column: &mut [u8]) -> usize
             // Draw the pixel:
             //draw_fn(dest, src);
             dest.copy_from_slice(src);
+            for color in &mut dest[0..3] {
+                *color = (*color as f32 * intensity_factor) as u8;
+            }
             //}
             // TODO maybe make it so `tex_y_step` is being subtracted.
             tex_y += tex_y_step;
