@@ -48,20 +48,18 @@ impl World {
         };
         room_counter += 1;
 
+        let root_segment = &segments[1];
         let mut adjacent_rooms: Vec<Room> = starting_room
             .portals
             .iter_mut()
             .map(|portal| {
-                // The first segment appears only once at the beginning, so skip it
-                let rand_segment = segments[1..].choose(&mut rng).unwrap();
                 let mut new_room = Room {
                     id: RoomID(room_counter),
-                    segment_id: rand_segment.id,
-                    portals: rand_segment.unlinked_portals.clone(),
+                    segment_id: root_segment.id,
+                    portals: root_segment.unlinked_portals.clone(),
                     is_fully_generated: false,
                 };
                 let room_rand_portal = new_room.portals.choose_mut(&mut rng).unwrap();
-
                 // Connect the two portals:
                 // Connect the starting room with new random room
                 portal.link = Some((new_room.id, room_rand_portal.id));
@@ -85,15 +83,27 @@ impl World {
         }
     }
 
-    pub fn update(&mut self, player: &Player) {
+    pub fn update(&mut self, current_room_id: RoomID) {
+        self.fully_generate_room(current_room_id);
+        // The current room is now fully generated
+        let current_room = &mut self.rooms[current_room_id.0];
+        // Clone needed for the borrow checker. Is there a better solution???
+        current_room.portals.clone().iter().for_each(|portal|
+            self.fully_generate_room(portal.link.unwrap().0));
+    }
+
+    fn fully_generate_room(&mut self, room_id: RoomID) {
         let mut next_id = self.rooms.len();
-        let current_room = &mut self.rooms[player.get_current_room_id().0];
+        let current_room = &mut self.rooms[room_id.0];
+        // Check if current room has all adjacent rooms generated
         if !current_room.is_fully_generated {
+            // Generated adjacent rooms where needed
             let mut adjacent_rooms: Vec<Room> = current_room
                 .portals
                 .iter_mut()
                 .filter(|portal| portal.link.is_none())
                 .map(|portal| {
+                    // Skip the first (two) rooms since they appear only once
                     let rand_segment = self.segments[1..].choose(&mut self.rng).unwrap();
                     let mut new_room = Room {
                         id: RoomID(next_id),

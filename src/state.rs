@@ -36,7 +36,7 @@ impl State {
 
     pub fn update(&mut self, frame_time: f32) {
         self.player.update(&self.world, frame_time);
-        self.world.update(&self.player);
+        self.world.update(self.player.get_current_room_id());
     }
 
     pub fn draw<'a, C>(&mut self, canvas_column_iter: C)

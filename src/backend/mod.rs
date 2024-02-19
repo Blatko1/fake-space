@@ -1,5 +1,6 @@
 pub mod gfx;
 
+use std::ptr;
 use crate::dbg::Dbg;
 use gfx::Gfx;
 use rand::Fill;
@@ -200,8 +201,7 @@ impl Canvas {
     }
 
     pub fn clear_buffer(&mut self) {
-        // Clearing the buffer isn't needed since everything is being overwritten
-        //self.buffer.fill(0);
+        self.buffer.fill(0);
 
         // TODO cool effects!
         //self.buffer.try_fill(&mut rand::thread_rng()).unwrap();
@@ -224,7 +224,11 @@ impl Canvas {
                     .step_by(self.height as usize)
                     .zip(row.chunks_exact_mut(4))
                     .for_each(|(src, dest)| {
-                        dest.copy_from_slice(src);
+                        //dest.copy_from_slice(src);
+                        // Using unsafe for speed
+                        unsafe {
+                            ptr::copy_nonoverlapping(src.as_ptr(), dest.as_mut_ptr(), dest.len());
+                        }
                     })
             });
 

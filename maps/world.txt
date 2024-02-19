@@ -37,3 +37,4 @@
 !root = src:root.txt, repeatable: false
 !l_turn = src:hall_turn.txt, repeatable: true
 !t_turn = src:t_turn.txt, repeatable: true
+!straight = src:straight.txt, repeatable:true

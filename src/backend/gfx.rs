@@ -22,7 +22,7 @@ impl Gfx {
             gles_minor_version: wgpu::Gles3MinorVersion::Automatic,
         });
 
-        let surface = unsafe { instance.create_surface(winit_window) }?;
+        let surface = instance.create_surface(winit_window)?;
 
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {

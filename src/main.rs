@@ -56,7 +56,6 @@ fn main() {
     let mut framerate = 0;
     let mut frame_time = 0.0;
     let mut current_fps = 0;
-    //let mut fps_avg_time_ms = 0.0;
 
     event_loop
         .run(move |event, elwt| {
@@ -103,7 +102,8 @@ fn main() {
 
                         // TODO check result instead of unwrap
                         dbg.queue_data(canvas.gfx()).unwrap();
-                        canvas.clear_buffer();
+                        // Clearing the buffer isn't needed since everything is being overwritten
+                        //canvas.clear_buffer();
                         state.draw(canvas.mut_column_iterator());
 
                         match canvas.render(&dbg) {
