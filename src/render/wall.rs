@@ -76,6 +76,9 @@ pub(super) fn draw_bottom_wall(
             // Draw the pixel:
             //draw_fn(dest, src);
             dest.copy_from_slice(src);
+            dest[0] = (dest[0] as f32 / ray.wall_dist * 2.0) as u8;
+            dest[1] = (dest[1] as f32 / ray.wall_dist * 2.0) as u8;
+            dest[2] = (dest[2] as f32 / ray.wall_dist * 2.0) as u8;
             //}
             // TODO maybe make it so `tex_y_step` is being subtracted.
             tex_y += tex_y_step;

@@ -28,7 +28,7 @@ use winit::{
     window::WindowBuilder as WinitWindowBuilder,
 };
 
-const FPS_CAP: u32 = 500;
+const FPS_CAP: u32 = 50;
 
 fn main() {
     if std::env::var("RUST_LOG").is_err() {
