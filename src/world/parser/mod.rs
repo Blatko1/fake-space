@@ -98,6 +98,7 @@ impl WorldParser {
 
         let mut segment_data = None;
         let mut repeatable = None;
+        let mut ambient_light = None;
         for expr in expressions.split(',') {
             // Split the expression and check for formatting errors
             let split: Vec<&str> = expr.split(':').collect();
@@ -137,6 +138,14 @@ impl WorldParser {
                         }
                     }
                 }
+                "ambient_light" => {
+                    ambient_light = match value.parse::<f32>() {
+                        Ok(b) => Some(b),
+                        Err(_) => {
+                            return Err(SegmentError::F32ParseFail(value.to_owned()))
+                        }
+                    }
+                }
                 _ => return Err(SegmentError::UnknownParameter(parameter.to_owned())),
             }
         }
@@ -147,6 +156,12 @@ impl WorldParser {
         let Some(repeatable) = repeatable else {
             return Err(SegmentError::UnspecifiedRepetition);
         };
+        let Some(ambient_light) = ambient_light else {
+            return Err(SegmentError::UnspecifiedAmbientLight);
+        };
+        if ambient_light < 0.0 {
+            return Err(SegmentError::InvalidAmbientLight(ambient_light.to_string()));
+        }
 
         let skybox = SkyboxTextures {
             north: self.settings.skybox_north,
@@ -164,6 +179,7 @@ impl WorldParser {
             tiles,
             skybox,
             repeatable,
+            ambient_light
         ))
     }
 

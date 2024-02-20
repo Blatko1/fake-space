@@ -12,6 +12,10 @@ use crate::{player::Player, world::textures::TextureManager};
 
 use self::ray::Ray;
 
+const SPOTLIGHT_DISTANCE: f32 = 2.0;
+const FLASHLIGHT_INTENSITY: f32 = 1.3;
+const FLASHLIGHT_RADIUS: f32 = 0.7;
+
 #[derive(Debug, Copy, Clone)]
 pub struct PointXZ<T> {
     pub x: T,
@@ -35,7 +39,8 @@ where
             outer_top_draw_bound: 0,
             tile: Tile::EMPTY,
             ray: Ray::cast_with_camera(column_index, camera),
-            skybox: room.segment.get_skybox(),
+            skybox: room.data.get_skybox(),
+            ambient_light: room.data.get_ambient_light(),
             texture_manager,
             camera,
         };
@@ -103,6 +108,8 @@ where
                 };
                 ray.portal_teleport(src_portal, dest_portal);
                 params.ray = ray;
+                params.skybox = room.data.get_skybox();
+                params.ambient_light = room.data.get_ambient_light();
             }
 
             params.tile = next_tile;
@@ -128,6 +135,7 @@ pub struct DrawParams<'a> {
     pub tile: Tile,
     pub ray: Ray,
     pub skybox: SkyboxTextures,
+    pub ambient_light: f32,
     pub texture_manager: &'a TextureManager,
     pub camera: &'a Camera,
 }

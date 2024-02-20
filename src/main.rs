@@ -1,6 +1,6 @@
 /// For the record:
 /// I have tried adding FXAA in the fragment shader, which ended up in a weird
-/// output, have tried MSAA but it doesn't work on textures, have tried applying
+/// output, have tried MSAA, but it doesn't work on textures, have tried applying
 /// bilinear texture filtering but unnoticeable.
 pub mod backend;
 mod dbg;
@@ -42,7 +42,7 @@ fn main() {
 
     let world = World::from_path("maps/world.txt").unwrap();
 
-    let mut canvas = block_on(Canvas::init(winit_window.clone(), 240 * 2, 135 * 2));
+    let mut canvas = block_on(Canvas::init(winit_window.clone(), 240 * 4, 135 * 4));
     // TODO change/fix this
     let font_data = fs::read("res/DejaVuSans.ttf").unwrap();
     let font = FontVec::try_from_vec(font_data).unwrap();

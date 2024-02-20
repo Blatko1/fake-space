@@ -45,6 +45,8 @@ impl World {
             segment_id: segment.id,
             portals: segment.unlinked_portals.clone(),
             is_fully_generated: true,
+            skybox: segment.skybox,
+            ambient_light: segment.ambient_light
         };
         room_counter += 1;
 
@@ -58,6 +60,8 @@ impl World {
                     segment_id: root_segment.id,
                     portals: root_segment.unlinked_portals.clone(),
                     is_fully_generated: false,
+                    skybox: root_segment.skybox,
+                    ambient_light: root_segment.ambient_light
                 };
                 let room_rand_portal = new_room.portals.choose_mut(&mut rng).unwrap();
                 // Connect the two portals:
@@ -110,6 +114,8 @@ impl World {
                         segment_id: rand_segment.id,
                         portals: rand_segment.unlinked_portals.clone(),
                         is_fully_generated: false,
+                        skybox: rand_segment.skybox,
+                        ambient_light: rand_segment.ambient_light
                     };
                     let room_rand_portal =
                         new_room.portals.choose_mut(&mut self.rng).unwrap();
@@ -138,6 +144,8 @@ impl World {
             segment_id: segment.id,
             portals: segment.unlinked_portals.clone(),
             is_fully_generated: false,
+            skybox: segment.skybox,
+            ambient_light: segment.ambient_light
         };
         self.rooms.push(starting_room);
         self.rooms.last_mut().unwrap()
@@ -153,11 +161,11 @@ impl World {
         SegmentID(self.rng.gen_range(1..self.segment_count))
     }
 
-    pub fn get_room_data(&self, index: RoomID) -> RoomDataRef {
+    pub fn get_room_data(&self, index: RoomID) -> RoomRef {
         let room = &self.rooms[index.0];
-        RoomDataRef {
+        RoomRef {
             segment: &self.segments[room.segment_id.0],
-            portals: &room.portals,
+            data: room
         }
     }
 
@@ -171,14 +179,14 @@ impl World {
 }
 
 #[derive(Debug)]
-pub struct RoomDataRef<'a> {
+pub struct RoomRef<'a> {
     pub segment: &'a Segment,
-    pub portals: &'a [Portal],
+    pub data: &'a Room,
 }
 
-impl<'a> RoomDataRef<'a> {
+impl<'a> RoomRef<'a> {
     pub fn get_portal(&self, local_id: PortalID) -> Portal {
-        self.portals[local_id.0]
+        self.data.portals[local_id.0]
     }
 }
 
@@ -190,6 +198,22 @@ pub struct Room {
     // Each portal has its own index which is the position in this Vec
     portals: Vec<Portal>,
     is_fully_generated: bool,
+    skybox: SkyboxTextures,
+    ambient_light: f32
+}
+
+impl Room {
+    pub fn get_portals(&self) -> &[Portal] {
+        &self.portals
+    }
+
+    pub fn get_ambient_light(&self) -> f32 {
+        self.ambient_light
+    }
+
+    pub fn get_skybox(&self) -> SkyboxTextures {
+        self.skybox
+    }
 }
 
 // TODO Use a struct or type for dimensions instead
@@ -204,6 +228,7 @@ pub struct Segment {
     unlinked_portals: Vec<Portal>,
     skybox: SkyboxTextures,
     repeatable: bool,
+    ambient_light: f32
 }
 
 impl Segment {
@@ -214,6 +239,7 @@ impl Segment {
         tiles: Vec<Tile>,
         skybox: SkyboxTextures,
         repeatable: bool,
+        ambient_light: f32
     ) -> Self {
         // Create unlinked Portals from DummyPortals
         let unlinked_portals = tiles
@@ -242,6 +268,7 @@ impl Segment {
             tiles,
             skybox,
             repeatable,
+            ambient_light
         }
     }
 

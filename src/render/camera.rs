@@ -55,8 +55,9 @@ pub struct Camera {
     four_width: usize,
     pub(super) f_height: f32,
     pub(super) width_recip: f32,
-    height_recip: f32,
+    pub(super) height_recip: f32,
     pub(super) f_half_height: f32,
+    pub(super) f_half_width: f32,
 
     // Variables for controlling and moving the scene.
     turn_left: f32,
@@ -116,6 +117,7 @@ impl Camera {
             width_recip: f_width.recip(),
             height_recip: f_height.recip(),
             f_half_height: view_height as f32 * 0.5,
+            f_half_width: view_width as f32 * 0.5,
 
             turn_left: 0.0,
             turn_right: 0.0,

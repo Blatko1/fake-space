@@ -64,12 +64,17 @@ pub(super) fn draw_bottom_wall(
     // Precomputed variables for performance increase
     let four_tex_width = tex_width * 4;
     let four_tex_x = tex_x * 4;
-    let intensity_factor = (ray.wall_dist * 0.5).clamp(1.0, 6.0).recip();
+
+    //let flashlight_x = 1.0 - ((ray.column_index as f32 - cam.view_width as f32 / 2.0) / (cam.view_width as f32 / 2.0)).abs();
+    let flashlight_x = (2.0 * (ray.column_index as f32 * cam.width_recip) - 1.0) * cam.aspect;
+    let t = 1.0 - (ray.wall_dist / super::SPOTLIGHT_DISTANCE).clamp(0.0, 1.0);
+    let spotlight = t * t * (3.0 - t * 2.0);
     column
         .chunks_exact_mut(4)
+        .enumerate()
         .skip(draw_from)
         .take(draw_to - draw_from)
-        .for_each(|dest| {
+        .for_each(|(y, dest)| {
             //if dest[3] != 255 {
             let tex_y_pos = tex_y.round() as usize % tex_height;
             let i = (tex_height - tex_y_pos - 1) * four_tex_width + four_tex_x;
@@ -78,8 +83,12 @@ pub(super) fn draw_bottom_wall(
             // Draw the pixel:
             //draw_fn(dest, src);
             dest.copy_from_slice(src);
+
+            let flashlight_y = 2.0 * (y as f32 * cam.height_recip) - 1.0;
             for color in &mut dest[0..3] {
-                *color = (*color as f32 * intensity_factor) as u8;
+                let flashlight_intensity = (super::FLASHLIGHT_RADIUS - (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt()) * super::FLASHLIGHT_INTENSITY;
+                let intensity = (flashlight_intensity.max(0.0) + spotlight + draw_params.ambient_light).max(0.0);
+                *color = (*color as f32 * intensity) as u8;
             }
             //}
             // TODO maybe make it so `tex_y_step` is being subtracted.
@@ -143,12 +152,17 @@ pub(super) fn draw_top_wall(draw_params: DrawParams, column: &mut [u8]) -> usize
     // Precomputed variables for performance increase
     let four_tex_width = tex_width * 4;
     let four_tex_x = tex_x * 4;
-    let intensity_factor = (ray.wall_dist * 0.5).clamp(1.0, 6.0).recip();
+
+    //let flashlight_x = 0.5 - ((ray.column_index as f32 - cam.view_width as f32 / 2.0) / (cam.view_width as f32 / 2.0)).abs();
+    let flashlight_x = (2.0 * (ray.column_index as f32 * cam.width_recip) - 1.0) * cam.aspect;
+    let t = 1.0 - (ray.wall_dist / 3.0).clamp(0.0, 1.0);
+    let spotlight = t * t * (3.0 - t * 2.0);
     column
         .chunks_exact_mut(4)
+        .enumerate()
         .skip(draw_from)
         .take(draw_to - draw_from)
-        .for_each(|dest| {
+        .for_each(|(y, dest)| {
             //if dest[3] != 255 {
             let tex_y_pos = tex_y.round() as usize % tex_height;
             let i = (tex_height - tex_y_pos - 1) * four_tex_width + four_tex_x;
@@ -157,8 +171,12 @@ pub(super) fn draw_top_wall(draw_params: DrawParams, column: &mut [u8]) -> usize
             // Draw the pixel:
             //draw_fn(dest, src);
             dest.copy_from_slice(src);
+
+            let flashlight_y = 2.0 * (y as f32 * cam.height_recip) - 1.0;
             for color in &mut dest[0..3] {
-                *color = (*color as f32 * intensity_factor) as u8;
+                let flashlight_intensity = (super::FLASHLIGHT_RADIUS - (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt()) * super::FLASHLIGHT_INTENSITY;
+                let intensity = (flashlight_intensity.max(0.0) + spotlight + draw_params.ambient_light).max(0.0);
+                *color = (*color as f32 * intensity) as u8;
             }
             //}
             // TODO maybe make it so `tex_y_step` is being subtracted.

@@ -50,6 +50,7 @@ pub(super) fn draw_bottom_platform(draw_params: DrawParams, column: &mut [u8]) -
     let pos_factor = ray_dir + tile_step_factor * ray.column_index as f32;
     let row_dist_factor = cam.f_half_height * cam.plane_dist;
     let shearing_plus_half_height = cam.y_shearing + cam.f_half_height;
+    let flashlight_x = (2.0 * (ray.column_index as f32 * cam.width_recip) - 1.0) * cam.aspect;
     column
         .chunks_exact_mut(4)
         .enumerate()
@@ -69,8 +70,14 @@ pub(super) fn draw_bottom_platform(draw_params: DrawParams, column: &mut [u8]) -
             let i = 4 * (tex_width * tex_y + tex_x); //tex_width * 4 * tex_y + tex_x * 4
             let color = &texture[i..i + 4];
             rgba.copy_from_slice(color);
+
+            let flashlight_y = 2.0 * (y as f32 * cam.height_recip) - 1.0;
             for color in &mut rgba[0..3] {
-                *color = (*color as f32 / (row_dist * COLOR_INTENSITY_FACTOR).clamp(1.0, 6.0)) as u8;
+                let t = 1.0 - (row_dist / 3.0).clamp(0.0, 1.0);
+                let spotlight = t * t * (3.0 - t * 2.0);
+                let flashlight_intensity = (super::FLASHLIGHT_RADIUS - (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt()) * super::FLASHLIGHT_INTENSITY;
+                let intensity = (flashlight_intensity.max(0.0) + spotlight + draw_params.ambient_light).max(0.0);
+                *color = (*color as f32 * intensity) as u8;
             }
         });
 
@@ -117,6 +124,7 @@ pub(super) fn draw_top_platform(draw_params: DrawParams, column: &mut [u8]) -> u
     let pos_factor = ray_dir + tile_step_factor * ray.column_index as f32;
     let row_dist_factor = cam.f_half_height * cam.plane_dist;
     let shearing_plus_half_height = cam.y_shearing + cam.f_half_height;
+    let flashlight_x = (2.0 * (ray.column_index as f32 * cam.width_recip) - 1.0) * cam.aspect;
     column
         .chunks_exact_mut(4)
         .enumerate()
@@ -136,10 +144,15 @@ pub(super) fn draw_top_platform(draw_params: DrawParams, column: &mut [u8]) -> u
             let i = 4 * (tex_width * tex_y + tex_x); //tex_width * 4 * tex_y + tex_x * 4
             let color = &texture[i..i + 4];
             rgba.copy_from_slice(color);
+
+            let flashlight_y = 2.0 * (y as f32 * cam.height_recip) - 1.0;
             for color in &mut rgba[0..3] {
-                *color = (*color as f32 / (row_dist * COLOR_INTENSITY_FACTOR).clamp(1.0, 6.0)) as u8;
+                let t = 1.0 - (row_dist / 3.0).clamp(0.0, 1.0);
+                let spotlight = t * t * (3.0 - t * 2.0);
+                let flashlight_intensity = (super::FLASHLIGHT_RADIUS - (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt()) * super::FLASHLIGHT_INTENSITY;
+                let intensity = (flashlight_intensity.max(0.0) + spotlight + draw_params.ambient_light).max(0.0);
+                *color = (*color as f32 * intensity) as u8;
             }
         });
-
     draw_from
 }

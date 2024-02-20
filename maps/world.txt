@@ -33,8 +33,8 @@
 
 // Declare the segments
 // You can't have multiple segments with the same name
-!start = src:start.txt, repeatable: false //ambient: , light_effect:
-!root = src:root.txt, repeatable: false //ambient: , light_effect:
-!l_turn = src:hall_turn.txt, repeatable: true //ambient: , light_effect:
-!t_turn = src:t_turn.txt, repeatable: true //ambient: , light_effect:
-!straight = src:straight.txt, repeatable:true //ambient: , light_effect:
+!start = src:start.txt, repeatable: false, ambient_light: 1//, light_effect:
+!root = src:root.txt, repeatable: false, ambient_light: 0.1//, light_effect:
+!l_turn = src:hall_turn.txt, repeatable: true, ambient_light: 0.1//, light_effect:
+!t_turn = src:t_turn.txt, repeatable: true, ambient_light: 1.5//, light_effect:
+!straight = src:straight.txt, repeatable:true, ambient_light: 0.5//, light_effect:

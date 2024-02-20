@@ -14,12 +14,15 @@ pub enum ParseError {
 #[derive(Debug)]
 pub enum SegmentError {
     // Errors for the world file
-    FileErr(std::io::ErrorKind),
+    FileErr(io::ErrorKind),
     InvalidFormat(String),
     UnknownParameter(String),
     BoolParseFail(String),
+    F32ParseFail(String),
     UnspecifiedSrc,
     UnspecifiedRepetition,
+    UnspecifiedAmbientLight,
+    InvalidAmbientLight(String),
 
     // Errors for the segment file
     SegmentParseErr(SegmentParseError, String),
