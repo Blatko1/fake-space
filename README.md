@@ -1,5 +1,7 @@
 # fake-space
 
+![showcase1](res/showcase1.png)
+
 `fake-space` is a game. Check out [`pixels`](https://github.com/parasyte/pixels) which helped me learn more about this type of rendering.
 
 Excellent explanations about the raycaster [here](https://lodev.org/cgtutor/raycasting.html#The_Basic_Idea_) and [here](https://permadi.com/1996/05/ray-casting-tutorial-table-of-contents/).
@@ -23,11 +25,12 @@ Excellent explanations about the raycaster [here](https://lodev.org/cgtutor/rayc
 - [x] Rotate the canvas by 90 degrees so drawing is more efficient
 - [x] Simplify map creation by making possible creating maps in external .txt files while following a defined format
 - [x] Add portals
-- [ ] Add shading effects
+- [x] Add shading/lightning effects
+- [x] Draw a skybox
+- [x] Add different height walls while also their tops sides (floor), if seen from above, and bottom sides (ceilings), if seen from below
+- [ ] Reimplement voxel objects again :/
 - [ ] Add removable object walls (cool opening or moving animation with voxels)
 - [ ] Add collision detection (circle-rectangle collision detection)
-- [ ] Draw a skybox when outside the map (looking at out of bound parts or at transparent ceiling)
-- [ ] Add different height walls while also their tops sides (floor), if seen from above, and bottom sides (ceilings), if seen from below
 - [ ] Add special tiles through which the player would fall to their demise
 - [ ] Add a UI
 - [ ] Go unsafe for performance increase after most of the project is finished

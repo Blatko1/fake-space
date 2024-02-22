@@ -3,7 +3,6 @@ pub mod gfx;
 use std::ptr;
 use crate::dbg::Dbg;
 use gfx::Gfx;
-use rand::Fill;
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
 use winit::dpi::PhysicalSize;

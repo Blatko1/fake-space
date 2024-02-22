@@ -37,7 +37,7 @@ pub struct Camera {
     /// y-coord is always 0.
     pub(super) horizontal_plane: Vec3,
     /// Raycaster (camera) vertical plane.
-    vertical_plane: Vec3,
+    pub(super) vertical_plane: Vec3,
     /// Angle in radians.
     pub(super) yaw_angle: f32,
     /// Width of the output screen/texture.
@@ -179,12 +179,12 @@ impl Camera {
                 z = dest.position.z as f32 + self.origin.z.fract();
             }
             PortalRotationDifference::ClockwiseDeg90 => {
-                self.yaw_angle -= PI / 2.0;
+                self.yaw_angle -= PI * 0.5;
                 x = dest.center.x - (src.center.z - self.origin.z);
                 z = dest.center.z + (src.center.x - self.origin.x);
             }
             PortalRotationDifference::AnticlockwiseDeg90 => {
-                self.yaw_angle += PI / 2.0;
+                self.yaw_angle += PI * 0.5;
                 x = dest.center.x + (src.center.z - self.origin.z);
                 z = dest.center.z - (src.center.x - self.origin.x);
             }

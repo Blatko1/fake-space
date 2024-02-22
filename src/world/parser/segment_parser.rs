@@ -1,10 +1,11 @@
 use std::{ops::RangeInclusive, str::FromStr};
 
 use hashbrown::HashMap;
+use crate::voxel::VoxelModelType;
 
 use crate::world::portal::{DummyPortal, PortalDirection, PortalID};
 use crate::world::textures::Texture;
-use crate::world::{Tile, TilePosition};
+use crate::world::{Tile, TilePosition, VoxelObject};
 
 use super::{
     error::{DimensionError, PresetError, SegmentParseError, TileError},
@@ -108,6 +109,12 @@ impl<'a> SegmentDataParser<'a> {
                 x: i as u64 % dimensions.0,
                 z: i as u64 / dimensions.0,
             };
+            let voxel_object = Some(VoxelObject {
+                pos_x: position.x,
+                pos_z: position.z,
+                pos_y: ground_level,
+                model: VoxelModelType::Voxel,
+            });
             let t = Tile {
                 position,
                 bottom_pillar_tex: tile.bottom_pillar_tex.unwrap_or_default(),
@@ -119,6 +126,8 @@ impl<'a> SegmentDataParser<'a> {
                 ceiling_level,
                 top_level,
                 portal,
+                // TODO this is temporary hard-coded
+                voxel_object,
             };
 
             tiles.push(t);
@@ -230,7 +239,7 @@ impl<'a> SegmentDataParser<'a> {
             // Split the expression and check for formatting errors
             let operands: Vec<&str> = expr.trim().split(':').collect();
             match operands[..] {
-                [s] if s.is_empty() => continue,
+                [""] => continue,
                 // If the expression is only one word with a preceding '$' sign,
                 // then load that preset in this preset
                 [e] => {

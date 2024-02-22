@@ -1,7 +1,6 @@
 use crate::backend::gfx::Gfx;
 use crate::backend::Canvas;
 use crate::state::State;
-use glam::Vec3;
 use wgpu::RenderPass;
 use wgpu_text::glyph_brush::ab_glyph::FontVec;
 use wgpu_text::glyph_brush::{

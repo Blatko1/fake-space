@@ -1,5 +1,4 @@
 use super::{blend, DrawParams, Side};
-use crate::render::skybox::draw_skybox;
 
 // TODO write tests for each draw call function to check for overflows
 // Draws full and transparent walls.
@@ -18,10 +17,11 @@ pub(super) fn draw_bottom_wall(
         return top_draw_bound;
     }
 
-    let texture = match ray.wall_side_hit {
-        Side::Vertical => bottom_wall_texture.light_shade,
-        Side::Horizontal => bottom_wall_texture.medium_shade,
-    };
+    //let texture = match ray.wall_side_hit {
+    //    Side::Vertical => bottom_wall_texture.light_shade,
+    //    Side::Horizontal => bottom_wall_texture.medium_shade,
+    //};
+    let texture = bottom_wall_texture.light_shade;
     let (tex_width, tex_height) = (
         bottom_wall_texture.width as usize,
         bottom_wall_texture.height as usize,
@@ -66,9 +66,10 @@ pub(super) fn draw_bottom_wall(
     let four_tex_x = tex_x * 4;
 
     //let flashlight_x = 1.0 - ((ray.column_index as f32 - cam.view_width as f32 / 2.0) / (cam.view_width as f32 / 2.0)).abs();
-    let flashlight_x = (2.0 * (ray.column_index as f32 * cam.width_recip) - 1.0) * cam.aspect;
+    let flashlight_x = (2.0 * ray.column_index as f32 * cam.width_recip - 1.0) * cam.aspect;
     let t = 1.0 - (ray.wall_dist / super::SPOTLIGHT_DISTANCE).clamp(0.0, 1.0);
     let spotlight = t * t * (3.0 - t * 2.0);
+    let flashlight_intensity_factor = (1.0 - (ray.wall_dist / super::FLASHLIGHT_DISTANCE).clamp(0.0, 1.0)) * super::FLASHLIGHT_INTENSITY;
     column
         .chunks_exact_mut(4)
         .enumerate()
@@ -84,10 +85,10 @@ pub(super) fn draw_bottom_wall(
             //draw_fn(dest, src);
             dest.copy_from_slice(src);
 
-            let flashlight_y = 2.0 * (y as f32 * cam.height_recip) - 1.0;
+            let flashlight_y = 2.0 * y as f32 * cam.height_recip - 1.0;
             for color in &mut dest[0..3] {
-                let flashlight_intensity = (super::FLASHLIGHT_RADIUS - (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt()) * super::FLASHLIGHT_INTENSITY;
-                let intensity = (flashlight_intensity.max(0.0) + spotlight + draw_params.ambient_light).max(0.0);
+                let flashlight_intensity = (super::FLASHLIGHT_RADIUS - (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt()) * flashlight_intensity_factor;
+                let intensity = flashlight_intensity.max(0.0) + spotlight + draw_params.ambient_light;
                 *color = (*color as f32 * intensity) as u8;
             }
             //}
@@ -109,10 +110,11 @@ pub(super) fn draw_top_wall(draw_params: DrawParams, column: &mut [u8]) -> usize
         return bottom_draw_bound;
     }
 
-    let texture = match ray.wall_side_hit {
-        Side::Vertical => top_wall_texture.light_shade,
-        Side::Horizontal => top_wall_texture.medium_shade,
-    };
+    //let texture = match ray.wall_side_hit {
+    //    Side::Vertical => top_wall_texture.light_shade,
+    //    Side::Horizontal => top_wall_texture.medium_shade,
+    //};
+    let texture = top_wall_texture.light_shade;
     let (tex_width, tex_height) = (
         top_wall_texture.width as usize,
         top_wall_texture.height as usize,
@@ -153,10 +155,10 @@ pub(super) fn draw_top_wall(draw_params: DrawParams, column: &mut [u8]) -> usize
     let four_tex_width = tex_width * 4;
     let four_tex_x = tex_x * 4;
 
-    //let flashlight_x = 0.5 - ((ray.column_index as f32 - cam.view_width as f32 / 2.0) / (cam.view_width as f32 / 2.0)).abs();
     let flashlight_x = (2.0 * (ray.column_index as f32 * cam.width_recip) - 1.0) * cam.aspect;
-    let t = 1.0 - (ray.wall_dist / 3.0).clamp(0.0, 1.0);
+    let t = 1.0 - (ray.wall_dist / super::SPOTLIGHT_DISTANCE).clamp(0.0, 1.0);
     let spotlight = t * t * (3.0 - t * 2.0);
+    let flashlight_intensity_factor = (1.0 - (ray.wall_dist / super::FLASHLIGHT_DISTANCE).clamp(0.0, 1.0)) * super::FLASHLIGHT_INTENSITY;
     column
         .chunks_exact_mut(4)
         .enumerate()
@@ -172,10 +174,10 @@ pub(super) fn draw_top_wall(draw_params: DrawParams, column: &mut [u8]) -> usize
             //draw_fn(dest, src);
             dest.copy_from_slice(src);
 
-            let flashlight_y = 2.0 * (y as f32 * cam.height_recip) - 1.0;
+            let flashlight_y = 2.0 * y as f32 * cam.height_recip - 1.0;
             for color in &mut dest[0..3] {
-                let flashlight_intensity = (super::FLASHLIGHT_RADIUS - (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt()) * super::FLASHLIGHT_INTENSITY;
-                let intensity = (flashlight_intensity.max(0.0) + spotlight + draw_params.ambient_light).max(0.0);
+                let flashlight_intensity = (super::FLASHLIGHT_RADIUS - (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt()) * flashlight_intensity_factor;
+                let intensity = flashlight_intensity.max(0.0) + spotlight + draw_params.ambient_light;
                 *color = (*color as f32 * intensity) as u8;
             }
             //}

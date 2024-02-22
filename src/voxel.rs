@@ -45,7 +45,7 @@ impl VoxelModelManager {
         let pillars_data = pillars_data.into_iter().flatten().flatten().collect();
         let pillars = VoxelModel::new(pillars_data, dimension);
 
-        // letter B model:
+        // damaged cube model:
         let dimension = 8;
         let mut damaged_data = vec![vec![vec![1; dimension]; dimension]; dimension];
         for x in 0..4 {

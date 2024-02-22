@@ -5,11 +5,11 @@ pub mod textures;
 use rand::{rngs::ThreadRng, seq::SliceRandom, Rng};
 use std::path::PathBuf;
 
-use crate::player::Player;
 use crate::render::PointXZ;
 use crate::world::portal::{DummyPortal, Portal, PortalID};
 use parser::{error::ParseError, WorldParser};
 use textures::{Texture, TextureData, TextureManager};
+use crate::voxel::{VoxelModelType};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RoomID(pub usize);
@@ -328,6 +328,7 @@ pub struct Tile {
     pub top_level: f32,
     /// If the current tile should be a portal to different segment (map).
     pub portal: Option<DummyPortal>,
+    pub voxel_object: Option<VoxelObject>,
 }
 
 impl Tile {
@@ -342,6 +343,7 @@ impl Tile {
         ceiling_level: 1.0,
         top_level: 2.0,
         portal: None,
+        voxel_object: None
     };
 }
 
@@ -353,4 +355,12 @@ pub struct SkyboxTextures {
     pub west: Texture,
     pub top: Texture,
     pub bottom: Texture,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct VoxelObject {
+    pub pos_x: u64,
+    pub pos_z: u64,
+    pub pos_y: f32,
+    pub model: VoxelModelType,
 }

@@ -6,7 +6,6 @@ mod segment_parser;
 
 use std::path::PathBuf;
 
-use crate::world::parser::error::TileError;
 use hashbrown::HashMap;
 use image::{io::Reader as ImageReader, EncodableLayout};
 

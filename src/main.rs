@@ -42,7 +42,7 @@ fn main() {
 
     let world = World::from_path("maps/world.txt").unwrap();
 
-    let mut canvas = block_on(Canvas::init(winit_window.clone(), 240 * 4, 135 * 4));
+    let mut canvas = block_on(Canvas::init(winit_window.clone(), 240 * 2, 135 * 2));
     // TODO change/fix this
     let font_data = fs::read("res/DejaVuSans.ttf").unwrap();
     let font = FontVec::try_from_vec(font_data).unwrap();
