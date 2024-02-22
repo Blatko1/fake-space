@@ -16,8 +16,15 @@ use self::ray::Ray;
 
 const SPOTLIGHT_DISTANCE: f32 = 2.5;
 const FLASHLIGHT_INTENSITY: f32 = 3.0;
-const FLASHLIGHT_RADIUS: f32 = 0.65;
-const FLASHLIGHT_DISTANCE: f32 = 21.0;
+const FLASHLIGHT_RADIUS: f32 = 1.0;
+const FLASHLIGHT_DISTANCE: f32 = 19.0;
+
+const NORMAL_Y_POSITIVE: Vec3 = Vec3::new(0.0, 1.0, 0.0);
+const NORMAL_Y_NEGATIVE: Vec3 = Vec3::new(0.0, -1.0, 0.0);
+const NORMAL_X_POSITIVE: Vec3 = Vec3::new(1.0, 0.0, 0.0);
+const NORMAL_X_NEGATIVE: Vec3 = Vec3::new(-1.0, 0.0, 0.0);
+const NORMAL_Z_POSITIVE: Vec3 = Vec3::new(0.0, 0.0, 1.0);
+const NORMAL_Z_NEGATIVE: Vec3 = Vec3::new(0.0, 0.0, -1.0);
 
 #[derive(Debug, Copy, Clone)]
 pub struct PointXZ<T> {
@@ -156,7 +163,7 @@ where
             params.ray = ray;
         }
         let ray = starting_ray;
-        if !encountered_models.is_empty() {
+        /*if !encountered_models.is_empty() {
             column
                 .chunks_exact_mut(4)
                 .enumerate()
@@ -305,25 +312,37 @@ where
                                 match voxel {
                                     Some(0) => (),
                                     Some(v) => {
-                                        let x = (grid_x as f32 + obj_x_pos - ray_origin.x)/ dimension;
-                                        let y = (grid_y as f32 + obj_y_pos - ray_origin.y) * 2.0/ dimension;
-                                        let z = (grid_z as f32 + obj_z_pos - ray_origin.z)/ dimension;
-                                        let distance = ((x*x + y*y + z*z)).sqrt();
-                                        if column_index as u32 == camera.view_width / 2 && screen_y as u32 == camera.view_height / 2 {
-                                            println!("d: {}", distance);
-                                        }
+                                        let x = grid_x as f32 + obj_x_pos - ray_origin.x;
+                                        let y = (grid_y as f32 + obj_y_pos - ray_origin.y) * 2.0;
+                                        let z = grid_z as f32 + obj_z_pos - ray_origin.z;
+                                        let distance = ((x*x + y*y + z*z)/ (dimension * dimension)).sqrt();
+
                                         let flashlight_x = (2.0 * ray.column_index as f32 * camera.width_recip - 1.0) * camera.aspect;
                                         let t = 1.0 - (distance / SPOTLIGHT_DISTANCE).clamp(0.0, 1.0);
                                         let spotlight = t * t * (3.0 - t * 2.0);
                                         let flashlight_intensity_factor = (1.0 - (distance / FLASHLIGHT_DISTANCE).clamp(0.0, 1.0)) * FLASHLIGHT_INTENSITY;
+                                        let normal = match side {
+                                            VoxelSide::Top => NORMAL_Y_POS,
+                                            VoxelSide::Bottom => NORMAL_Y_NEG,
+                                            VoxelSide::Left => NORMAL_X_NEG,
+                                            VoxelSide::Right => NORMAL_X_POS,
+                                            VoxelSide::Front => NORMAL_Z_NEG,
+                                            VoxelSide::Back => NORMAL_Z_POS,
+                                        };
+                                        let mut ray = ray;
+                                        // Looking up and down is impossible so ray.dir.y is always '0', but try to simulate pitch change
+                                        // through the y_shearing variable
+                                        ray.dir.y = -camera.y_shearing / camera.f_height;
+                                        let diffuse_light = ray.dir.dot(normal).abs();
+
                                         pixel.copy_from_slice(&[100, 200, 240, 255]);
                                         let flashlight_y = 2.0 * screen_y as f32 * camera.height_recip - 1.0;
                                         for color in &mut pixel[0..3] {
-                                            let flashlight_intensity = (FLASHLIGHT_RADIUS - (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt()) * flashlight_intensity_factor;
+                                            let flashlight_intensity = (FLASHLIGHT_RADIUS - (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt()) * flashlight_intensity_factor * diffuse_light;
                                             let intensity = flashlight_intensity.max(0.0) + 0.03;
                                             *color = (*color as f32 * intensity) as u8;
                                         }
-                                        darken_side(side, pixel);
+                                        //darken_side(side, pixel);
                                         break;
                                     }
 
@@ -384,7 +403,7 @@ where
                         }
                     }
                 });
-        }
+        }*/
     })
 }
 
@@ -462,7 +481,7 @@ fn rectangle_vector_intersection(
     let q2 = p0p.dot(left_side) / left_side_len;
 
     // Check if the intersection point is inside the rectangle.
-    // Only check if the intersection point is too high or too low.
+    // Only check if the intersection point is too low.
     if q2 <= left_side_len {
         Some(intersection_point)
     } else {

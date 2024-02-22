@@ -11,16 +11,29 @@ pub(super) fn draw_bottom_wall(
     let cam = draw_params.camera;
     let ray = draw_params.ray;
     let tile = draw_params.tile;
+    let ambient = draw_params.ambient_light;
 
     let bottom_wall_texture = draw_params.texture_manager.get(tile.bottom_pillar_tex);
     if bottom_wall_texture.is_empty() {
         return top_draw_bound;
     }
 
-    //let texture = match ray.wall_side_hit {
-    //    Side::Vertical => bottom_wall_texture.light_shade,
-    //    Side::Horizontal => bottom_wall_texture.medium_shade,
-    //};
+    let normal = match ray.wall_side_hit {
+        Side::Vertical => if ray.dir.x > 0.0 {
+            // side facing west hit
+            super::NORMAL_X_NEGATIVE
+        } else {
+            // side facing east hit
+            super::NORMAL_X_POSITIVE
+        },
+        Side::Horizontal => if ray.dir.z > 0.0 {
+            // side facing south hit
+            super::NORMAL_Z_NEGATIVE
+        } else {
+            // side facing north hit
+            super::NORMAL_Z_POSITIVE
+        },
+    };
     let texture = bottom_wall_texture.light_shade;
     let (tex_width, tex_height) = (
         bottom_wall_texture.width as usize,
@@ -34,7 +47,6 @@ pub(super) fn draw_bottom_wall(
     let pixels_to_top =
         half_wall_pixel_height * (tile.ground_level - ray.origin.y) + cam.y_shearing;
     let full_wall_pixel_height = pixels_to_top + pixels_to_bottom;
-
     // From which pixel to begin drawing and on which to end
     let draw_from = ((cam.f_half_height - pixels_to_bottom) as usize)
         .clamp(bottom_draw_bound, top_draw_bound);
@@ -66,31 +78,38 @@ pub(super) fn draw_bottom_wall(
     let four_tex_x = tex_x * 4;
 
     //let flashlight_x = 1.0 - ((ray.column_index as f32 - cam.view_width as f32 / 2.0) / (cam.view_width as f32 / 2.0)).abs();
+
+    // TODO idk why this gives negative results
+    let diffuse = (-ray.dir.dot(normal)).max(0.0);
     let flashlight_x = (2.0 * ray.column_index as f32 * cam.width_recip - 1.0) * cam.aspect;
+    // Smooth out the flashlight intensity using the distance
+    let flashlight_intensity = (1.0 - (ray.wall_dist / super::FLASHLIGHT_DISTANCE).clamp(0.0, 1.0)) * super::FLASHLIGHT_INTENSITY * diffuse;
+
+    // Smoothstep distance to get the spotlight
     let t = 1.0 - (ray.wall_dist / super::SPOTLIGHT_DISTANCE).clamp(0.0, 1.0);
     let spotlight = t * t * (3.0 - t * 2.0);
-    let flashlight_intensity_factor = (1.0 - (ray.wall_dist / super::FLASHLIGHT_DISTANCE).clamp(0.0, 1.0)) * super::FLASHLIGHT_INTENSITY;
+
     column
         .chunks_exact_mut(4)
         .enumerate()
         .skip(draw_from)
         .take(draw_to - draw_from)
-        .for_each(|(y, dest)| {
+        .for_each(|(y, pixel)| {
             //if dest[3] != 255 {
             let tex_y_pos = tex_y.round() as usize % tex_height;
             let i = (tex_height - tex_y_pos - 1) * four_tex_width + four_tex_x;
-            let src = &texture[i..i + 4];
+            let color = &texture[i..i + 4];
 
             // Draw the pixel:
             //draw_fn(dest, src);
-            dest.copy_from_slice(src);
 
             let flashlight_y = 2.0 * y as f32 * cam.height_recip - 1.0;
-            for color in &mut dest[0..3] {
-                let flashlight_intensity = (super::FLASHLIGHT_RADIUS - (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt()) * flashlight_intensity_factor;
-                let intensity = flashlight_intensity.max(0.0) + spotlight + draw_params.ambient_light;
-                *color = (*color as f32 * intensity) as u8;
+            for (dest, src) in pixel[0..3].iter_mut().zip(color[0..3].iter()) {
+                let flashlight_radius = (super::FLASHLIGHT_RADIUS - (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt()).clamp(0.0, 1.0);
+                let flashlight = (flashlight_radius * flashlight_intensity).max(0.0);
+                *dest = (*src as f32 * (flashlight + ambient)) as u8;
             }
+            pixel[3] = color[3];
             //}
             // TODO maybe make it so `tex_y_step` is being subtracted.
             tex_y += tex_y_step;
@@ -104,6 +123,7 @@ pub(super) fn draw_top_wall(draw_params: DrawParams, column: &mut [u8]) -> usize
     let cam = draw_params.camera;
     let ray = draw_params.ray;
     let tile = draw_params.tile;
+    let ambient = draw_params.ambient_light;
 
     let top_wall_texture = draw_params.texture_manager.get(tile.top_pillar_tex);
     if top_wall_texture.is_empty() {
@@ -114,6 +134,22 @@ pub(super) fn draw_top_wall(draw_params: DrawParams, column: &mut [u8]) -> usize
     //    Side::Vertical => top_wall_texture.light_shade,
     //    Side::Horizontal => top_wall_texture.medium_shade,
     //};
+    let normal = match ray.wall_side_hit {
+        Side::Vertical => if ray.dir.x > 0.0 {
+            // side facing west hit
+            super::NORMAL_X_NEGATIVE
+        } else {
+            // side facing east hit
+            super::NORMAL_X_POSITIVE
+        },
+        Side::Horizontal => if ray.dir.z > 0.0 {
+            // side facing south hit
+            super::NORMAL_Z_NEGATIVE
+        } else {
+            // side facing north hit
+            super::NORMAL_Z_POSITIVE
+        },
+    };
     let texture = top_wall_texture.light_shade;
     let (tex_width, tex_height) = (
         top_wall_texture.width as usize,
@@ -155,31 +191,37 @@ pub(super) fn draw_top_wall(draw_params: DrawParams, column: &mut [u8]) -> usize
     let four_tex_width = tex_width * 4;
     let four_tex_x = tex_x * 4;
 
-    let flashlight_x = (2.0 * (ray.column_index as f32 * cam.width_recip) - 1.0) * cam.aspect;
+    // TODO idk why this gives negative results
+    let diffuse = (-ray.dir.dot(normal)).max(0.0);
+    let flashlight_x = (2.0 * ray.column_index as f32 * cam.width_recip - 1.0) * cam.aspect;
+    // Smooth out the flashlight intensity using the distance
+    let flashlight_intensity = (1.0 - (ray.wall_dist / super::FLASHLIGHT_DISTANCE).clamp(0.0, 1.0)) * super::FLASHLIGHT_INTENSITY * diffuse;
+
+    // Smoothstep distance to get the spotlight
     let t = 1.0 - (ray.wall_dist / super::SPOTLIGHT_DISTANCE).clamp(0.0, 1.0);
     let spotlight = t * t * (3.0 - t * 2.0);
-    let flashlight_intensity_factor = (1.0 - (ray.wall_dist / super::FLASHLIGHT_DISTANCE).clamp(0.0, 1.0)) * super::FLASHLIGHT_INTENSITY;
+
     column
         .chunks_exact_mut(4)
         .enumerate()
         .skip(draw_from)
         .take(draw_to - draw_from)
-        .for_each(|(y, dest)| {
+        .for_each(|(y, pixel)| {
             //if dest[3] != 255 {
             let tex_y_pos = tex_y.round() as usize % tex_height;
             let i = (tex_height - tex_y_pos - 1) * four_tex_width + four_tex_x;
-            let src = &texture[i..i + 4];
+            let color = &texture[i..i + 4];
 
             // Draw the pixel:
             //draw_fn(dest, src);
-            dest.copy_from_slice(src);
 
             let flashlight_y = 2.0 * y as f32 * cam.height_recip - 1.0;
-            for color in &mut dest[0..3] {
-                let flashlight_intensity = (super::FLASHLIGHT_RADIUS - (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt()) * flashlight_intensity_factor;
-                let intensity = flashlight_intensity.max(0.0) + spotlight + draw_params.ambient_light;
-                *color = (*color as f32 * intensity) as u8;
+            for (dest, src) in pixel[0..3].iter_mut().zip(color[0..3].iter()) {
+                let flashlight_radius = super::FLASHLIGHT_RADIUS - (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt();
+                let flashlight = (flashlight_radius * flashlight_intensity).max(0.0);
+                *dest = (*src as f32 * (flashlight + ambient)) as u8;
             }
+            pixel[3] = color[3];
             //}
             // TODO maybe make it so `tex_y_step` is being subtracted.
             tex_y += tex_y_step;
