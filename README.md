@@ -1,6 +1,6 @@
 # fake-space
 
-![showcase1](res/showcase1.png)
+![showcase1](res/showcase2.png)
 
 `fake-space` is a game. Check out [`pixels`](https://github.com/parasyte/pixels) which helped me learn more about this type of rendering.
 

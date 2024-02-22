@@ -85,7 +85,7 @@ pub(super) fn draw_bottom_platform(draw_params: DrawParams, column: &mut [u8]) -
             //    println!("P: dif: {}, intesn: {}, dir: {}", diffuse, flashlight_intensity, ray_dir);
             //}
             for (dest, src) in pixel[0..3].iter_mut().zip(color[0..3].iter()) {
-                let flashlight_radius = super::FLASHLIGHT_RADIUS - (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt();
+                let flashlight_radius = (super::FLASHLIGHT_RADIUS - (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt()).clamp(0.0, 1.0);
                 let flashlight = (flashlight_radius * flashlight_intensity).max(0.0);
                 *dest = (*src as f32 * (flashlight + ambient)) as u8;
             }
@@ -170,7 +170,7 @@ pub(super) fn draw_top_platform(draw_params: DrawParams, column: &mut [u8]) -> u
             let flashlight_intensity = (1.0 - (row_dist / super::FLASHLIGHT_DISTANCE).clamp(0.0, 1.0)) * super::FLASHLIGHT_INTENSITY * diffuse;
             let flashlight_y = 2.0 * y as f32 * cam.height_recip - 1.0;
             for (dest, src) in pixel[0..3].iter_mut().zip(color[0..3].iter()) {
-                let flashlight_radius = super::FLASHLIGHT_RADIUS - (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt();
+                let flashlight_radius = (super::FLASHLIGHT_RADIUS - (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt()).clamp(0.0, 1.0);
                 let flashlight = (flashlight_radius * flashlight_intensity).max(0.0);
                 *dest = (*src as f32 * (flashlight + ambient)) as u8;
             }

@@ -6,6 +6,7 @@ mod skybox;
 mod voxel_model;
 mod wall;
 
+use std::f32::consts::PI;
 use glam::Vec3;
 use crate::render::camera::Camera;
 use crate::world::{SkyboxTextures, Tile, World};
@@ -333,6 +334,12 @@ where
                                         // Looking up and down is impossible so ray.dir.y is always '0', but try to simulate pitch change
                                         // through the y_shearing variable
                                         ray.dir.y = -camera.y_shearing / camera.f_height;
+                                        //let r = -camera.y_shearing * PI / (2.0 * camera.f_height);
+                                        //ray.dir.y = ray.dir.x * r.tan();
+                                        //if ray.dir.x < 0.0 {
+                                        //    ray.dir.y = ray.dir.x * (PI - r).tan();
+                                        //}
+
                                         let diffuse = (-ray.dir.dot(normal)).max(0.0);
                                         let flashlight_x = (2.0 * ray.column_index as f32 * camera.width_recip - 1.0) * camera.aspect;
                                         // Smooth out the flashlight intensity using the distance
@@ -402,7 +409,6 @@ where
                                     side_dist_z += delta_dist.z;
                                 }
                             }
-                            //pixel.copy_from_slice(&[100, 200, 240, 255]);
                         }
                     }
                 });
