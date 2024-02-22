@@ -109,12 +109,16 @@ impl<'a> SegmentDataParser<'a> {
                 x: i as u64 % dimensions.0,
                 z: i as u64 / dimensions.0,
             };
-            let voxel_object = Some(VoxelObject {
-                pos_x: position.x,
-                pos_z: position.z,
-                pos_y: ground_level,
-                model: VoxelModelType::Voxel,
-            });
+            let voxel_object = if rand::random() && rand::random() && rand::random() {
+                Some(VoxelObject {
+                    pos_x: position.x,
+                    pos_z: position.z,
+                    pos_y: ground_level,
+                    model: VoxelModelType::Voxel,
+                })
+            } else {
+                None
+            };
             let t = Tile {
                 position,
                 bottom_pillar_tex: tile.bottom_pillar_tex.unwrap_or_default(),

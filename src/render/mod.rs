@@ -10,6 +10,7 @@ use glam::Vec3;
 use crate::render::camera::Camera;
 use crate::world::{SkyboxTextures, Tile, World};
 use crate::{player::Player, world::textures::TextureManager};
+use crate::render::colors::COLOR_LUT;
 use crate::voxel::VoxelModel;
 
 use self::ray::Ray;
@@ -163,7 +164,7 @@ where
             params.ray = ray;
         }
         let ray = starting_ray;
-        /*if !encountered_models.is_empty() {
+        if !encountered_models.is_empty() {
             column
                 .chunks_exact_mut(4)
                 .enumerate()
@@ -311,37 +312,39 @@ where
                                 );
                                 match voxel {
                                     Some(0) => (),
-                                    Some(v) => {
+                                    Some(&c) => {
+                                        let color = &COLOR_LUT[c as usize];
                                         let x = grid_x as f32 + obj_x_pos - ray_origin.x;
                                         let y = (grid_y as f32 + obj_y_pos - ray_origin.y) * 2.0;
                                         let z = grid_z as f32 + obj_z_pos - ray_origin.z;
                                         let distance = ((x*x + y*y + z*z)/ (dimension * dimension)).sqrt();
 
-                                        let flashlight_x = (2.0 * ray.column_index as f32 * camera.width_recip - 1.0) * camera.aspect;
                                         let t = 1.0 - (distance / SPOTLIGHT_DISTANCE).clamp(0.0, 1.0);
                                         let spotlight = t * t * (3.0 - t * 2.0);
-                                        let flashlight_intensity_factor = (1.0 - (distance / FLASHLIGHT_DISTANCE).clamp(0.0, 1.0)) * FLASHLIGHT_INTENSITY;
                                         let normal = match side {
-                                            VoxelSide::Top => NORMAL_Y_POS,
-                                            VoxelSide::Bottom => NORMAL_Y_NEG,
-                                            VoxelSide::Left => NORMAL_X_NEG,
-                                            VoxelSide::Right => NORMAL_X_POS,
-                                            VoxelSide::Front => NORMAL_Z_NEG,
-                                            VoxelSide::Back => NORMAL_Z_POS,
+                                            VoxelSide::Top => NORMAL_Y_POSITIVE,
+                                            VoxelSide::Bottom => NORMAL_Y_NEGATIVE,
+                                            VoxelSide::Left => NORMAL_X_NEGATIVE,
+                                            VoxelSide::Right => NORMAL_X_POSITIVE,
+                                            VoxelSide::Front => NORMAL_Z_NEGATIVE,
+                                            VoxelSide::Back => NORMAL_Z_POSITIVE,
                                         };
                                         let mut ray = ray;
                                         // Looking up and down is impossible so ray.dir.y is always '0', but try to simulate pitch change
                                         // through the y_shearing variable
                                         ray.dir.y = -camera.y_shearing / camera.f_height;
-                                        let diffuse_light = ray.dir.dot(normal).abs();
+                                        let diffuse = (-ray.dir.dot(normal)).max(0.0);
+                                        let flashlight_x = (2.0 * ray.column_index as f32 * camera.width_recip - 1.0) * camera.aspect;
+                                        // Smooth out the flashlight intensity using the distance
+                                        let flashlight_intensity = (1.0 - (distance / FLASHLIGHT_DISTANCE).clamp(0.0, 1.0)) * FLASHLIGHT_INTENSITY * diffuse;
 
-                                        pixel.copy_from_slice(&[100, 200, 240, 255]);
                                         let flashlight_y = 2.0 * screen_y as f32 * camera.height_recip - 1.0;
-                                        for color in &mut pixel[0..3] {
-                                            let flashlight_intensity = (FLASHLIGHT_RADIUS - (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt()) * flashlight_intensity_factor * diffuse_light;
-                                            let intensity = flashlight_intensity.max(0.0) + 0.03;
-                                            *color = (*color as f32 * intensity) as u8;
+                                        for (dest, src) in pixel[0..3].iter_mut().zip(color[0..3].iter()) {
+                                            let flashlight_radius = (FLASHLIGHT_RADIUS - (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt()).clamp(0.0, 1.0);
+                                            let flashlight = (flashlight_radius * flashlight_intensity).max(0.0);
+                                            *dest = (*src as f32 * (flashlight + room.data.get_ambient_light())) as u8;
                                         }
+                                        pixel[3] = 255;
                                         //darken_side(side, pixel);
                                         break;
                                     }
@@ -403,7 +406,7 @@ where
                         }
                     }
                 });
-        }*/
+        }
     })
 }
 
