@@ -8,7 +8,6 @@ mod wall;
 
 use crate::render::camera::Camera;
 use crate::render::object::ObjectDrawData;
-use crate::voxel::{VoxelModelData, VoxelModelManager};
 use crate::world::{SkyboxTextures, Tile, World};
 use crate::{player::Player, world::textures::TextureManager};
 use glam::Vec3;
@@ -16,8 +15,10 @@ use glam::Vec3;
 use self::ray::Ray;
 
 const SPOTLIGHT_DISTANCE: f32 = 2.5;
-const FLASHLIGHT_INTENSITY: f32 = 2.5;
-const FLASHLIGHT_RADIUS: f32 = 1.15;
+const FLASHLIGHT_INTENSITY: f32 = 1.2;
+const FLASHLIGHT_OUTER_RADIUS: f32 = 1.1;
+const FLASHLIGHT_RADIUS: f32 = 1.0;
+const FLASHLIGHT_INNER_RADIUS: f32 = 0.55;
 const FLASHLIGHT_DISTANCE: f32 = 19.0;
 
 const NORMAL_Y_POSITIVE: Vec3 = Vec3::new(0.0, 1.0, 0.0);
