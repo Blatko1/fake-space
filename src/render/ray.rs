@@ -44,7 +44,7 @@ pub struct Ray {
     /// Distance to the previous just hit wall.
     pub previous_wall_dist: f32,
     /// The side of which the wall was hit.
-    pub wall_side_hit: Side,
+    pub hit_wall_side: Side,
     /// Offset which represent where exactly was the wall hit
     /// (at which x coordinate).
     pub wall_offset: f32,
@@ -109,7 +109,7 @@ impl Ray {
             },
             wall_dist,
             previous_wall_dist: wall_dist,
-            wall_side_hit: side,
+            hit_wall_side: side,
             wall_offset,
         }
     }
@@ -140,7 +140,7 @@ impl Ray {
                 std::mem::swap(&mut self.side_dist_x, &mut self.side_dist_z);
                 self.step_x = self.dir.x.signum() as i64;
                 self.step_z = self.dir.z.signum() as i64;
-                self.wall_side_hit = match self.wall_side_hit {
+                self.hit_wall_side = match self.hit_wall_side {
                     Side::Vertical => Side::Horizontal,
                     Side::Horizontal => Side::Vertical,
                 };
@@ -160,7 +160,7 @@ impl Ray {
                 std::mem::swap(&mut self.side_dist_x, &mut self.side_dist_z);
                 self.step_x = self.dir.x.signum() as i64;
                 self.step_z = self.dir.z.signum() as i64;
-                self.wall_side_hit = match self.wall_side_hit {
+                self.hit_wall_side = match self.hit_wall_side {
                     Side::Vertical => Side::Horizontal,
                     Side::Horizontal => Side::Vertical,
                 };

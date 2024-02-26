@@ -178,7 +178,7 @@ impl WorldParser {
             tiles,
             skybox,
             repeatable,
-            ambient_light
+            ambient_light,
         ))
     }
 

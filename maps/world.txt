@@ -12,6 +12,10 @@
 #Mossy = path:../res/mossy_stone.png, transparency:false
 #Glass = path:../res/blue_glass.png, transparency:true
 
+#Wallpaper = path:../res/backrooms_wall.png, transparency:false
+#Carpet = path:../res/backrooms_carpet.jpg, transparency:false
+#DropCeiling = path:../res/backrooms_ceiling.jpg, transparency:false
+
 #BoxNorth = path:../res/SkyBoxNorth.png, transparency:false
 #BoxEast = path:../res/SkyBoxEast.png, transparency:false
 #BoxSouth = path:../res/SkyBoxSouth.png, transparency:false

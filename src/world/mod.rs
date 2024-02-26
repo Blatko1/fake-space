@@ -6,10 +6,10 @@ use rand::{rngs::ThreadRng, seq::SliceRandom, Rng};
 use std::path::PathBuf;
 
 use crate::render::PointXZ;
+use crate::voxel::{VoxelModelID, VoxelModelManager};
 use crate::world::portal::{DummyPortal, Portal, PortalID};
 use parser::{error::ParseError, WorldParser};
 use textures::{Texture, TextureData, TextureManager};
-use crate::voxel::{VoxelModelType};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RoomID(pub usize);
@@ -21,6 +21,7 @@ pub struct World {
     segments: Vec<Segment>,
     segment_count: usize,
     texture_manager: TextureManager,
+    voxel_model_manager: VoxelModelManager,
 
     rng: ThreadRng,
     // Each room has index which is the position in this Vec
@@ -46,7 +47,7 @@ impl World {
             portals: segment.unlinked_portals.clone(),
             is_fully_generated: true,
             skybox: segment.skybox,
-            ambient_light: segment.ambient_light
+            ambient_light: segment.ambient_light,
         };
         room_counter += 1;
 
@@ -61,7 +62,7 @@ impl World {
                     portals: root_segment.unlinked_portals.clone(),
                     is_fully_generated: false,
                     skybox: root_segment.skybox,
-                    ambient_light: root_segment.ambient_light
+                    ambient_light: root_segment.ambient_light,
                 };
                 let room_rand_portal = new_room.portals.choose_mut(&mut rng).unwrap();
                 // Connect the two portals:
@@ -82,6 +83,7 @@ impl World {
             segments,
             segment_count,
             texture_manager: TextureManager::new(textures),
+            voxel_model_manager: VoxelModelManager::init(),
             rng,
             rooms,
         }
@@ -92,8 +94,11 @@ impl World {
         // The current room is now fully generated
         let current_room = &mut self.rooms[current_room_id.0];
         // Clone needed for the borrow checker. Is there a better solution???
-        current_room.portals.clone().iter().for_each(|portal|
-            self.fully_generate_room(portal.link.unwrap().0));
+        current_room
+            .portals
+            .clone()
+            .iter()
+            .for_each(|portal| self.fully_generate_room(portal.link.unwrap().0));
     }
 
     fn fully_generate_room(&mut self, room_id: RoomID) {
@@ -115,7 +120,7 @@ impl World {
                         portals: rand_segment.unlinked_portals.clone(),
                         is_fully_generated: false,
                         skybox: rand_segment.skybox,
-                        ambient_light: rand_segment.ambient_light
+                        ambient_light: rand_segment.ambient_light,
                     };
                     let room_rand_portal =
                         new_room.portals.choose_mut(&mut self.rng).unwrap();
@@ -145,7 +150,7 @@ impl World {
             portals: segment.unlinked_portals.clone(),
             is_fully_generated: false,
             skybox: segment.skybox,
-            ambient_light: segment.ambient_light
+            ambient_light: segment.ambient_light,
         };
         self.rooms.push(starting_room);
         self.rooms.last_mut().unwrap()
@@ -165,7 +170,7 @@ impl World {
         let room = &self.rooms[index.0];
         RoomRef {
             segment: &self.segments[room.segment_id.0],
-            data: room
+            data: room,
         }
     }
 
@@ -175,6 +180,10 @@ impl World {
 
     pub fn texture_manager(&self) -> &TextureManager {
         &self.texture_manager
+    }
+
+    pub fn voxel_model_manager(&self) -> &VoxelModelManager {
+        &self.voxel_model_manager
     }
 }
 
@@ -199,7 +208,7 @@ pub struct Room {
     portals: Vec<Portal>,
     is_fully_generated: bool,
     skybox: SkyboxTextures,
-    ambient_light: f32
+    ambient_light: f32,
 }
 
 impl Room {
@@ -228,7 +237,7 @@ pub struct Segment {
     unlinked_portals: Vec<Portal>,
     skybox: SkyboxTextures,
     repeatable: bool,
-    ambient_light: f32
+    ambient_light: f32,
 }
 
 impl Segment {
@@ -239,7 +248,7 @@ impl Segment {
         tiles: Vec<Tile>,
         skybox: SkyboxTextures,
         repeatable: bool,
-        ambient_light: f32
+        ambient_light: f32,
     ) -> Self {
         // Create unlinked Portals from DummyPortals
         let unlinked_portals = tiles
@@ -268,7 +277,7 @@ impl Segment {
             tiles,
             skybox,
             repeatable,
-            ambient_light
+            ambient_light,
         }
     }
 
@@ -328,7 +337,7 @@ pub struct Tile {
     pub top_level: f32,
     /// If the current tile should be a portal to different segment (map).
     pub portal: Option<DummyPortal>,
-    pub voxel_object: Option<VoxelObject>,
+    pub voxel_model: Option<VoxelModelID>,
 }
 
 impl Tile {
@@ -343,7 +352,7 @@ impl Tile {
         ceiling_level: 1.0,
         top_level: 2.0,
         portal: None,
-        voxel_object: None
+        voxel_model: None,
     };
 }
 
@@ -355,12 +364,4 @@ pub struct SkyboxTextures {
     pub west: Texture,
     pub top: Texture,
     pub bottom: Texture,
-}
-
-#[derive(Debug, Copy, Clone)]
-pub struct VoxelObject {
-    pub pos_x: u64,
-    pub pos_z: u64,
-    pub pos_y: f32,
-    pub model: VoxelModelType,
 }

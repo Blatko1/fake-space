@@ -2,8 +2,8 @@
 // are bleeding out when further away
 // TODO problem! adding unsafe could improve performance
 
-use glam::Vec3;
 use super::DrawParams;
+use glam::Vec3;
 
 pub(super) fn draw_bottom_platform(draw_params: DrawParams, column: &mut [u8]) -> usize {
     let bottom_draw_bound = draw_params.bottom_draw_bound;
@@ -44,12 +44,14 @@ pub(super) fn draw_bottom_platform(draw_params: DrawParams, column: &mut [u8]) -
 
     // Variables used for reducing the amount of calculations and for optimization
     let tile_step_factor = ray.horizontal_plane * 2.0 * cam.width_recip;
-    let pos_factor = ray.camera_dir - ray.horizontal_plane + tile_step_factor * ray.column_index as f32;
+    let pos_factor = ray.camera_dir - ray.horizontal_plane
+        + tile_step_factor * ray.column_index as f32;
     let row_dist_factor = cam.f_half_height * cam.plane_dist;
     //let shearing_plus_half_height = cam.y_shearing + cam.f_half_height;
 
     // Calculating lightning
-    let flashlight_x = (2.0 * ray.column_index as f32 * cam.width_recip - 1.0) * cam.aspect;
+    let flashlight_x =
+        (2.0 * ray.column_index as f32 * cam.width_recip - 1.0) * cam.aspect;
     // Smoothstep distance to get the spotlight
     let t = 1.0 - (ray.wall_dist / super::SPOTLIGHT_DISTANCE).clamp(0.0, 1.0);
     let spotlight = t * t * (3.0 - t * 2.0);
@@ -79,13 +81,18 @@ pub(super) fn draw_bottom_platform(draw_params: DrawParams, column: &mut [u8]) -
             ray_dir.y += ray.origin.y - tile.ground_level;
             let diffuse = ray_dir.normalize().dot(normal);
             // Smooth out the flashlight intensity using the distance
-            let flashlight_intensity = (1.0 - (row_dist / super::FLASHLIGHT_DISTANCE).clamp(0.0, 1.0)) * super::FLASHLIGHT_INTENSITY * diffuse;
+            let flashlight_intensity = (1.0
+                - (row_dist / super::FLASHLIGHT_DISTANCE).clamp(0.0, 1.0))
+                * super::FLASHLIGHT_INTENSITY
+                * diffuse;
             let flashlight_y = 2.0 * y as f32 * cam.height_recip - 1.0;
             //if ray.column_index as u32 == cam.view_width / 2 && y as u32 == cam.view_height / 2 {
             //    println!("P: dif: {}, intesn: {}, dir: {}", diffuse, flashlight_intensity, ray_dir);
             //}
             for (dest, src) in pixel[0..3].iter_mut().zip(color[0..3].iter()) {
-                let flashlight_radius = (super::FLASHLIGHT_RADIUS - (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt()).clamp(0.0, 1.0);
+                let flashlight_radius = (super::FLASHLIGHT_RADIUS
+                    - (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt())
+                .clamp(0.0, 1.0);
                 let flashlight = (flashlight_radius * flashlight_intensity).max(0.0);
                 *dest = (*src as f32 * (flashlight + ambient)) as u8;
             }
@@ -138,7 +145,8 @@ pub(super) fn draw_top_platform(draw_params: DrawParams, column: &mut [u8]) -> u
     let row_dist_factor = cam.f_half_height * cam.plane_dist;
     let shearing_plus_half_height = cam.y_shearing + cam.f_half_height;
 
-    let flashlight_x = (2.0 * ray.column_index as f32 * cam.width_recip - 1.0) * cam.aspect;
+    let flashlight_x =
+        (2.0 * ray.column_index as f32 * cam.width_recip - 1.0) * cam.aspect;
     // Smoothstep distance to get the spotlight
     let t = 1.0 - (ray.wall_dist / super::SPOTLIGHT_DISTANCE).clamp(0.0, 1.0);
     let spotlight = t * t * (3.0 - t * 2.0);
@@ -167,10 +175,15 @@ pub(super) fn draw_top_platform(draw_params: DrawParams, column: &mut [u8]) -> u
             pixel.copy_from_slice(color);
 
             // Smooth out the flashlight intensity using the distance
-            let flashlight_intensity = (1.0 - (row_dist / super::FLASHLIGHT_DISTANCE).clamp(0.0, 1.0)) * super::FLASHLIGHT_INTENSITY * diffuse;
+            let flashlight_intensity = (1.0
+                - (row_dist / super::FLASHLIGHT_DISTANCE).clamp(0.0, 1.0))
+                * super::FLASHLIGHT_INTENSITY
+                * diffuse;
             let flashlight_y = 2.0 * y as f32 * cam.height_recip - 1.0;
             for (dest, src) in pixel[0..3].iter_mut().zip(color[0..3].iter()) {
-                let flashlight_radius = (super::FLASHLIGHT_RADIUS - (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt()).clamp(0.0, 1.0);
+                let flashlight_radius = (super::FLASHLIGHT_RADIUS
+                    - (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt())
+                .clamp(0.0, 1.0);
                 let flashlight = (flashlight_radius * flashlight_intensity).max(0.0);
                 *dest = (*src as f32 * (flashlight + ambient)) as u8;
             }

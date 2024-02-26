@@ -1,7 +1,7 @@
-use std::ptr;
 use crate::render::{DrawParams, Side};
 use crate::world::textures::TextureDataRef;
 use glam::Vec3;
+use std::ptr;
 
 // TODO solve maybe? entering new rooms rotates camera which rotates the skybox
 pub fn draw_skybox(mut draw_params: DrawParams, column: &mut [u8]) {
@@ -16,11 +16,10 @@ pub fn draw_skybox(mut draw_params: DrawParams, column: &mut [u8]) {
     if ray.dir.z >= 0.0 && ray.dir.x.abs() <= ray.dir.z {
         let t = 0.5 / ray.dir.z;
         ray.wall_offset = 0.5 + t * ray.dir.x;
-        ray.wall_side_hit = Side::Horizontal;
+        ray.hit_wall_side = Side::Horizontal;
         //half_wall_pixel_height =
         //    cam.f_half_height / (ray.delta_dist_z * 0.5) * cam.plane_dist;
-        half_wall_pixel_height =
-            cam.f_height / ray.delta_dist_z * cam.plane_dist;
+        half_wall_pixel_height = cam.f_height / ray.delta_dist_z * cam.plane_dist;
 
         wall_texture = draw_params.texture_manager.get(draw_params.skybox.north);
     }
@@ -29,9 +28,8 @@ pub fn draw_skybox(mut draw_params: DrawParams, column: &mut [u8]) {
         let t = 0.5 / ray.dir.x;
         // ray.wall_offset = 1.0 - (0.5 + t * ray.dir.z);
         ray.wall_offset = 0.5 - t * ray.dir.z;
-        ray.wall_side_hit = Side::Vertical;
-        half_wall_pixel_height =
-            cam.f_height / ray.delta_dist_x * cam.plane_dist;
+        ray.hit_wall_side = Side::Vertical;
+        half_wall_pixel_height = cam.f_height / ray.delta_dist_x * cam.plane_dist;
 
         wall_texture = draw_params.texture_manager.get(draw_params.skybox.east);
     }
@@ -39,9 +37,8 @@ pub fn draw_skybox(mut draw_params: DrawParams, column: &mut [u8]) {
     else if ray.dir.x < 0.0 && ray.dir.z.abs() <= -ray.dir.x {
         let t = 0.5 / ray.dir.x;
         ray.wall_offset = 0.5 - t * ray.dir.z;
-        ray.wall_side_hit = Side::Vertical;
-        half_wall_pixel_height =
-            cam.f_height / ray.delta_dist_x * cam.plane_dist;
+        ray.hit_wall_side = Side::Vertical;
+        half_wall_pixel_height = cam.f_height / ray.delta_dist_x * cam.plane_dist;
 
         wall_texture = draw_params.texture_manager.get(draw_params.skybox.west);
     }
@@ -49,9 +46,8 @@ pub fn draw_skybox(mut draw_params: DrawParams, column: &mut [u8]) {
     else {
         let t = 0.5 / ray.dir.z;
         ray.wall_offset = 0.5 + t * ray.dir.x;
-        ray.wall_side_hit = Side::Horizontal;
-        half_wall_pixel_height =
-            cam.f_height / ray.delta_dist_z * cam.plane_dist;
+        ray.hit_wall_side = Side::Horizontal;
+        half_wall_pixel_height = cam.f_height / ray.delta_dist_z * cam.plane_dist;
 
         wall_texture = draw_params.texture_manager.get(draw_params.skybox.south);
     };
@@ -100,16 +96,16 @@ fn draw_skybox_top(
         .skip(draw_from)
         .take(draw_to - draw_from)
         .for_each(|(y, rgba)| {
-            let row_dist = row_dist_factor
-                / (y as f32 - half_h_plus_shearing);
-            let pos = Vec3::new(0.5, 0.5, 0.5) + row_dist
-                * pos_factor;
+            let row_dist = row_dist_factor / (y as f32 - half_h_plus_shearing);
+            let pos = Vec3::new(0.5, 0.5, 0.5) + row_dist * pos_factor;
             let tex_x = ((tex_width as f32 * pos.x) as usize).min(tex_width - 1);
             let tex_y = ((tex_height as f32 * pos.z) as usize).min(tex_height - 1);
             let i = 4 * (tex_width * tex_y + tex_x);
             let color = &texture[i..i + 4];
             //rgba.copy_from_slice(color);
-            unsafe { ptr::copy_nonoverlapping(color.as_ptr(), rgba.as_mut_ptr(), rgba.len()) }
+            unsafe {
+                ptr::copy_nonoverlapping(color.as_ptr(), rgba.as_mut_ptr(), rgba.len())
+            }
         });
 }
 
@@ -152,16 +148,16 @@ fn draw_skybox_bottom(
         .skip(draw_from)
         .take(draw_to - draw_from)
         .for_each(|(y, rgba)| {
-            let row_dist = row_dist_factor
-                / (y as f32 - half_h_plus_shearing);
-            let pos = Vec3::new(0.5, 0.5, 0.5) + row_dist
-                * pos_factor;
+            let row_dist = row_dist_factor / (y as f32 - half_h_plus_shearing);
+            let pos = Vec3::new(0.5, 0.5, 0.5) + row_dist * pos_factor;
             let tex_x = ((tex_width as f32 * pos.x) as usize).min(tex_width - 1);
             let tex_y = ((tex_height as f32 * pos.z) as usize).min(tex_height - 1);
             let i = 4 * (tex_width * tex_y + tex_x);
             let color = &texture[i..i + 4];
             //rgba.copy_from_slice(color);
-            unsafe { ptr::copy_nonoverlapping(color.as_ptr(), rgba.as_mut_ptr(), rgba.len()) }
+            unsafe {
+                ptr::copy_nonoverlapping(color.as_ptr(), rgba.as_mut_ptr(), rgba.len())
+            }
         });
 }
 
@@ -189,8 +185,8 @@ fn draw_skybox_wall(
     // From which pixel to begin drawing and on which to end
     let draw_from = ((cam.f_half_height - pixels_to_bottom) as usize)
         .clamp(bottom_draw_bound, top_draw_bound);
-    let draw_to = ((cam.f_half_height + pixels_to_top) as usize)
-        .clamp(draw_from, top_draw_bound);
+    let draw_to =
+        ((cam.f_half_height + pixels_to_top) as usize).clamp(draw_from, top_draw_bound);
 
     let tex_x = (ray.wall_offset * tex_width as f32) as usize;
     let tex_y_step = tex_height as f32 / full_wall_pixel_height;
@@ -212,7 +208,9 @@ fn draw_skybox_wall(
             // Draw the pixel:
             //draw_fn(dest, src);
             //dest.copy_from_slice(src);
-            unsafe { ptr::copy_nonoverlapping(src.as_ptr(), dest.as_mut_ptr(), dest.len()) }
+            unsafe {
+                ptr::copy_nonoverlapping(src.as_ptr(), dest.as_mut_ptr(), dest.len())
+            }
             //}
             // TODO maybe make it so `tex_y_step` is being subtracted.
             tex_y += tex_y_step;

@@ -1,11 +1,11 @@
 use std::{ops::RangeInclusive, str::FromStr};
 
+use crate::voxel::VoxelModelID;
 use hashbrown::HashMap;
-use crate::voxel::VoxelModelType;
 
 use crate::world::portal::{DummyPortal, PortalDirection, PortalID};
 use crate::world::textures::Texture;
-use crate::world::{Tile, TilePosition, VoxelObject};
+use crate::world::{Tile, TilePosition};
 
 use super::{
     error::{DimensionError, PresetError, SegmentParseError, TileError},
@@ -109,13 +109,8 @@ impl<'a> SegmentDataParser<'a> {
                 x: i as u64 % dimensions.0,
                 z: i as u64 / dimensions.0,
             };
-            let voxel_object = if rand::random() && rand::random() && rand::random() {
-                Some(VoxelObject {
-                    pos_x: position.x,
-                    pos_z: position.z,
-                    pos_y: ground_level,
-                    model: VoxelModelType::Voxel,
-                })
+            let voxel_model = if rand::random() && rand::random() && rand::random() {
+                Some(VoxelModelID::Damaged)
             } else {
                 None
             };
@@ -131,7 +126,7 @@ impl<'a> SegmentDataParser<'a> {
                 top_level,
                 portal,
                 // TODO this is temporary hard-coded
-                voxel_object,
+                voxel_model: None,
             };
 
             tiles.push(t);

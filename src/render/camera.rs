@@ -136,18 +136,22 @@ impl Camera {
 
     pub fn update(&mut self, frame_time: f32) {
         // Change FOV and vertical FOV
-        self.fov = (self.fov + (self.increase_fov - self.decrease_fov) * FOV_CHANGE_SPEED * frame_time)
+        self.fov = (self.fov
+            + (self.increase_fov - self.decrease_fov) * FOV_CHANGE_SPEED * frame_time)
             .clamp(ONE_DEGREE_RAD, MAX_FOV_RAD);
         self.plane_dist = 1.0 / f32::tan(self.fov * 0.5);
 
         // Change y_shearing (look up/down)
         self.y_shearing = (self.y_shearing
-            + (self.decrease_y_shearing - self.increase_y_shearing) * Y_SHEARING_SPEED * frame_time)
+            + (self.decrease_y_shearing - self.increase_y_shearing)
+                * Y_SHEARING_SPEED
+                * frame_time)
             .clamp(-self.f_height, self.f_height);
 
         // Update rotation and direction
         self.yaw_angle = normalize_rad(
-            self.yaw_angle + (self.turn_left - self.turn_right) * ROTATION_SPEED * frame_time,
+            self.yaw_angle
+                + (self.turn_left - self.turn_right) * ROTATION_SPEED * frame_time,
         );
         self.dir = Vec3::new(self.yaw_angle.cos(), 0.0, self.yaw_angle.sin());
 
@@ -157,15 +161,19 @@ impl Camera {
             Vec3::cross(DEFAULT_PLANE_V, self.dir) * self.aspect / self.plane_dist;
 
         // Update origin position
-        self.origin.x += self.dir.x * (self.forward - self.backward) * MOVEMENT_SPEED * frame_time;
-        self.origin.z += self.dir.z * (self.forward - self.backward) * MOVEMENT_SPEED * frame_time;
+        self.origin.x +=
+            self.dir.x * (self.forward - self.backward) * MOVEMENT_SPEED * frame_time;
+        self.origin.z +=
+            self.dir.z * (self.forward - self.backward) * MOVEMENT_SPEED * frame_time;
         let horizontal_plane_norm = self.horizontal_plane.normalize();
         self.origin.x += horizontal_plane_norm.x
             * (self.strafe_right - self.strafe_left)
-            * MOVEMENT_SPEED * frame_time;
+            * MOVEMENT_SPEED
+            * frame_time;
         self.origin.z += horizontal_plane_norm.z
             * (self.strafe_right - self.strafe_left)
-            * MOVEMENT_SPEED * frame_time;
+            * MOVEMENT_SPEED
+            * frame_time;
         self.origin.y += (self.fly_up - self.fly_down) * FLY_UP_DOWN_SPEED * frame_time;
     }
 

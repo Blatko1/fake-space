@@ -2,10 +2,7 @@ use super::{blend, DrawParams, Side};
 
 // TODO write tests for each draw call function to check for overflows
 // Draws full and transparent walls.
-pub(super) fn draw_bottom_wall(
-    draw_params: DrawParams,
-    column: &mut [u8],
-) -> usize {
+pub(super) fn draw_bottom_wall(draw_params: DrawParams, column: &mut [u8]) -> usize {
     let bottom_draw_bound = draw_params.bottom_draw_bound;
     let top_draw_bound = draw_params.top_draw_bound;
     let cam = draw_params.camera;
@@ -18,21 +15,25 @@ pub(super) fn draw_bottom_wall(
         return top_draw_bound;
     }
 
-    let normal = match ray.wall_side_hit {
-        Side::Vertical => if ray.dir.x > 0.0 {
-            // side facing west hit
-            super::NORMAL_X_NEGATIVE
-        } else {
-            // side facing east hit
-            super::NORMAL_X_POSITIVE
-        },
-        Side::Horizontal => if ray.dir.z > 0.0 {
-            // side facing south hit
-            super::NORMAL_Z_NEGATIVE
-        } else {
-            // side facing north hit
-            super::NORMAL_Z_POSITIVE
-        },
+    let normal = match ray.hit_wall_side {
+        Side::Vertical => {
+            if ray.dir.x > 0.0 {
+                // side facing west hit
+                super::NORMAL_X_NEGATIVE
+            } else {
+                // side facing east hit
+                super::NORMAL_X_POSITIVE
+            }
+        }
+        Side::Horizontal => {
+            if ray.dir.z > 0.0 {
+                // side facing south hit
+                super::NORMAL_Z_NEGATIVE
+            } else {
+                // side facing north hit
+                super::NORMAL_Z_POSITIVE
+            }
+        }
     };
     let texture = bottom_wall_texture.light_shade;
     let (tex_width, tex_height) = (
@@ -53,7 +54,7 @@ pub(super) fn draw_bottom_wall(
     let draw_to = ((cam.f_half_height + pixels_to_top) as usize)
         .clamp(bottom_draw_bound, top_draw_bound);
 
-    let tex_x = match ray.wall_side_hit {
+    let tex_x = match ray.hit_wall_side {
         Side::Vertical if ray.dir.x > 0.0 => {
             tex_width - (ray.wall_offset * tex_width as f32) as usize - 1
         }
@@ -65,7 +66,9 @@ pub(super) fn draw_bottom_wall(
     //let tex_y_step = tex_height as f32
     //    / full_wall_pixel_height
     //    / (2.0 / (tile.ground_level - tile.bottom_level));
-    let tex_y_step = (tile.ground_level - tile.bottom_level) * tex_height as f32 / full_wall_pixel_height * 0.5;
+    let tex_y_step = (tile.ground_level - tile.bottom_level) * tex_height as f32
+        / full_wall_pixel_height
+        * 0.5;
     let mut tex_y =
         (draw_from as f32 + pixels_to_bottom - cam.f_half_height) * tex_y_step;
     let draw_fn = match bottom_wall_texture.transparency {
@@ -81,9 +84,13 @@ pub(super) fn draw_bottom_wall(
 
     // TODO idk why this gives negative results
     let diffuse = (-ray.dir.dot(normal)).max(0.0);
-    let flashlight_x = (2.0 * ray.column_index as f32 * cam.width_recip - 1.0) * cam.aspect;
+    let flashlight_x =
+        (2.0 * ray.column_index as f32 * cam.width_recip - 1.0) * cam.aspect;
     // Smooth out the flashlight intensity using the distance
-    let flashlight_intensity = (1.0 - (ray.wall_dist / super::FLASHLIGHT_DISTANCE).clamp(0.0, 1.0)) * super::FLASHLIGHT_INTENSITY * diffuse;
+    let flashlight_intensity = (1.0
+        - (ray.wall_dist / super::FLASHLIGHT_DISTANCE).clamp(0.0, 1.0))
+        * super::FLASHLIGHT_INTENSITY
+        * diffuse;
 
     // Smoothstep distance to get the spotlight
     let t = 1.0 - (ray.wall_dist / super::SPOTLIGHT_DISTANCE).clamp(0.0, 1.0);
@@ -105,7 +112,9 @@ pub(super) fn draw_bottom_wall(
 
             let flashlight_y = 2.0 * y as f32 * cam.height_recip - 1.0;
             for (dest, src) in pixel[0..3].iter_mut().zip(color[0..3].iter()) {
-                let flashlight_radius = (super::FLASHLIGHT_RADIUS - (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt()).clamp(0.0, 1.0);
+                let flashlight_radius = (super::FLASHLIGHT_RADIUS
+                    - (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt())
+                .clamp(0.0, 1.0);
                 let flashlight = (flashlight_radius * flashlight_intensity).max(0.0);
                 *dest = (*src as f32 * (flashlight + ambient)) as u8;
             }
@@ -134,21 +143,25 @@ pub(super) fn draw_top_wall(draw_params: DrawParams, column: &mut [u8]) -> usize
     //    Side::Vertical => top_wall_texture.light_shade,
     //    Side::Horizontal => top_wall_texture.medium_shade,
     //};
-    let normal = match ray.wall_side_hit {
-        Side::Vertical => if ray.dir.x > 0.0 {
-            // side facing west hit
-            super::NORMAL_X_NEGATIVE
-        } else {
-            // side facing east hit
-            super::NORMAL_X_POSITIVE
-        },
-        Side::Horizontal => if ray.dir.z > 0.0 {
-            // side facing south hit
-            super::NORMAL_Z_NEGATIVE
-        } else {
-            // side facing north hit
-            super::NORMAL_Z_POSITIVE
-        },
+    let normal = match ray.hit_wall_side {
+        Side::Vertical => {
+            if ray.dir.x > 0.0 {
+                // side facing west hit
+                super::NORMAL_X_NEGATIVE
+            } else {
+                // side facing east hit
+                super::NORMAL_X_POSITIVE
+            }
+        }
+        Side::Horizontal => {
+            if ray.dir.z > 0.0 {
+                // side facing south hit
+                super::NORMAL_Z_NEGATIVE
+            } else {
+                // side facing north hit
+                super::NORMAL_Z_POSITIVE
+            }
+        }
     };
     let texture = top_wall_texture.light_shade;
     let (tex_width, tex_height) = (
@@ -174,7 +187,7 @@ pub(super) fn draw_top_wall(draw_params: DrawParams, column: &mut [u8]) -> usize
     let draw_to = ((cam.f_half_height + pixels_to_top) as usize)
         .clamp(bottom_draw_bound, top_draw_bound);
 
-    let tex_x = match ray.wall_side_hit {
+    let tex_x = match ray.hit_wall_side {
         Side::Vertical if ray.dir.x > 0.0 => {
             tex_width - (ray.wall_offset * tex_width as f32) as usize - 1
         }
@@ -183,7 +196,9 @@ pub(super) fn draw_top_wall(draw_params: DrawParams, column: &mut [u8]) -> usize
         }
         _ => (ray.wall_offset * tex_width as f32) as usize,
     };
-    let tex_y_step = (tile.top_level - tile.ceiling_level) * tex_height as f32 / full_wall_pixel_height * 0.5;
+    let tex_y_step = (tile.top_level - tile.ceiling_level) * tex_height as f32
+        / full_wall_pixel_height
+        * 0.5;
     let mut tex_y =
         (draw_from as f32 + pixels_to_bottom - cam.f_half_height) * tex_y_step;
 
@@ -193,9 +208,13 @@ pub(super) fn draw_top_wall(draw_params: DrawParams, column: &mut [u8]) -> usize
 
     // TODO idk why this gives negative results
     let diffuse = (-ray.dir.dot(normal)).max(0.0);
-    let flashlight_x = (2.0 * ray.column_index as f32 * cam.width_recip - 1.0) * cam.aspect;
+    let flashlight_x =
+        (2.0 * ray.column_index as f32 * cam.width_recip - 1.0) * cam.aspect;
     // Smooth out the flashlight intensity using the distance
-    let flashlight_intensity = (1.0 - (ray.wall_dist / super::FLASHLIGHT_DISTANCE).clamp(0.0, 1.0)) * super::FLASHLIGHT_INTENSITY * diffuse;
+    let flashlight_intensity = (1.0
+        - (ray.wall_dist / super::FLASHLIGHT_DISTANCE).clamp(0.0, 1.0))
+        * super::FLASHLIGHT_INTENSITY
+        * diffuse;
 
     // Smoothstep distance to get the spotlight
     let t = 1.0 - (ray.wall_dist / super::SPOTLIGHT_DISTANCE).clamp(0.0, 1.0);
@@ -217,7 +236,9 @@ pub(super) fn draw_top_wall(draw_params: DrawParams, column: &mut [u8]) -> usize
 
             let flashlight_y = 2.0 * y as f32 * cam.height_recip - 1.0;
             for (dest, src) in pixel[0..3].iter_mut().zip(color[0..3].iter()) {
-                let flashlight_radius = (super::FLASHLIGHT_RADIUS - (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt()).clamp(0.0, 1.0);
+                let flashlight_radius = (super::FLASHLIGHT_RADIUS
+                    - (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt())
+                .clamp(0.0, 1.0);
                 let flashlight = (flashlight_radius * flashlight_intensity).max(0.0);
                 *dest = (*src as f32 * (flashlight + ambient)) as u8;
             }

@@ -1,8 +1,8 @@
 pub mod gfx;
 
-use std::ptr;
 use crate::dbg::Dbg;
 use gfx::Gfx;
+use std::ptr;
 use std::sync::Arc;
 use wgpu::util::DeviceExt;
 use winit::dpi::PhysicalSize;
@@ -226,7 +226,11 @@ impl Canvas {
                         //dest.copy_from_slice(src);
                         // Using unsafe for speed
                         unsafe {
-                            ptr::copy_nonoverlapping(src.as_ptr(), dest.as_mut_ptr(), dest.len());
+                            ptr::copy_nonoverlapping(
+                                src.as_ptr(),
+                                dest.as_mut_ptr(),
+                                dest.len(),
+                            );
                         }
                     })
             });
