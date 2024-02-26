@@ -3,13 +3,12 @@
 // TODO problem! adding unsafe could improve performance
 
 use super::DrawParams;
-use glam::Vec3;
 
 pub(super) fn draw_bottom_platform(draw_params: DrawParams, column: &mut [u8]) -> usize {
     let bottom_draw_bound = draw_params.bottom_draw_bound;
     let top_draw_bound = draw_params.top_draw_bound;
     let cam = draw_params.camera;
-    let mut ray = draw_params.ray;
+    let ray = draw_params.ray;
     let tile = draw_params.tile;
     let ambient = draw_params.ambient_light;
     let normal = super::NORMAL_Y_POSITIVE;

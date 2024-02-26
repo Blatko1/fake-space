@@ -34,7 +34,7 @@ pub fn draw_objects(objects: Vec<ObjectDrawData>, camera: &Camera, column: &mut 
             for object in objects.iter().rev().filter(|object| {
                 object.bottom_draw_bound <= screen_y && object.top_draw_bound > screen_y
             }) {
-                let mut ray = object.ray;
+                let ray = object.ray;
                 let ambient_light = object.ambient_light;
                 let dimension = object.model_data.dimension as f32;
                 let hit_side = ray.hit_wall_side;

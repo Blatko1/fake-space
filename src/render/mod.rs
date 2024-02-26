@@ -15,7 +15,7 @@ use glam::Vec3;
 use self::ray::Ray;
 
 const SPOTLIGHT_DISTANCE: f32 = 2.5;
-const FLASHLIGHT_INTENSITY: f32 = 1.2;
+const FLASHLIGHT_INTENSITY: f32 = 1.35;
 const FLASHLIGHT_OUTER_RADIUS: f32 = 1.1;
 const FLASHLIGHT_RADIUS: f32 = 1.0;
 const FLASHLIGHT_INNER_RADIUS: f32 = 0.55;
@@ -128,7 +128,7 @@ where
                 params.ambient_light = room.data.get_ambient_light();
             }
 
-            if let Some(model_id) = next_tile.voxel_model.clone() {
+            if let Some(model_id) = next_tile.voxel_model {
                 encountered_objects.push(ObjectDrawData {
                     pos_x: next_tile.position.x,
                     pos_z: next_tile.position.z,
