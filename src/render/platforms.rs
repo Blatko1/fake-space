@@ -51,9 +51,6 @@ pub(super) fn draw_bottom_platform(draw_params: DrawParams, column: &mut [u8]) -
     // Calculating lightning
     let flashlight_x =
         (2.0 * ray.column_index as f32 * cam.width_recip - 1.0) * cam.aspect;
-    // Smoothstep distance to get the spotlight
-    let t = 1.0 - (ray.wall_dist / super::SPOTLIGHT_DISTANCE).clamp(0.0, 1.0);
-    let spotlight = t * t * (3.0 - t * 2.0);
 
     column
         .chunks_exact_mut(4)
@@ -85,14 +82,16 @@ pub(super) fn draw_bottom_platform(draw_params: DrawParams, column: &mut [u8]) -
                 * super::FLASHLIGHT_INTENSITY
                 * diffuse;
             let flashlight_y = 2.0 * y as f32 * cam.height_recip - 1.0;
-            //if ray.column_index as u32 == cam.view_width / 2 && y as u32 == cam.view_height / 2 {
-            //    println!("P: dif: {}, intesn: {}, dir: {}", diffuse, flashlight_intensity, ray_dir);
-            //}
+
+            // Smoothstep distance to get the spotlight
+            let t = 1.0 - (row_dist / super::SPOTLIGHT_DISTANCE).clamp(0.0, 1.0);
+            let spotlight = t * t * (3.0 - t * 2.0) * super::SPOTLIGHT_STRENGTH;
+
             for (dest, src) in pixel[0..3].iter_mut().zip(color[0..3].iter()) {
                 let flashlight_radius = (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt();
                 let t = 1.0 - ((flashlight_radius - super::FLASHLIGHT_INNER_RADIUS) / (super::FLASHLIGHT_OUTER_RADIUS - super::FLASHLIGHT_INNER_RADIUS)).clamp(0.0, 1.0);
                 let flashlight = t * t * (3.0 - t * 2.0) * flashlight_intensity;
-                *dest = (*src as f32 * (flashlight + ambient)) as u8;
+                *dest = (*src as f32 * (flashlight + ambient + spotlight)) as u8;
             }
             pixel[3] = color[3];
         });
@@ -145,9 +144,6 @@ pub(super) fn draw_top_platform(draw_params: DrawParams, column: &mut [u8]) -> u
 
     let flashlight_x =
         (2.0 * ray.column_index as f32 * cam.width_recip - 1.0) * cam.aspect;
-    // Smoothstep distance to get the spotlight
-    let t = 1.0 - (ray.wall_dist / super::SPOTLIGHT_DISTANCE).clamp(0.0, 1.0);
-    let spotlight = t * t * (3.0 - t * 2.0);
 
     column
         .chunks_exact_mut(4)
@@ -157,10 +153,9 @@ pub(super) fn draw_top_platform(draw_params: DrawParams, column: &mut [u8]) -> u
         .for_each(|(y, pixel)| {
             let row_dist = (tile.ceiling_level - ray.origin.y) * row_dist_factor
                 / (y as f32 - shearing_plus_half_height);
-            let pos = ray.origin + row_dist * pos_factor;
-            let mut dir = row_dist * pos_factor;
-            dir.y += pos.y - tile.ceiling_level;
-            let diffuse = dir.normalize().dot(normal);
+            let mut ray_dir = row_dist * pos_factor;
+            let pos = ray.origin + ray_dir;
+
             //let tex_x = ((tex_width as f32 * (pos.x - tile_x as f32)) as usize)
             //    .min(tex_width - 1);
             //let tex_y = ((tex_height as f32 * (pos.z - tile_z as f32)) as usize)
@@ -172,17 +167,25 @@ pub(super) fn draw_top_platform(draw_params: DrawParams, column: &mut [u8]) -> u
             let color = &texture[i..i + 4];
             pixel.copy_from_slice(color);
 
+            // Calculate the diffuse lightning by finding the direction of the ray with pitch
+            ray_dir.y += ray.origin.y - tile.ceiling_level;
+            let diffuse = ray_dir.normalize().dot(normal);
             // Smooth out the flashlight intensity using the distance
             let flashlight_intensity = (1.0
                 - (row_dist / super::FLASHLIGHT_DISTANCE).clamp(0.0, 1.0))
                 * super::FLASHLIGHT_INTENSITY
                 * diffuse;
             let flashlight_y = 2.0 * y as f32 * cam.height_recip - 1.0;
+
+            // Smoothstep distance to get the spotlight
+            let t = 1.0 - (row_dist / super::SPOTLIGHT_DISTANCE).clamp(0.0, 1.0);
+            let spotlight = t * t * (3.0 - t * 2.0) * super::SPOTLIGHT_STRENGTH;
+
             for (dest, src) in pixel[0..3].iter_mut().zip(color[0..3].iter()) {
                 let flashlight_radius = (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt();
                 let t = 1.0 - ((flashlight_radius - super::FLASHLIGHT_INNER_RADIUS) / (super::FLASHLIGHT_OUTER_RADIUS - super::FLASHLIGHT_INNER_RADIUS)).clamp(0.0, 1.0);
                 let flashlight = t * t * (3.0 - t * 2.0) * flashlight_intensity;
-                *dest = (*src as f32 * (flashlight + ambient)) as u8;
+                *dest = (*src as f32 * (flashlight + ambient + spotlight)) as u8;
             }
             pixel[3] = color[3];
         });

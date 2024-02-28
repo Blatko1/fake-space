@@ -94,7 +94,7 @@ pub(super) fn draw_bottom_wall(draw_params: DrawParams, column: &mut [u8]) -> us
 
     // Smoothstep distance to get the spotlight
     let t = 1.0 - (ray.wall_dist / super::SPOTLIGHT_DISTANCE).clamp(0.0, 1.0);
-    let spotlight = t * t * (3.0 - t * 2.0);
+    let spotlight = t * t * (3.0 - t * 2.0) * super::SPOTLIGHT_STRENGTH;
 
     column
         .chunks_exact_mut(4)
@@ -115,11 +115,10 @@ pub(super) fn draw_bottom_wall(draw_params: DrawParams, column: &mut [u8]) -> us
                 let flashlight_radius = (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt();
                 let t = 1.0 - ((flashlight_radius - super::FLASHLIGHT_INNER_RADIUS) / (super::FLASHLIGHT_OUTER_RADIUS - super::FLASHLIGHT_INNER_RADIUS)).clamp(0.0, 1.0);
                 let flashlight = t * t * (3.0 - t * 2.0) * flashlight_intensity;
-                *dest = (*src as f32 * (flashlight + ambient)) as u8;
-
+                *dest = (*src as f32 * (flashlight + ambient + spotlight)) as u8;
             }
             pixel[3] = color[3];
-            //}
+
             // TODO maybe make it so `tex_y_step` is being subtracted.
             tex_y += tex_y_step;
         });
@@ -218,7 +217,7 @@ pub(super) fn draw_top_wall(draw_params: DrawParams, column: &mut [u8]) -> usize
 
     // Smoothstep distance to get the spotlight
     let t = 1.0 - (ray.wall_dist / super::SPOTLIGHT_DISTANCE).clamp(0.0, 1.0);
-    let spotlight = t * t * (3.0 - t * 2.0);
+    let spotlight = t * t * (3.0 - t * 2.0) * super::SPOTLIGHT_STRENGTH;
 
     column
         .chunks_exact_mut(4)
@@ -239,10 +238,9 @@ pub(super) fn draw_top_wall(draw_params: DrawParams, column: &mut [u8]) -> usize
                 let flashlight_radius = (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt();
                 let t = 1.0 - ((flashlight_radius - super::FLASHLIGHT_INNER_RADIUS) / (super::FLASHLIGHT_OUTER_RADIUS - super::FLASHLIGHT_INNER_RADIUS)).clamp(0.0, 1.0);
                 let flashlight = t * t * (3.0 - t * 2.0) * flashlight_intensity;
-                *dest = (*src as f32 * (flashlight + ambient)) as u8;
+                *dest = (*src as f32 * (flashlight + ambient + spotlight)) as u8;
             }
             pixel[3] = color[3];
-            //}
             // TODO maybe make it so `tex_y_step` is being subtracted.
             tex_y += tex_y_step;
         });

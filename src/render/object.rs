@@ -2,7 +2,7 @@ use crate::render::camera::Camera;
 use crate::render::colors::COLOR_LUT;
 use crate::render::ray::Ray;
 use crate::render::{
-    Side, FLASHLIGHT_DISTANCE, FLASHLIGHT_INTENSITY, FLASHLIGHT_RADIUS,
+    Side, FLASHLIGHT_DISTANCE, FLASHLIGHT_INTENSITY,
     NORMAL_X_NEGATIVE, NORMAL_X_POSITIVE, NORMAL_Y_NEGATIVE, NORMAL_Y_POSITIVE,
     NORMAL_Z_NEGATIVE, NORMAL_Z_POSITIVE, SPOTLIGHT_DISTANCE,
 };
@@ -213,16 +213,10 @@ pub fn draw_objects(objects: Vec<ObjectDrawData>, camera: &Camera, column: &mut 
                                 for (dest, src) in
                                     pixel[0..3].iter_mut().zip(color[0..3].iter())
                                 {
-                                    let flashlight_radius = (FLASHLIGHT_RADIUS
-                                        - (flashlight_x * flashlight_x
-                                            + flashlight_y * flashlight_y)
-                                            .sqrt())
-                                    .clamp(0.0, 1.0);
-                                    let flashlight = (flashlight_radius
-                                        * flashlight_intensity)
-                                        .max(0.0);
-                                    *dest = (*src as f32 * (flashlight + ambient_light))
-                                        as u8;
+                                    let flashlight_radius = (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt();
+                                    let t = 1.0 - ((flashlight_radius - super::FLASHLIGHT_INNER_RADIUS) / (super::FLASHLIGHT_OUTER_RADIUS - super::FLASHLIGHT_INNER_RADIUS)).clamp(0.0, 1.0);
+                                    let flashlight = t * t * (3.0 - t * 2.0) * flashlight_intensity;
+                                    *dest = (*src as f32 * (flashlight + ambient_light)) as u8;
                                 }
                                 pixel[3] = 255;
                                 //darken_side(side, pixel);

@@ -14,12 +14,12 @@ use glam::Vec3;
 
 use self::ray::Ray;
 
-const SPOTLIGHT_DISTANCE: f32 = 2.5;
+const SPOTLIGHT_DISTANCE: f32 = 1.3;
+const SPOTLIGHT_STRENGTH: f32 = 0.65;
 const FLASHLIGHT_INTENSITY: f32 = 1.35;
 const FLASHLIGHT_OUTER_RADIUS: f32 = 1.1;
-const FLASHLIGHT_RADIUS: f32 = 1.0;
-const FLASHLIGHT_INNER_RADIUS: f32 = 0.55;
-const FLASHLIGHT_DISTANCE: f32 = 19.0;
+const FLASHLIGHT_INNER_RADIUS: f32 = 0.65;
+const FLASHLIGHT_DISTANCE: f32 = 18.0;
 
 const NORMAL_Y_POSITIVE: Vec3 = Vec3::new(0.0, 1.0, 0.0);
 const NORMAL_Y_NEGATIVE: Vec3 = Vec3::new(0.0, -1.0, 0.0);
