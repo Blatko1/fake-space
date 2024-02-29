@@ -46,7 +46,6 @@ pub(super) fn draw_bottom_platform(draw_params: DrawParams, column: &mut [u8]) -
     let pos_factor = ray.camera_dir - ray.horizontal_plane
         + tile_step_factor * ray.column_index as f32;
     let row_dist_factor = cam.f_half_height * cam.plane_dist;
-    //let shearing_plus_half_height = cam.y_shearing + cam.f_half_height;
 
     // Calculating lightning
     let flashlight_x =
@@ -140,7 +139,6 @@ pub(super) fn draw_top_platform(draw_params: DrawParams, column: &mut [u8]) -> u
     let tile_step_factor = ray.horizontal_plane * 2.0 * cam.width_recip;
     let pos_factor = ray_dir + tile_step_factor * ray.column_index as f32;
     let row_dist_factor = cam.f_half_height * cam.plane_dist;
-    let shearing_plus_half_height = cam.y_shearing + cam.f_half_height;
 
     let flashlight_x =
         (2.0 * ray.column_index as f32 * cam.width_recip - 1.0) * cam.aspect;
@@ -152,7 +150,7 @@ pub(super) fn draw_top_platform(draw_params: DrawParams, column: &mut [u8]) -> u
         .take(draw_to - draw_from)
         .for_each(|(y, pixel)| {
             let row_dist = (tile.ceiling_level - ray.origin.y) * row_dist_factor
-                / (y as f32 - shearing_plus_half_height);
+                / (y as f32 - cam.y_shearing - cam.f_half_height);
             let mut ray_dir = row_dist * pos_factor;
             let pos = ray.origin + ray_dir;
 

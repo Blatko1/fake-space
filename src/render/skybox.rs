@@ -10,7 +10,6 @@ pub fn draw_skybox(mut draw_params: DrawParams, column: &mut [u8]) {
     ray.wall_dist = 1.0;
 
     let wall_texture;
-
     let half_wall_pixel_height;
     // Skybox wall to the north
     if ray.dir.z >= 0.0 && ray.dir.x.abs() <= ray.dir.z {
@@ -68,6 +67,10 @@ fn draw_skybox_top(
     let ray = draw_params.ray;
 
     let top_texture = draw_params.texture_manager.get(draw_params.skybox.top);
+    if top_texture.is_empty() {
+        column.fill(0);
+        return;
+    }
 
     let (texture, tex_width, tex_height) = (
         top_texture.data,
@@ -120,6 +123,10 @@ fn draw_skybox_bottom(
     let ray = draw_params.ray;
 
     let bottom_texture = draw_params.texture_manager.get(draw_params.skybox.bottom);
+    if bottom_texture.is_empty() {
+        column.fill(0);
+        return;
+    }
 
     let (texture, tex_width, tex_height) = (
         bottom_texture.data,
@@ -137,20 +144,18 @@ fn draw_skybox_bottom(
         .clamp(draw_from, top_draw_bound);
 
     // Variables used for reducing the amount of calculations and for optimization
-    let ray_dir = ray.camera_dir - ray.horizontal_plane;
     let tile_step_factor = ray.horizontal_plane * 2.0 * cam.width_recip;
-    let pos_factor = ray_dir + tile_step_factor * ray.column_index as f32;
+    let pos_factor = ray.camera_dir - ray.horizontal_plane + tile_step_factor * ray.column_index as f32;
     let row_dist_factor = cam.f_half_height * cam.plane_dist;
-    let half_h_plus_shearing = cam.f_half_height + cam.y_shearing;
     column
         .chunks_exact_mut(4)
         .enumerate()
         .skip(draw_from)
         .take(draw_to - draw_from)
         .for_each(|(y, rgba)| {
-            let row_dist = row_dist_factor / (y as f32 - half_h_plus_shearing);
+            let row_dist = row_dist_factor / (y as f32 - cam.f_half_height - cam.y_shearing);
             let pos = Vec3::new(0.5, 0.5, 0.5) + row_dist * pos_factor;
-            let tex_x = ((tex_width as f32 * pos.x) as usize).min(tex_width - 1);
+            let tex_x = ((tex_width as f32 * (1.0 - pos.x)) as usize).min(tex_width - 1);
             let tex_y = ((tex_height as f32 * pos.z) as usize).min(tex_height - 1);
             let i = 4 * (tex_width * tex_y + tex_x);
             let color = &texture[i..i + 4];
@@ -172,6 +177,10 @@ fn draw_skybox_wall(
     let cam = draw_params.camera;
     let ray = draw_params.ray;
 
+    if texture.is_empty() {
+        column.fill(0);
+        return;
+    }
     let (texture, tex_width, tex_height) = (
         texture.data,
         texture.width as usize,

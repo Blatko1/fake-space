@@ -16,28 +16,42 @@
 #Carpet = path:../res/backrooms_carpet.jpg, transparency:false
 #DropCeiling = path:../res/backrooms_ceiling.jpg, transparency:false
 
-#BoxNorth = path:../res/SkyBoxNorth.png, transparency:false
-#BoxEast = path:../res/SkyBoxEast.png, transparency:false
-#BoxSouth = path:../res/SkyBoxSouth.png, transparency:false
-#BoxWest = path:../res/SkyBoxWest.png, transparency:false
-#BoxTop = path:../res/SkyBoxTop.png, transparency:false
-#BoxBot = path:../res/SkyBoxBottom.png, transparency:false
+#SkyNorth = path:../res/sky_north.png, transparency:false
+#SkyEast = path:../res/sky_east.png, transparency:false
+#SkySouth = path:../res/sky_south.png, transparency:false
+#SkyWest = path:../res/sky_west.png, transparency:false
+#SkyTop = path:../res/sky_top.png, transparency:false
+#SkyBottom = path:../res/sky_bottom.png, transparency:false
+
+#NightNorth = path:../res/night_north.png, transparency:false
+#NightEast = path:../res/night_east.png, transparency:false
+#NightSouth = path:../res/night_south.png, transparency:false
+#NightWest = path:../res/night_west.png, transparency:false
+#NightTop = path:../res/night_top.png, transparency:false
+#NightBottom = path:../res/night_bottom.png, transparency:false
+
+#Sky2North = path:../res/sky2_north.png, transparency:false
+#Sky2East = path:../res/sky2_east.png, transparency:false
+#Sky2South = path:../res/sky2_south.png, transparency:false
+#Sky2West = path:../res/sky2_west.png, transparency:false
+#Sky2Top = path:../res/sky2_top.png, transparency:false
+#Sky2Bottom = path:../res/sky2_bottom.png, transparency:false
 
 // Determine the constant settings
 *bottomL = -90.0
 *groundL = -10.0
 *ceilingL = 20.0
 *topL = 300.0
-*skyboxNorth = BoxNorth
-*skyboxEast = BoxEast
-*skyboxSouth = BoxSouth
-*skyboxWest = BoxWest
-*skyboxTop = BoxTop
-*skyboxBottom = BoxBot
+*skyboxNorth = Sky2North
+*skyboxEast = Sky2East
+*skyboxSouth = Sky2South
+*skyboxWest = Sky2West
+*skyboxTop = Sky2Top
+*skyboxBottom = Sky2Bottom
 
 // Declare the segments
 // You can't have multiple segments with the same name
-!start = src:start.txt, repeatable: false, ambient_light: 0.1//, light_effect:
+!start = src:start.txt, repeatable: false, ambient_light: 1.0, skyboxNorth: SkyNorth, skyboxEast: SkyEast, skyboxSouth: SkySouth, skyboxWest: SkyWest, skyboxTop: SkyTop, skyboxBottom: SkyBottom //, light_effect:
 !root = src:root.txt, repeatable: false, ambient_light: 0.1//, light_effect:
 !l_turn = src:hall_turn.txt, repeatable: true, ambient_light: 0.1//, light_effect:
 !t_turn = src:t_turn.txt, repeatable: true, ambient_light: 0.1//, light_effect:

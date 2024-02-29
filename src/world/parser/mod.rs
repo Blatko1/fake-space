@@ -98,6 +98,13 @@ impl WorldParser {
         let mut segment_data = None;
         let mut repeatable = None;
         let mut ambient_light = None;
+        let mut skybox_north = None;
+        let mut skybox_east = None;
+        let mut skybox_south = None;
+        let mut skybox_west = None;
+        let mut skybox_top = None;
+        let mut skybox_bottom = None;
+
         for expr in expressions.split(',') {
             // Split the expression and check for formatting errors
             let split: Vec<&str> = expr.split(':').collect();
@@ -145,6 +152,42 @@ impl WorldParser {
                         }
                     }
                 }
+                "skyboxNorth" => {
+                    skybox_north = match self.texture_map.get(value) {
+                        Some(&s) => Some(s),
+                        None => return Err(SegmentError::UnknownTexture(value.to_owned()))
+                    };
+                }
+                "skyboxEast" => {
+                    skybox_east = match self.texture_map.get(value) {
+                        Some(&s) => Some(s),
+                        None => return Err(SegmentError::UnknownTexture(value.to_owned()))
+                    };
+                }
+                "skyboxSouth" => {
+                    skybox_south = match self.texture_map.get(value) {
+                        Some(&s) => Some(s),
+                        None => return Err(SegmentError::UnknownTexture(value.to_owned()))
+                    };
+                }
+                "skyboxWest" => {
+                    skybox_west = match self.texture_map.get(value) {
+                        Some(&s) => Some(s),
+                        None => return Err(SegmentError::UnknownTexture(value.to_owned()))
+                    };
+                }
+                "skyboxTop" => {
+                    skybox_top = match self.texture_map.get(value) {
+                        Some(&s) => Some(s),
+                        None => return Err(SegmentError::UnknownTexture(value.to_owned()))
+                    };
+                }
+                "skyboxBottom" => {
+                    skybox_bottom = match self.texture_map.get(value) {
+                        Some(&s) => Some(s),
+                        None => return Err(SegmentError::UnknownTexture(value.to_owned()))
+                    };
+                }
                 _ => return Err(SegmentError::UnknownParameter(parameter.to_owned())),
             }
         }
@@ -163,12 +206,12 @@ impl WorldParser {
         }
 
         let skybox = SkyboxTextures {
-            north: self.settings.skybox_north,
-            east: self.settings.skybox_east,
-            south: self.settings.skybox_south,
-            west: self.settings.skybox_west,
-            top: self.settings.skybox_top,
-            bottom: self.settings.skybox_bottom,
+            north: skybox_north.unwrap_or(self.settings.skybox_north),
+            east: skybox_east.unwrap_or(self.settings.skybox_east),
+            south: skybox_south.unwrap_or(self.settings.skybox_south),
+            west: skybox_west.unwrap_or(self.settings.skybox_west),
+            top: skybox_top.unwrap_or(self.settings.skybox_top),
+            bottom: skybox_bottom.unwrap_or(self.settings.skybox_bottom),
         };
 
         Ok(Segment::new(

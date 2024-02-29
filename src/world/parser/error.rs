@@ -17,6 +17,7 @@ pub enum SegmentError {
     FileErr(io::ErrorKind),
     InvalidFormat(String),
     UnknownParameter(String),
+    UnknownTexture(String),
     BoolParseFail(String),
     F32ParseFail(String),
     UnspecifiedSrc,
