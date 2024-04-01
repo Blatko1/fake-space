@@ -34,12 +34,12 @@ impl Dbg {
     }
 
     pub fn update(&mut self, state: &State, avg_fps_time: f64, fps: i32) {
-        let world = state.get_world();
-        let player = state.get_player();
-        let camera = player.get_camera();
-        let position = camera.get_origin();
-        let direction = camera.get_direction();
-        let angle = camera.get_yaw_angle().to_degrees();
+        let world = state.world();
+        let player = state.player();
+        let camera = player.camera();
+        let position = camera.origin();
+        let direction = camera.direction();
+        let angle = camera.yaw_angle().to_degrees();
 
         self.content = Section::default()
             .with_text(vec![Text::new(&format!(
@@ -59,7 +59,7 @@ impl Dbg {
                 direction.y,
                 direction.z,
                 angle,
-                player.get_current_room_id().0,
+                player.current_room_id().0,
                 world.room_count()
             ))
             .with_scale(30.0)

@@ -6,10 +6,12 @@ use rand::{rngs::ThreadRng, seq::SliceRandom, Rng};
 use std::path::PathBuf;
 
 use crate::render::PointXZ;
-use crate::voxel::{VoxelModelID, VoxelModelManager};
+use crate::voxel::{VoxelModelDataRef, VoxelModelID, VoxelModelManager};
 use crate::world::portal::{DummyPortal, Portal, PortalID};
 use parser::{error::ParseError, WorldParser};
-use textures::{Texture, TextureData, TextureManager};
+use textures::{TextureData, TextureID, TextureManager};
+
+use self::textures::TextureDataRef;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RoomID(pub usize);
@@ -47,7 +49,7 @@ impl World {
             portals: segment.unlinked_portals.clone(),
             is_fully_generated: true,
             skybox: segment.skybox,
-            ambient_light: segment.ambient_light,
+            ambient_light_intensity: segment.ambient_light_intensity,
         };
         room_counter += 1;
 
@@ -62,7 +64,7 @@ impl World {
                     portals: root_segment.unlinked_portals.clone(),
                     is_fully_generated: false,
                     skybox: root_segment.skybox,
-                    ambient_light: root_segment.ambient_light,
+                    ambient_light_intensity: root_segment.ambient_light_intensity,
                 };
                 let room_rand_portal = new_room.portals.choose_mut(&mut rng).unwrap();
                 // Connect the two portals:
@@ -120,7 +122,7 @@ impl World {
                         portals: rand_segment.unlinked_portals.clone(),
                         is_fully_generated: false,
                         skybox: rand_segment.skybox,
-                        ambient_light: rand_segment.ambient_light,
+                        ambient_light_intensity: rand_segment.ambient_light_intensity,
                     };
                     let room_rand_portal =
                         new_room.portals.choose_mut(&mut self.rng).unwrap();
@@ -150,7 +152,7 @@ impl World {
             portals: segment.unlinked_portals.clone(),
             is_fully_generated: false,
             skybox: segment.skybox,
-            ambient_light: segment.ambient_light,
+            ambient_light_intensity: segment.ambient_light_intensity,
         };
         self.rooms.push(starting_room);
         self.rooms.last_mut().unwrap()
@@ -178,12 +180,23 @@ impl World {
         self.rooms.len()
     }
 
-    pub fn texture_manager(&self) -> &TextureManager {
-        &self.texture_manager
+    pub fn get_texture(&self, id: TextureID) -> TextureDataRef {
+        self.texture_manager.get_texture_data(id)
     }
 
-    pub fn voxel_model_manager(&self) -> &VoxelModelManager {
-        &self.voxel_model_manager
+    pub fn get_skybox_textures(&self, skybox: &SkyboxTextureIDs) -> SkyboxTexturesRef {
+        SkyboxTexturesRef {
+            north: self.texture_manager.get_texture_data(skybox.north),
+            east: self.texture_manager.get_texture_data(skybox.east),
+            south: self.texture_manager.get_texture_data(skybox.south),
+            west: self.texture_manager.get_texture_data(skybox.west),
+            top: self.texture_manager.get_texture_data(skybox.top),
+            bottom: self.texture_manager.get_texture_data(skybox.bottom),
+        }
+    }
+
+    pub fn get_voxel_model(&self, id: VoxelModelID) -> VoxelModelDataRef {
+        self.voxel_model_manager.get_model(id)
     }
 }
 
@@ -207,8 +220,8 @@ pub struct Room {
     // Each portal has its own index which is the position in this Vec
     portals: Vec<Portal>,
     is_fully_generated: bool,
-    skybox: SkyboxTextures,
-    ambient_light: f32,
+    skybox: SkyboxTextureIDs,
+    ambient_light_intensity: f32,
 }
 
 impl Room {
@@ -216,12 +229,12 @@ impl Room {
         &self.portals
     }
 
-    pub fn get_ambient_light(&self) -> f32 {
-        self.ambient_light
+    pub fn ambient_light_intensity(&self) -> f32 {
+        self.ambient_light_intensity
     }
 
-    pub fn get_skybox(&self) -> SkyboxTextures {
-        self.skybox
+    pub fn skybox(&self) -> &SkyboxTextureIDs {
+        &self.skybox
     }
 }
 
@@ -235,9 +248,9 @@ pub struct Segment {
     dimensions: (u64, u64),
     tiles: Vec<Tile>,
     unlinked_portals: Vec<Portal>,
-    skybox: SkyboxTextures,
+    skybox: SkyboxTextureIDs,
     repeatable: bool,
-    ambient_light: f32,
+    ambient_light_intensity: f32,
 }
 
 impl Segment {
@@ -246,9 +259,9 @@ impl Segment {
         name: String,
         dimensions: (u64, u64),
         tiles: Vec<Tile>,
-        skybox: SkyboxTextures,
+        skybox: SkyboxTextureIDs,
         repeatable: bool,
-        ambient_light: f32,
+        ambient_light_intensity: f32,
     ) -> Self {
         // Create unlinked Portals from DummyPortals
         let unlinked_portals = tiles
@@ -277,7 +290,7 @@ impl Segment {
             tiles,
             skybox,
             repeatable,
-            ambient_light,
+            ambient_light_intensity,
         }
     }
 
@@ -301,7 +314,7 @@ impl Segment {
             .get(z as usize * self.dimensions.0 as usize + x as usize)
     }
 
-    pub fn get_skybox(&self) -> SkyboxTextures {
+    pub fn get_skybox(&self) -> SkyboxTextureIDs {
         self.skybox
     }
 }
@@ -316,52 +329,46 @@ pub struct TilePosition {
 #[derive(Debug, Clone, Copy)]
 pub struct Tile {
     pub position: TilePosition,
-    /// Texture of the bottom pillar walls.
-    pub bottom_pillar_tex: Texture,
-    /// Texture of the top pillar walls.
-    pub top_pillar_tex: Texture,
+    /// Texture of the bottom wall walls.
+    pub bottom_wall_tex: TextureID,
+    /// Texture of the top wall walls.
+    pub top_wall_tex: TextureID,
     /// Texture of the bottom platform.
-    pub ground_tex: Texture,
+    pub ground_tex: TextureID,
     /// Texture of the top platform.
-    pub ceiling_tex: Texture,
-    /// `Y-level` - starting lower bound of the bottom pillar;
-    /// level from which the bottom pillar stretches.
+    pub ceiling_tex: TextureID,
+    /// `Y-level` - starting lower bound of the bottom wall;
+    /// level from which the bottom wall stretches.
     pub bottom_level: f32,
-    /// `Y-level` - ending upper bound of the bottom pillar;
+    /// `Y-level` - ending upper bound of the bottom wall;
     /// area/platform on which the player is walking.
     pub ground_level: f32,
-    /// `Y-level` - starting lower bound of the top pillar; the ceiling.
+    /// `Y-level` - starting lower bound of the top wall; the ceiling.
     pub ceiling_level: f32,
-    /// `Y-level` - ending upper bound of the top pillar;
-    /// level to which the top pillar stretches.
+    /// `Y-level` - ending upper bound of the top wall;
+    /// level to which the top wall stretches.
     pub top_level: f32,
     /// If the current tile should be a portal to different segment (map).
     pub portal: Option<DummyPortal>,
     pub voxel_model: Option<VoxelModelID>,
 }
 
-impl Tile {
-    pub const EMPTY: Self = Self {
-        position: TilePosition { x: 0, z: 0 },
-        bottom_pillar_tex: Texture::Default,
-        top_pillar_tex: Texture::Default,
-        ground_tex: Texture::Default,
-        ceiling_tex: Texture::Default,
-        bottom_level: -2.0,
-        ground_level: -1.0,
-        ceiling_level: 1.0,
-        top_level: 2.0,
-        portal: None,
-        voxel_model: None,
-    };
+#[derive(Copy, Clone, Debug)]
+pub struct SkyboxTextureIDs {
+    pub north: TextureID,
+    pub east: TextureID,
+    pub south: TextureID,
+    pub west: TextureID,
+    pub top: TextureID,
+    pub bottom: TextureID,
 }
 
-#[derive(Copy, Clone, Debug)]
-pub struct SkyboxTextures {
-    pub north: Texture,
-    pub east: Texture,
-    pub south: Texture,
-    pub west: Texture,
-    pub top: Texture,
-    pub bottom: Texture,
+#[derive(Debug)]
+pub struct SkyboxTexturesRef<'a> {
+    pub north: TextureDataRef<'a>,
+    pub east: TextureDataRef<'a>,
+    pub south: TextureDataRef<'a>,
+    pub west: TextureDataRef<'a>,
+    pub top: TextureDataRef<'a>,
+    pub bottom: TextureDataRef<'a>,
 }

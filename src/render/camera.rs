@@ -255,19 +255,19 @@ impl Camera {
         }
     }
 
-    pub fn get_origin(&self) -> Vec3 {
+    pub fn origin(&self) -> Vec3 {
         self.origin
     }
 
-    pub fn get_direction(&self) -> Vec3 {
+    pub fn direction(&self) -> Vec3 {
         self.dir
     }
 
-    pub fn get_yaw_angle(&self) -> f32 {
+    pub fn yaw_angle(&self) -> f32 {
         self.yaw_angle
     }
 
-    pub fn get_y_shearing(&self) -> f32 {
+    pub fn y_shearing(&self) -> f32 {
         self.y_shearing
     }
 }

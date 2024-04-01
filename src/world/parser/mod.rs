@@ -9,7 +9,8 @@ use std::path::PathBuf;
 use hashbrown::HashMap;
 use image::{io::Reader as ImageReader, EncodableLayout};
 
-use super::{SkyboxTextures, Texture, TextureData};
+use super::textures::TextureID;
+use super::{SkyboxTextureIDs, TextureData};
 
 use self::error::{ParseError, SegmentError, SettingError, TextureError};
 use self::segment_parser::SegmentDataParser;
@@ -22,7 +23,7 @@ pub struct WorldParser {
 
     settings: Settings,
     textures: Vec<TextureData>,
-    texture_map: HashMap<String, Texture>,
+    texture_map: HashMap<String, TextureID>,
     texture_counter: usize,
     segments: Vec<Segment>,
 }
@@ -38,7 +39,7 @@ impl WorldParser {
             settings: Settings::default(),
             textures: Vec::new(),
             texture_map: HashMap::new(),
-            texture_counter: 0,
+            texture_counter: 2,
             segments: Vec::new(),
         })
     }
@@ -65,10 +66,10 @@ impl WorldParser {
                     }
                 }
                 '#' => match self.parse_texture(line) {
-                    Ok((name, tex)) => {
-                        self.textures.push(tex);
+                    Ok((name, texture)) => {
+                        self.textures.push(texture);
                         self.texture_map
-                            .insert(name, Texture::ID(self.texture_counter));
+                            .insert(name, TextureID(self.texture_counter));
                         self.texture_counter += 1;
                     }
                     Err(e) => return Err(ParseError::TextureErr(e, i)),
@@ -155,37 +156,49 @@ impl WorldParser {
                 "skyboxNorth" => {
                     skybox_north = match self.texture_map.get(value) {
                         Some(&s) => Some(s),
-                        None => return Err(SegmentError::UnknownTexture(value.to_owned()))
+                        None => {
+                            return Err(SegmentError::UnknownTexture(value.to_owned()))
+                        }
                     };
                 }
                 "skyboxEast" => {
                     skybox_east = match self.texture_map.get(value) {
                         Some(&s) => Some(s),
-                        None => return Err(SegmentError::UnknownTexture(value.to_owned()))
+                        None => {
+                            return Err(SegmentError::UnknownTexture(value.to_owned()))
+                        }
                     };
                 }
                 "skyboxSouth" => {
                     skybox_south = match self.texture_map.get(value) {
                         Some(&s) => Some(s),
-                        None => return Err(SegmentError::UnknownTexture(value.to_owned()))
+                        None => {
+                            return Err(SegmentError::UnknownTexture(value.to_owned()))
+                        }
                     };
                 }
                 "skyboxWest" => {
                     skybox_west = match self.texture_map.get(value) {
                         Some(&s) => Some(s),
-                        None => return Err(SegmentError::UnknownTexture(value.to_owned()))
+                        None => {
+                            return Err(SegmentError::UnknownTexture(value.to_owned()))
+                        }
                     };
                 }
                 "skyboxTop" => {
                     skybox_top = match self.texture_map.get(value) {
                         Some(&s) => Some(s),
-                        None => return Err(SegmentError::UnknownTexture(value.to_owned()))
+                        None => {
+                            return Err(SegmentError::UnknownTexture(value.to_owned()))
+                        }
                     };
                 }
                 "skyboxBottom" => {
                     skybox_bottom = match self.texture_map.get(value) {
                         Some(&s) => Some(s),
-                        None => return Err(SegmentError::UnknownTexture(value.to_owned()))
+                        None => {
+                            return Err(SegmentError::UnknownTexture(value.to_owned()))
+                        }
                     };
                 }
                 _ => return Err(SegmentError::UnknownParameter(parameter.to_owned())),
@@ -205,7 +218,7 @@ impl WorldParser {
             return Err(SegmentError::InvalidAmbientLight(ambient_light.to_string()));
         }
 
-        let skybox = SkyboxTextures {
+        let skybox = SkyboxTextureIDs {
             north: skybox_north.unwrap_or(self.settings.skybox_north),
             east: skybox_east.unwrap_or(self.settings.skybox_east),
             south: skybox_south.unwrap_or(self.settings.skybox_south),
@@ -376,12 +389,12 @@ pub(super) struct Settings {
     pub ground_level: f32,
     pub ceiling_level: f32,
     pub top_level: f32,
-    pub skybox_north: Texture,
-    pub skybox_east: Texture,
-    pub skybox_south: Texture,
-    pub skybox_west: Texture,
-    pub skybox_top: Texture,
-    pub skybox_bottom: Texture,
+    pub skybox_north: TextureID,
+    pub skybox_east: TextureID,
+    pub skybox_south: TextureID,
+    pub skybox_west: TextureID,
+    pub skybox_top: TextureID,
+    pub skybox_bottom: TextureID,
 }
 
 impl Default for Settings {
@@ -391,12 +404,12 @@ impl Default for Settings {
             ground_level: -0.5,
             ceiling_level: 0.5,
             top_level: 1.0,
-            skybox_north: Texture::Empty,
-            skybox_east: Texture::Empty,
-            skybox_south: Texture::Empty,
-            skybox_west: Texture::Empty,
-            skybox_top: Texture::Empty,
-            skybox_bottom: Texture::Empty,
+            skybox_north: TextureID(0),
+            skybox_east: TextureID(0),
+            skybox_south: TextureID(0),
+            skybox_west: TextureID(0),
+            skybox_top: TextureID(0),
+            skybox_bottom: TextureID(0),
         }
     }
 }

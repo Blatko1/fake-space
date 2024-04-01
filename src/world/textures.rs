@@ -1,27 +1,47 @@
+const DEFAULT_TEXTURE_WIDTH: u32 = 2;
+const DEFAULT_TEXTURE_HEIGHT: u32 = 2;
+const DEFAULT_TEXTURE_RGBA: [u8; 16] = [
+    200, 0, 200, 255, 0, 0, 0, 255, 0, 0, 0, 255, 200, 0, 200, 255,
+];
+const DEFAULT_TEXTURE_TRANSPARENCY: bool = false;
+
 pub struct TextureManager {
     textures: Vec<TextureData>,
 }
 
 impl TextureManager {
-    pub fn new(textures: Vec<TextureData>) -> Self {
+    pub(super) fn new(mut textures: Vec<TextureData>) -> Self {
+        let default_texture = TextureData {
+            data: DEFAULT_TEXTURE_RGBA.to_vec(),
+            width: DEFAULT_TEXTURE_WIDTH,
+            height: DEFAULT_TEXTURE_HEIGHT,
+            transparency: DEFAULT_TEXTURE_TRANSPARENCY,
+        };
+        textures.insert(0, default_texture);
+
+        let empty_texture = TextureData {
+            data: Vec::new(),
+            width: 0,
+            height: 0,
+            transparency: true,
+        };
+        textures.insert(0, empty_texture);
         Self { textures }
     }
 
-    pub fn get(&self, id: Texture) -> TextureDataRef {
-        match id {
-            Texture::ID(id) => self.textures.get(id).unwrap().as_ref(),
-            Texture::Default => TextureDataRef::DEFAULT,
-            Texture::Empty => TextureDataRef::EMPTY,
-        }
+    pub(super) fn get_texture_data(&self, id: TextureID) -> TextureDataRef {
+        self.textures[id.0].as_ref()
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
-pub enum Texture {
-    ID(usize),
-    #[default]
-    Default,
-    Empty,
+// TODO maybe rename to TextureID
+#[derive(Debug, Clone, Copy)]
+pub struct TextureID(pub usize);
+
+impl Default for TextureID {
+    fn default() -> Self {
+        Self(1)
+    }
 }
 
 pub struct TextureData {
@@ -29,36 +49,15 @@ pub struct TextureData {
     width: u32,
     height: u32,
     transparency: bool,
-
-    light_shade: Vec<u8>,
-    medium_shade: Vec<u8>,
 }
 
 impl TextureData {
     pub fn new(data: Vec<u8>, width: u32, height: u32, transparency: bool) -> Self {
-        let mut light_shade = data.clone();
-        let mut medium_shade = data.clone();
-
-        // Generate a light shade:
-        light_shade.chunks_exact_mut(4).for_each(|rgba| {
-            rgba[0] = (rgba[0] as f32 * 0.85) as u8;
-            rgba[1] = (rgba[1] as f32 * 0.85) as u8;
-            rgba[2] = (rgba[2] as f32 * 0.85) as u8;
-        });
-
-        // Generate a heavier shade:
-        medium_shade.chunks_exact_mut(4).for_each(|rgba| {
-            rgba[0] = (rgba[0] as f32 * 0.65) as u8;
-            rgba[1] = (rgba[1] as f32 * 0.65) as u8;
-            rgba[2] = (rgba[2] as f32 * 0.65) as u8;
-        });
         Self {
             data,
             width,
             height,
             transparency,
-            light_shade,
-            medium_shade,
         }
     }
 }
@@ -70,54 +69,20 @@ impl TextureData {
             width: self.width,
             height: self.height,
             transparency: self.transparency,
-            light_shade: &self.light_shade,
-            medium_shade: &self.medium_shade,
         }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct TextureDataRef<'a> {
     pub data: &'a [u8],
     pub width: u32,
     pub height: u32,
     pub transparency: bool,
-
-    pub light_shade: &'a [u8],
-    pub medium_shade: &'a [u8],
 }
 
 impl<'a> TextureDataRef<'a> {
-    const EMPTY: Self = Self {
-        data: &[],
-        width: 0,
-        height: 0,
-        transparency: true,
-        light_shade: &[],
-        medium_shade: &[],
-    };
-
-    const DEFAULT_TEXTURE_WIDTH: u32 = 2;
-    const DEFAULT_TEXTURE_HEIGHT: u32 = 2;
-    const DEFAULT_TEXTURE_RGBA: &'static [u8] = &[
-        200, 0, 200, 255, 0, 0, 0, 255, 0, 0, 0, 255, 200, 0, 200, 255,
-    ];
-    const DEFAULT_TEXTURE_RGBA_LIGHT_SHADE: &'static [u8] = &[
-        170, 0, 170, 255, 0, 0, 0, 255, 0, 0, 0, 255, 170, 0, 170, 255,
-    ];
-    const DEFAULT_TEXTURE_RGBA_MEDIUM_SHADE: &'static [u8] = &[
-        130, 0, 130, 255, 0, 0, 0, 255, 0, 0, 0, 255, 130, 0, 130, 255,
-    ];
-
-    const DEFAULT: Self = Self {
-        data: Self::DEFAULT_TEXTURE_RGBA,
-        width: Self::DEFAULT_TEXTURE_WIDTH,
-        height: Self::DEFAULT_TEXTURE_HEIGHT,
-        transparency: false,
-        light_shade: Self::DEFAULT_TEXTURE_RGBA_LIGHT_SHADE,
-        medium_shade: Self::DEFAULT_TEXTURE_RGBA_MEDIUM_SHADE,
-    };
-
+    // TODO probably unneeded
     pub fn is_empty(&self) -> bool {
         self.data.is_empty()
     }

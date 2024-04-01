@@ -4,7 +4,7 @@ use crate::voxel::VoxelModelID;
 use hashbrown::HashMap;
 
 use crate::world::portal::{DummyPortal, PortalDirection, PortalID};
-use crate::world::textures::Texture;
+use crate::world::textures::TextureID;
 use crate::world::{Tile, TilePosition};
 
 use super::{
@@ -18,7 +18,7 @@ pub(super) struct SegmentDataParser<'a> {
     settings: &'a Settings,
 
     preset_map: HashMap<String, TilePreset>,
-    texture_map: &'a HashMap<String, Texture>,
+    texture_map: &'a HashMap<String, TextureID>,
     tiles: Vec<TilePreset>,
 }
 
@@ -26,7 +26,7 @@ impl<'a> SegmentDataParser<'a> {
     pub(super) fn new(
         data: &'a str,
         settings: &'a Settings,
-        texture_map: &'a HashMap<String, Texture>,
+        texture_map: &'a HashMap<String, TextureID>,
     ) -> Self {
         Self {
             data,
@@ -116,8 +116,8 @@ impl<'a> SegmentDataParser<'a> {
             };
             let t = Tile {
                 position,
-                bottom_pillar_tex: tile.bottom_pillar_tex.unwrap_or_default(),
-                top_pillar_tex: tile.top_pillar_tex.unwrap_or_default(),
+                bottom_wall_tex: tile.bottom_wall_tex.unwrap_or_default(),
+                top_wall_tex: tile.top_wall_tex.unwrap_or_default(),
                 ground_tex: tile.ground_tex.unwrap_or_default(),
                 ceiling_tex: tile.ceiling_tex.unwrap_or_default(),
                 bottom_level,
@@ -126,7 +126,7 @@ impl<'a> SegmentDataParser<'a> {
                 top_level,
                 portal,
                 // TODO this is temporary hard-coded
-                voxel_model: None,
+                voxel_model,
             };
 
             tiles.push(t);
@@ -272,8 +272,8 @@ impl<'a> SegmentDataParser<'a> {
                         return Err(TileError::UnknownTexture(value.to_owned()));
                     };
                     match parameter {
-                        "bottomT" => preset.bottom_pillar_tex = Some(texture),
-                        "topT" => preset.top_pillar_tex = Some(texture),
+                        "bottomT" => preset.bottom_wall_tex = Some(texture),
+                        "topT" => preset.top_wall_tex = Some(texture),
                         "groundT" => preset.ground_tex = Some(texture),
                         "ceilingT" => preset.ceiling_tex = Some(texture),
                         _ => unreachable!(),
@@ -306,10 +306,10 @@ impl<'a> SegmentDataParser<'a> {
 
 #[derive(Debug, Default, Clone)]
 struct TilePreset {
-    bottom_pillar_tex: Option<Texture>,
-    top_pillar_tex: Option<Texture>,
-    ground_tex: Option<Texture>,
-    ceiling_tex: Option<Texture>,
+    bottom_wall_tex: Option<TextureID>,
+    top_wall_tex: Option<TextureID>,
+    ground_tex: Option<TextureID>,
+    ceiling_tex: Option<TextureID>,
     bottom_level: Option<f32>,
     ground_level: Option<f32>,
     ceiling_level: Option<f32>,
@@ -321,11 +321,11 @@ impl TilePreset {
     /// Overwrites all old values with new ones.
     /// Doesn't replace if the new value is `None`.
     fn overwrite_with(&mut self, other: &Self) {
-        if let Some(bottom_pillar_tex) = other.bottom_pillar_tex {
-            self.bottom_pillar_tex.replace(bottom_pillar_tex);
+        if let Some(bottom_wall_tex) = other.bottom_wall_tex {
+            self.bottom_wall_tex.replace(bottom_wall_tex);
         }
-        if let Some(top_pillar_tex) = other.top_pillar_tex {
-            self.top_pillar_tex.replace(top_pillar_tex);
+        if let Some(top_wall_tex) = other.top_wall_tex {
+            self.top_wall_tex.replace(top_wall_tex);
         }
         if let Some(ground_tex) = other.ground_tex {
             self.ground_tex.replace(ground_tex);

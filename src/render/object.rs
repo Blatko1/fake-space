@@ -2,9 +2,9 @@ use crate::render::camera::Camera;
 use crate::render::colors::COLOR_LUT;
 use crate::render::ray::Ray;
 use crate::render::{
-    Side, FLASHLIGHT_DISTANCE, FLASHLIGHT_INTENSITY,
-    NORMAL_X_NEGATIVE, NORMAL_X_POSITIVE, NORMAL_Y_NEGATIVE, NORMAL_Y_POSITIVE,
-    NORMAL_Z_NEGATIVE, NORMAL_Z_POSITIVE, SPOTLIGHT_DISTANCE,
+    Side, FLASHLIGHT_DISTANCE, FLASHLIGHT_INTENSITY, NORMAL_X_NEGATIVE,
+    NORMAL_X_POSITIVE, NORMAL_Y_NEGATIVE, NORMAL_Y_POSITIVE, NORMAL_Z_NEGATIVE,
+    NORMAL_Z_POSITIVE, SPOTLIGHT_DISTANCE,
 };
 use crate::voxel::VoxelModelDataRef;
 use glam::Vec3;
@@ -15,7 +15,7 @@ pub struct ObjectDrawData<'a> {
     pub pos_y: f32,
     pub model_data: VoxelModelDataRef<'a>,
     pub ray: Ray,
-    pub ambient_light: f32,
+    pub ambient_light_intensity: f32,
     pub bottom_draw_bound: usize,
     pub top_draw_bound: usize,
 }
@@ -35,7 +35,7 @@ pub fn draw_objects(objects: Vec<ObjectDrawData>, camera: &Camera, column: &mut 
                 object.bottom_draw_bound <= screen_y && object.top_draw_bound > screen_y
             }) {
                 let ray = object.ray;
-                let ambient_light = object.ambient_light;
+                let ambient = object.ambient_light_intensity;
                 let dimension = object.model_data.dimension as f32;
                 let hit_side = ray.hit_wall_side;
 
@@ -187,7 +187,8 @@ pub fn draw_objects(objects: Vec<ObjectDrawData>, camera: &Camera, column: &mut 
 
                                 let t =
                                     1.0 - (distance / SPOTLIGHT_DISTANCE).clamp(0.0, 1.0);
-                                let spotlight = t * t * (3.0 - t * 2.0);
+                                let spotlight =
+                                    t * t * (3.0 - t * 2.0) * super::SPOTLIGHT_STRENGTH;
                                 let normal = match side {
                                     VoxelSide::Top => NORMAL_Y_POSITIVE,
                                     VoxelSide::Bottom => NORMAL_Y_NEGATIVE,
@@ -213,10 +214,20 @@ pub fn draw_objects(objects: Vec<ObjectDrawData>, camera: &Camera, column: &mut 
                                 for (dest, src) in
                                     pixel[0..3].iter_mut().zip(color[0..3].iter())
                                 {
-                                    let flashlight_radius = (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt();
-                                    let t = 1.0 - ((flashlight_radius - super::FLASHLIGHT_INNER_RADIUS) / (super::FLASHLIGHT_OUTER_RADIUS - super::FLASHLIGHT_INNER_RADIUS)).clamp(0.0, 1.0);
-                                    let flashlight = t * t * (3.0 - t * 2.0) * flashlight_intensity;
-                                    *dest = (*src as f32 * (flashlight + ambient_light)) as u8;
+                                    let flashlight_radius = (flashlight_x * flashlight_x
+                                        + flashlight_y * flashlight_y)
+                                        .sqrt();
+                                    let t = 1.0
+                                        - ((flashlight_radius
+                                            - super::FLASHLIGHT_INNER_RADIUS)
+                                            / (super::FLASHLIGHT_OUTER_RADIUS
+                                                - super::FLASHLIGHT_INNER_RADIUS))
+                                            .clamp(0.0, 1.0);
+                                    let flashlight =
+                                        t * t * (3.0 - t * 2.0) * flashlight_intensity;
+                                    *dest = (*src as f32
+                                        * (flashlight + ambient + spotlight))
+                                        as u8;
                                 }
                                 pixel[3] = 255;
                                 //darken_side(side, pixel);

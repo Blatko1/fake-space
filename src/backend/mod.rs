@@ -182,8 +182,8 @@ impl Canvas {
 
         Self {
             // RGBA - 4 bytes per pixel
-            buffer: vec![0; buffer_len],
-            frame: vec![0; buffer_len],
+            buffer: vec![255; buffer_len],
+            frame: vec![255; buffer_len],
             width: canvas_width,
             height: canvas_height,
 

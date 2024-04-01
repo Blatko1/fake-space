@@ -2,14 +2,12 @@ use crate::{
     backend::Canvas,
     player::Player,
     render::camera::Camera,
-    voxel::VoxelModelManager,
     world::{RoomID, World},
 };
 use winit::event::DeviceEvent;
 use winit::event::KeyEvent;
 
 pub struct State {
-    models: VoxelModelManager,
     world: World,
     player: Player,
 }
@@ -27,7 +25,6 @@ impl State {
         );
 
         Self {
-            models: VoxelModelManager::init(),
             world,
             player: Player::new(camera, RoomID(0)),
         }
@@ -35,7 +32,7 @@ impl State {
 
     pub fn update(&mut self, frame_time: f32) {
         self.player.update(&self.world, frame_time);
-        self.world.update(self.player.get_current_room_id());
+        self.world.update(self.player.current_room_id());
     }
 
     pub fn draw<'a, C>(&mut self, canvas_column_iter: C)
@@ -45,19 +42,21 @@ impl State {
         self.player.cast_and_draw(&self.world, canvas_column_iter);
     }
 
+    #[inline]
     pub fn process_keyboard_input(&mut self, event: KeyEvent) {
         self.player.process_keyboard_input(event);
     }
 
+    #[inline]
     pub fn process_mouse_input(&mut self, event: DeviceEvent) {
         self.player.process_mouse_input(event);
     }
 
-    pub fn get_player(&self) -> &Player {
+    pub fn player(&self) -> &Player {
         &self.player
     }
 
-    pub fn get_world(&self) -> &World {
+    pub fn world(&self) -> &World {
         &self.world
     }
 }

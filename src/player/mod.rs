@@ -26,7 +26,7 @@ impl Player {
         self.camera.update(frame_time);
         // Teleportation between rooms
         let room = world.get_room_data(self.current_room);
-        let position = self.camera.get_origin();
+        let position = self.camera.origin();
         // Check if player is on a tile
         if let Some(tile) = room.segment.get_tile(position.x as i64, position.z as i64) {
             // Check if tile has a portal
@@ -57,18 +57,20 @@ impl Player {
         render::cast_and_draw(self, world, column_iter)
     }
 
-    pub fn get_camera(&self) -> &Camera {
+    pub fn camera(&self) -> &Camera {
         &self.camera
     }
 
-    pub fn get_current_room_id(&self) -> RoomID {
+    pub fn current_room_id(&self) -> RoomID {
         self.current_room
     }
 
+    #[inline]
     pub fn process_mouse_input(&mut self, event: DeviceEvent) {
         self.camera.process_mouse_input(event)
     }
 
+    #[inline]
     pub fn process_keyboard_input(&mut self, event: KeyEvent) {
         self.camera.process_keyboard_input(event)
     }
