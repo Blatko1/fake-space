@@ -28,10 +28,8 @@ Excellent explanations about the raycaster [here](https://lodev.org/cgtutor/rayc
 - [x] Add shading/lightning effects
 - [x] Draw a skybox
 - [x] Add different height walls while also their tops sides (floor), if seen from above, and bottom sides (ceilings), if seen from below
-- [ ] Reimplement voxel objects again :/
+- [x] Reimplement voxel objects again :/
 - [ ] Add removable object walls (cool opening or moving animation with voxels)
 - [ ] Add collision detection (circle-rectangle collision detection)
-- [ ] Add special tiles through which the player would fall to their demise
 - [ ] Add a UI
 - [ ] Go unsafe for performance increase after most of the project is finished
-- [ ] Maybe: Add an option to switch between CPU only graphics with lower quality (no 3D objects) and GPU accelerated graphics with higher quality (3D objects)

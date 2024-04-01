@@ -184,11 +184,12 @@ pub fn draw_objects(objects: Vec<ObjectDrawData>, camera: &Camera, column: &mut 
                                 let distance = ((x * x + y * y + z * z)
                                     / (dimension * dimension))
                                     .sqrt();
-
-                                let t =
-                                    1.0 - (distance / SPOTLIGHT_DISTANCE).clamp(0.0, 1.0);
-                                let spotlight =
-                                    t * t * (3.0 - t * 2.0) * super::SPOTLIGHT_STRENGTH;
+                                
+                                // TODO spotlight not working right
+                                //let t =
+                                //    1.0 - (distance / SPOTLIGHT_DISTANCE).clamp(0.0, 1.0);
+                                //let spotlight =
+                                //    t * t * (3.0 - t * 2.0) * super::SPOTLIGHT_STRENGTH;
                                 let normal = match side {
                                     VoxelSide::Top => NORMAL_Y_POSITIVE,
                                     VoxelSide::Bottom => NORMAL_Y_NEGATIVE,
@@ -226,7 +227,7 @@ pub fn draw_objects(objects: Vec<ObjectDrawData>, camera: &Camera, column: &mut 
                                     let flashlight =
                                         t * t * (3.0 - t * 2.0) * flashlight_intensity;
                                     *dest = (*src as f32
-                                        * (flashlight + ambient + spotlight))
+                                        * (flashlight + ambient))
                                         as u8;
                                 }
                                 pixel[3] = 255;

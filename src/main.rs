@@ -28,7 +28,7 @@ use winit::{
     window::WindowBuilder as WinitWindowBuilder,
 };
 
-const FPS_CAP: u32 = 50;
+const FPS_CAP: u32 = 60;
 
 fn main() {
     if std::env::var("RUST_LOG").is_err() {
@@ -53,7 +53,7 @@ fn main() {
     let framerate_delta = Duration::from_secs_f64(1.0 / FPS_CAP as f64);
     let mut time_delta = Instant::now();
     let mut fps_update_delta = Instant::now();
-    let mut framerate = 0;
+    let mut fps_counter = 0;
     let mut frame_time = 0.0;
     let mut current_fps = 0;
 
@@ -67,12 +67,12 @@ fn main() {
                     if elapsed >= framerate_delta {
                         time_delta = Instant::now();
                         winit_window.request_redraw();
-                        framerate += 1;
+                        fps_counter += 1;
                         frame_time = elapsed.as_secs_f32();
                         if fps_update_delta.elapsed().as_micros() >= 1000000 {
                             fps_update_delta = Instant::now();
-                            current_fps = framerate;
-                            framerate = 0;
+                            current_fps = fps_counter;
+                            fps_counter = 0;
                         }
                     }
                 }

@@ -2,7 +2,7 @@ mod parser;
 pub mod portal;
 pub mod textures;
 
-use rand::{rngs::ThreadRng, seq::SliceRandom, Rng};
+use rand::{rngs::ThreadRng, seq::SliceRandom};
 use std::path::PathBuf;
 
 use crate::render::PointXZ;
@@ -21,7 +21,6 @@ pub struct SegmentID(pub usize);
 
 pub struct World {
     segments: Vec<Segment>,
-    segment_count: usize,
     texture_manager: TextureManager,
     voxel_model_manager: VoxelModelManager,
 
@@ -80,10 +79,8 @@ impl World {
         rooms.push(starting_room);
         rooms.append(&mut adjacent_rooms);
 
-        let segment_count = segments.len();
         Self {
             segments,
-            segment_count,
             texture_manager: TextureManager::new(textures),
             voxel_model_manager: VoxelModelManager::init(),
             rng,
@@ -140,32 +137,6 @@ impl World {
 
             self.rooms.append(&mut adjacent_rooms);
         }
-    }
-
-    fn add_new_room(&mut self, segment_id: SegmentID) -> &mut Room {
-        // Append the room at the end of the list.
-        let room_id = RoomID(self.rooms.len());
-        let segment = &self.segments[segment_id.0];
-        let starting_room = Room {
-            id: room_id,
-            segment_id: segment.id,
-            portals: segment.unlinked_portals.clone(),
-            is_fully_generated: false,
-            skybox: segment.skybox,
-            ambient_light_intensity: segment.ambient_light_intensity,
-        };
-        self.rooms.push(starting_room);
-        self.rooms.last_mut().unwrap()
-    }
-
-    fn add_new_random_room(&mut self) -> &mut Room {
-        let rand_segment_id = self.get_random_segment_id();
-        self.add_new_room(rand_segment_id)
-    }
-
-    fn get_random_segment_id(&mut self) -> SegmentID {
-        // The first segment repeats only once at the beginning
-        SegmentID(self.rng.gen_range(1..self.segment_count))
     }
 
     pub fn get_room_data(&self, index: RoomID) -> RoomRef {
