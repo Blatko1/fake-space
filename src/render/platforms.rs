@@ -62,9 +62,8 @@ impl<'a> ColumnDrawer<'a> {
             + tile_step_factor * ray.column_index as f32;
         let row_dist_factor = cam.f_half_height * cam.plane_dist;
 
-        // Calculating lightning
-        let flashlight_x =
-            (2.0 * ray.column_index as f32 * cam.width_recip - 1.0) * cam.aspect;
+        // Multiply by the canvas aspect ratio so the light has a shape of a circle.
+        let flashlight_x = ray.plane_x * cam.aspect;
 
         column
             .chunks_exact_mut(4)
@@ -96,21 +95,23 @@ impl<'a> ColumnDrawer<'a> {
                 let flashlight_y = 2.0 * y as f32 * cam.height_recip - 1.0;
 
                 // Smoothstep distance to get the spotlight
-                let t = 1.0 - (row_dist / super::SPOTLIGHT_DISTANCE).clamp(0.0, 1.0);
-                let spotlight = t * t * (3.0 - t * 2.0) * super::SPOTLIGHT_STRENGTH;
+                let s = 1.0 - (row_dist / super::SPOTLIGHT_DISTANCE).clamp(0.0, 1.0);
+                let spotlight = s * s * (3.0 - s * 2.0) * super::SPOTLIGHT_STRENGTH;
 
-                for (dest, src) in pixel[0..3].iter_mut().zip(color[0..3].iter()) {
-                    let flashlight_radius = (flashlight_x * flashlight_x
-                        + flashlight_y * flashlight_y)
-                        .sqrt();
-                    let t = 1.0
-                        - ((flashlight_radius - super::FLASHLIGHT_INNER_RADIUS)
-                            / (super::FLASHLIGHT_OUTER_RADIUS
-                                - super::FLASHLIGHT_INNER_RADIUS))
-                            .clamp(0.0, 1.0);
-                    let flashlight = t * t * (3.0 - t * 2.0) * flashlight_intensity;
-                    *dest = (*src as f32 * (flashlight + ambient + spotlight)) as u8;
-                }
+                let flashlight_radius =
+                    (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt();
+                let t = 1.0
+                    - ((flashlight_radius - super::FLASHLIGHT_INNER_RADIUS)
+                        / (super::FLASHLIGHT_OUTER_RADIUS
+                            - super::FLASHLIGHT_INNER_RADIUS))
+                        .clamp(0.0, 1.0);
+                let flashlight = t * t * (3.0 - t * 2.0) * flashlight_intensity;
+                // Modify pixel
+                pixel[0..3].iter_mut().zip(color[0..3].iter()).for_each(
+                    |(dest, &src)| {
+                        *dest = (src as f32 * (flashlight + ambient + spotlight)) as u8;
+                    },
+                );
                 //pixel[3] = color[3];
             });
 

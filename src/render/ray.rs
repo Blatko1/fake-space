@@ -22,6 +22,8 @@ pub struct Ray {
     /// Specifies in which direction (forwards or backwards)
     /// the ray travels across the map.
     pub step_z: i64,
+    /// X-coordinate on the horizontal camera plane through which the Ray passes.
+    pub plane_x: f32,
 
     /// Origin of the Camera from which the ray was cast.
     pub origin: Vec3,
@@ -94,6 +96,7 @@ impl Ray {
             delta_dist_z,
             step_x: dir.x.signum() as i64,
             step_z: dir.z.signum() as i64,
+            plane_x,
 
             // Camera data from which the ray was cast
             origin,

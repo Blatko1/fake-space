@@ -156,11 +156,16 @@ impl<'a> ColumnDrawer<'a> {
             }
 
             if let Some(model_id) = next_tile.voxel_model {
+                let model_data = self.world.get_voxel_model(model_id);
+                let dimensions = model_data.dimension as f32;
+                let pos = Vec3::new(
+                    next_tile.position.x as f32 * dimensions,
+                    next_tile.ground_level * dimensions * 0.5,
+                    next_tile.position.z as f32 * dimensions,
+                );
                 encountered_objects.push(ObjectDrawData {
-                    pos_x: next_tile.position.x,
-                    pos_z: next_tile.position.z,
-                    pos_y: next_tile.ground_level,
-                    model_data: self.world.get_voxel_model(model_id),
+                    pos,
+                    model_data,
                     ray: self.ray,
                     ambient_light_intensity: self
                         .current_room
