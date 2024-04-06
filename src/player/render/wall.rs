@@ -90,7 +90,7 @@ impl<'a> ColumnDrawer<'a> {
         // TODO idk why this gives negative results
         let diffuse = (-ray.dir.dot(normal)).max(0.0);
         // Multiply by the canvas aspect ratio so the light has a shape of a circle.
-        let flashlight_x = ray.plane_x * cam.aspect;
+        let flashlight_x = ray.plane_x * cam.view_aspect;
         // Smooth out the flashlight intensity using the distance
         let flashlight_intensity = (1.0
             - (ray.wall_dist / super::FLASHLIGHT_DISTANCE).clamp(0.0, 1.0))

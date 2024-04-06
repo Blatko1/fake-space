@@ -7,11 +7,6 @@
 #Bricks = path:../res/stone_bricks.jpg, transparency:false
 #MetalFloor = path:../res/metal_floor.jpg, transparency:false
 
-#BlueBrick = path:../res/blue_brick.png, transparency:false
-#LightPlank = path:../res/light_plank.png, transparency:false
-#Mossy = path:../res/mossy_stone.png, transparency:false
-#Glass = path:../res/blue_glass.png, transparency:true
-
 #Wallpaper = path:../res/backrooms_wall.png, transparency:false
 #Carpet = path:../res/backrooms_carpet.jpg, transparency:false
 #DropCeiling = path:../res/backrooms_ceiling.jpg, transparency:false
@@ -23,12 +18,12 @@
 #SkyTop = path:../res/sky_top.png, transparency:false
 #SkyBottom = path:../res/sky_bottom.png, transparency:false
 
-#NightNorth = path:../res/night_north.png, transparency:false
-#NightEast = path:../res/night_east.png, transparency:false
-#NightSouth = path:../res/night_south.png, transparency:false
-#NightWest = path:../res/night_west.png, transparency:false
-#NightTop = path:../res/night_top.png, transparency:false
-#NightBottom = path:../res/night_bottom.png, transparency:false
+//#NightNorth = path:../res/night_north.png, transparency:false
+//#NightEast = path:../res/night_east.png, transparency:false
+//#NightSouth = path:../res/night_south.png, transparency:false
+//#NightWest = path:../res/night_west.png, transparency:false
+//#NightTop = path:../res/night_top.png, transparency:false
+//#NightBottom = path:../res/night_bottom.png, transparency:false
 
 #Sky2North = path:../res/sky2_north.png, transparency:false
 #Sky2East = path:../res/sky2_east.png, transparency:false
@@ -54,6 +49,4 @@
 !start = src:start.txt, repeatable: false, ambient_light: 1.0, skyboxNorth: SkyNorth, skyboxEast: SkyEast, skyboxSouth: SkySouth, skyboxWest: SkyWest, skyboxTop: SkyTop, skyboxBottom: SkyBottom //, light_effect:
 !root = src:root.txt, repeatable: false, ambient_light: 0.1//, light_effect:
 !l_turn = src:l_turn.txt, repeatable: true, ambient_light: 0.1//, light_effect:
-//!t_turn = src:t_turn.txt, repeatable: true, ambient_light: 0.1//, light_effect:
-!straight = src:straight.txt, repeatable:true, ambient_light: 0.1//, light_effect:
 !large1 = src:large1.txt, repeatable:true, ambient_light: 0.15//, light_effect:

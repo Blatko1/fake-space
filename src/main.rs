@@ -5,7 +5,6 @@
 pub mod backend;
 mod dbg;
 mod player;
-mod render;
 mod state;
 mod voxel;
 mod world;

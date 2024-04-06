@@ -1,4 +1,4 @@
-use std::{ops::RangeInclusive, str::FromStr};
+use std::str::FromStr;
 
 use crate::voxel::VoxelModelID;
 use hashbrown::HashMap;
@@ -9,7 +9,7 @@ use crate::world::{Tile, TilePosition};
 
 use super::error::RowError;
 use super::{
-    error::{DimensionError, PresetError, SegmentParseError, TileError},
+    error::{DimensionError, PresetError, SegmentParseError},
     Settings,
 };
 
@@ -39,7 +39,7 @@ impl<'a> SegmentParser<'a> {
             preset_map: HashMap::new(),
             texture_map,
             tiles: Vec::new(),
-            processed_tiles: 0
+            processed_tiles: 0,
         }
     }
     pub(super) fn parse(mut self) -> Result<((u64, u64), Vec<Tile>), SegmentParseError> {
@@ -82,8 +82,8 @@ impl<'a> SegmentParser<'a> {
         let mut tiles = Vec::with_capacity(self.tiles.len());
         let mut portal_id = 0;
         for (i, tile) in self.tiles.into_iter().enumerate() {
-            // Fill the `None` values with default ones and convert to [`Tile`], then
-            // compare levels to each other to find error (lvl1 <= lvl2 < lvl3 <= lvl4)
+            // Replace None values with Default values, then compare levels
+            // to find errors (lvl1 <= lvl2 < lvl3 <= lvl4)
             let bottom_level = tile.bottom_level.unwrap_or(self.settings.bottom_level);
             let ground_level = tile.ground_level.unwrap_or(self.settings.ground_level);
             let ceiling_level = tile.ceiling_level.unwrap_or(self.settings.ceiling_level);
@@ -171,36 +171,6 @@ impl<'a> SegmentParser<'a> {
         let identifier = split[0].trim();
         let expressions = split[1].trim();
 
-        let preset = self.parse_tile_expressions(expressions)?;
-
-        Ok((identifier.to_owned(), preset))
-    }
-
-    fn parse_segment_row(&mut self, line: &str) -> Result<(), RowError> {
-        let filtered = line.replace('|', "");
-        let tiles = filtered.split_whitespace();
-        if self.processed_tiles as u64 >= self.dimensions.1 {
-            return Err(RowError::SufficientRow)
-        }
-        if tiles.clone().count() as u64 != self.dimensions.0 {
-            return Err(RowError::RowLengthNotMatchingDimension(tiles.count() as u64, self.dimensions.0))
-        }
-
-        for (i, tile) in tiles.enumerate() {
-            let tile = match self.preset_map.get(tile) {
-                Some(t) => t,
-                None => return Err(RowError::TilePresetNonExistent(tile.to_owned())),
-            };
-            let index = (self.dimensions.1 as usize - self.processed_tiles - 1) * self.dimensions.0 as usize + i;
-            let old_tile = self.tiles.get_mut(index).unwrap();
-            old_tile.overwrite_with(tile);
-        }
-        self.processed_tiles += 1;
-
-        Ok(())
-    }
-
-    fn parse_tile_expressions(&self, expressions: &str) -> Result<TilePreset, TileError> {
         let mut preset = TilePreset::default();
         for expr in expressions.split(',') {
             // Split the expression and check for formatting errors
@@ -217,17 +187,19 @@ impl<'a> SegmentParser<'a> {
                                 continue;
                             }
                             None => {
-                                return Err(TileError::UnknownPreset(
+                                return Err(PresetError::UnknownPreset(
                                     preset_str.to_owned(),
                                 ))
                             }
                         }
                     } else {
-                        return Err(TileError::InvalidExpressionFormat(expr.to_owned()));
+                        return Err(PresetError::InvalidExpressionFormat(
+                            expr.to_owned(),
+                        ));
                     }
                 }
                 [_, _] => (),
-                _ => return Err(TileError::InvalidExpressionFormat(expr.to_owned())),
+                _ => return Err(PresetError::InvalidExpressionFormat(expr.to_owned())),
             }
             let parameter = operands[0].trim();
             let value = operands[1].trim();
@@ -237,7 +209,7 @@ impl<'a> SegmentParser<'a> {
                 // If the parameter is one of these, the value should be a *texture name*
                 "bottomT" | "topT" | "groundT" | "ceilingT" => {
                     let Some(&texture) = self.texture_map.get(value) else {
-                        return Err(TileError::UnknownTexture(value.to_owned()));
+                        return Err(PresetError::UnknownTexture(value.to_owned()));
                     };
                     match parameter {
                         "bottomT" => preset.bottom_wall_tex = Some(texture),
@@ -250,7 +222,7 @@ impl<'a> SegmentParser<'a> {
                 // If the parameter is one of these, the value should be a *number*
                 "bottomL" | "groundL" | "ceilingL" | "topL" => {
                     let Ok(parsed) = value.parse::<f32>() else {
-                        return Err(TileError::FloatParseFail(value.to_string()));
+                        return Err(PresetError::FloatParseFail(value.to_string()));
                     };
 
                     match parameter {
@@ -265,10 +237,40 @@ impl<'a> SegmentParser<'a> {
                     let parsed = value.parse::<PortalDirection>()?;
                     preset.portal_dir = Some(parsed);
                 }
-                _ => return Err(TileError::UnknownParameter(parameter.to_owned())),
+                _ => return Err(PresetError::UnknownParameter(parameter.to_owned())),
             }
         }
-        Ok(preset)
+
+        Ok((identifier.to_owned(), preset))
+    }
+
+    fn parse_segment_row(&mut self, line: &str) -> Result<(), RowError> {
+        let filtered = line.replace('|', "");
+        let tiles = filtered.split_whitespace();
+        if self.processed_tiles as u64 >= self.dimensions.1 {
+            return Err(RowError::SufficientRow);
+        }
+        if tiles.clone().count() as u64 != self.dimensions.0 {
+            return Err(RowError::RowLengthNotMatchingDimension(
+                tiles.count() as u64,
+                self.dimensions.0,
+            ));
+        }
+
+        for (i, tile) in tiles.enumerate() {
+            let tile = match self.preset_map.get(tile) {
+                Some(t) => t,
+                None => return Err(RowError::TilePresetNonExistent(tile.to_owned())),
+            };
+            let index = (self.dimensions.1 as usize - self.processed_tiles - 1)
+                * self.dimensions.0 as usize
+                + i;
+            let old_tile = self.tiles.get_mut(index).unwrap();
+            old_tile.overwrite_with(tile);
+        }
+        self.processed_tiles += 1;
+
+        Ok(())
     }
 }
 
@@ -320,7 +322,7 @@ impl TilePreset {
 }
 
 impl FromStr for PortalDirection {
-    type Err = TileError;
+    type Err = PresetError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -328,7 +330,7 @@ impl FromStr for PortalDirection {
             "S" => Ok(PortalDirection::South),
             "E" => Ok(PortalDirection::East),
             "W" => Ok(PortalDirection::West),
-            _ => Err(TileError::BoolParseFail(s.to_owned())),
+            _ => Err(PresetError::BoolParseFail(s.to_owned())),
         }
     }
 }

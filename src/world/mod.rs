@@ -5,7 +5,7 @@ pub mod textures;
 use rand::{rngs::ThreadRng, seq::SliceRandom};
 use std::path::PathBuf;
 
-use crate::render::PointXZ;
+use crate::player::render::PointXZ;
 use crate::voxel::{VoxelModelDataRef, VoxelModelID, VoxelModelManager};
 use crate::world::portal::{DummyPortal, Portal, PortalID};
 use parser::{error::ParseError, WorldParser};

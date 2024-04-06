@@ -1,7 +1,6 @@
 use crate::{
     backend::Canvas,
-    player::Player,
-    render::camera::Camera,
+    player::{camera::Camera, Player},
     world::{RoomID, World},
 };
 use winit::event::DeviceEvent;

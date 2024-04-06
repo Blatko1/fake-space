@@ -1,11 +1,9 @@
-use crate::render::camera::Camera;
-use crate::render::colors::COLOR_LUT;
-use crate::render::ray::Ray;
-use crate::render::{
-    Side, FLASHLIGHT_DISTANCE, FLASHLIGHT_INTENSITY, NORMAL_X_NEGATIVE,
-    NORMAL_X_POSITIVE, NORMAL_Y_NEGATIVE, NORMAL_Y_POSITIVE, NORMAL_Z_NEGATIVE,
-    NORMAL_Z_POSITIVE, SPOTLIGHT_DISTANCE,
+use super::{
+    colors::COLOR_LUT, ray::Ray, Side, FLASHLIGHT_DISTANCE, FLASHLIGHT_INTENSITY,
+    NORMAL_X_NEGATIVE, NORMAL_X_POSITIVE, NORMAL_Y_NEGATIVE, NORMAL_Y_POSITIVE,
+    NORMAL_Z_NEGATIVE, NORMAL_Z_POSITIVE, SPOTLIGHT_DISTANCE,
 };
+use crate::player::camera::Camera;
 use crate::voxel::VoxelModelDataRef;
 use glam::Vec3;
 
@@ -84,8 +82,7 @@ impl<'a> ObjectDrawData<'a> {
         let rectangle_normal = top_side.cross(left_side);
 
         // Y-coordinate on the vertical camera plane (range [-1.0, 1.0])
-        let plane_y =
-            (screen_y as f32 - camera.y_shearing) * camera.height_recip * 2.0 - 1.0;
+        let plane_y = (screen_y - camera.y_shearing) * camera.height_recip * 2.0 - 1.0;
         // Ray direction for current pixel column
         let ray_dir = ray.dir + camera.vertical_plane * plane_y;
         // Length of ray from one x/y/z side to next x/y/z side on the tile_map
@@ -187,15 +184,14 @@ impl<'a> ObjectDrawData<'a> {
                         let normal = side.normal();
                         let diffuse = (-ray_dir.dot(normal)).max(0.0);
                         // Multiply by the canvas aspect ratio so the light has a shape of a circle.
-                        let flashlight_x = ray.plane_x * camera.aspect;
+                        let flashlight_x = ray.plane_x * camera.view_aspect;
                         // Smooth out the flashlight intensity using the distance
                         let flashlight_intensity = (1.0
                             - (distance / FLASHLIGHT_DISTANCE).clamp(0.0, 1.0))
                             * FLASHLIGHT_INTENSITY
                             * diffuse;
 
-                        let flashlight_y =
-                            2.0 * screen_y as f32 * camera.height_recip - 1.0;
+                        let flashlight_y = 2.0 * screen_y * camera.height_recip - 1.0;
                         let flashlight_radius = (flashlight_x * flashlight_x
                             + flashlight_y * flashlight_y)
                             .sqrt();

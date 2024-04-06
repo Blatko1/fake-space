@@ -4,7 +4,7 @@
 // Declare the presets used in modifying the tiles
 $noRoof = ceilingL:100000.0, topL:100000.0
 $pillar = groundL:5.0, bottomT:Stone, groundT:Stone
-$grass = groundL:0.0, groundT:Grass
+$grass = groundL:0.0, groundT:Grass, bottomT:Stone,
 
 $pt = $pillar, groundL:100.0, ceilingL:100.1
 $p1 = $pillar, groundL:9.8, ceilingL:11.7, ceilingT:Stone, topT:Stone

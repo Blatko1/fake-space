@@ -1,4 +1,3 @@
-pub mod camera;
 mod colors;
 mod object;
 mod platforms;
@@ -6,12 +5,12 @@ mod ray;
 mod skybox;
 mod wall;
 
-use crate::player::Player;
-use crate::render::camera::Camera;
-use crate::render::object::ObjectDrawData;
+use super::Player;
+use crate::player::camera::Camera;
 use crate::world::{RoomRef, World};
 use glam::Vec3;
 
+use self::object::ObjectDrawData;
 use self::platforms::PlatformDrawData;
 use self::ray::Ray;
 use self::skybox::SkyboxSegment;
@@ -58,7 +57,7 @@ impl<'a> ColumnDrawer<'a> {
             camera,
 
             ray,
-            top_draw_bound: camera.view_height as usize,
+            top_draw_bound: camera.view_width as usize,
             bottom_draw_bound: 0,
 
             current_room: world.get_room_data(player.current_room_id()),

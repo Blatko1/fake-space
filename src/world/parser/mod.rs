@@ -1,8 +1,5 @@
-#[cfg(test)]
-mod tests;
-
+// TODO maybe add tests for the parser
 pub mod error;
-//mod segment_parser;
 mod segment;
 
 use std::path::PathBuf;

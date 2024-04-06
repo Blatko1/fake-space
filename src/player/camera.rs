@@ -45,7 +45,7 @@ pub struct Camera {
     /// Height of the output screen/texture.
     pub(super) view_height: u32,
     /// Output screen dimension aspect (width/height)
-    pub(super) aspect: f32,
+    pub(super) view_aspect: f32,
     /// Creates an illusion that the camera is looking up or down.
     /// In interval of [-self.height/2.0, self.height/2.0]
     pub(super) y_shearing: f32,
@@ -91,13 +91,14 @@ impl Camera {
         let f_height = view_height as f32;
 
         let plane_dist = 1.0 / f32::tan(fov / 2.0);
-        let aspect = f_width / f_height;
+        let view_aspect = f_width / f_height;
 
         let origin = Vec3::new(pos_x, pos_y, pos_z);
         let dir = Vec3::new(yaw_angle.cos(), 0.0, yaw_angle.sin());
 
         let vertical_plane = DEFAULT_PLANE_V / plane_dist;
-        let horizontal_plane = Vec3::cross(DEFAULT_PLANE_V, dir) * aspect / plane_dist;
+        let horizontal_plane =
+            Vec3::cross(DEFAULT_PLANE_V, dir) * view_aspect / plane_dist;
 
         Self {
             fov,
@@ -109,7 +110,7 @@ impl Camera {
             yaw_angle,
             view_width,
             view_height,
-            aspect,
+            view_aspect,
             y_shearing: 0.0,
 
             four_width: 4 * view_width as usize,
@@ -158,7 +159,7 @@ impl Camera {
         // Rotate camera planes
         self.vertical_plane = DEFAULT_PLANE_V / self.plane_dist;
         self.horizontal_plane =
-            Vec3::cross(DEFAULT_PLANE_V, self.dir) * self.aspect / self.plane_dist;
+            Vec3::cross(DEFAULT_PLANE_V, self.dir) * self.view_aspect / self.plane_dist;
 
         // Update origin position
         self.origin.x +=

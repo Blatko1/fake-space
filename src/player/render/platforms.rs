@@ -63,7 +63,7 @@ impl<'a> ColumnDrawer<'a> {
         let row_dist_factor = cam.f_half_height * cam.plane_dist;
 
         // Multiply by the canvas aspect ratio so the light has a shape of a circle.
-        let flashlight_x = ray.plane_x * cam.aspect;
+        let flashlight_x = ray.plane_x * cam.view_aspect;
 
         column
             .chunks_exact_mut(4)

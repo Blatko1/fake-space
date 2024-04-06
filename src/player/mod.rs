@@ -1,13 +1,19 @@
-use winit::event::{DeviceEvent, KeyEvent};
+pub mod camera;
+pub mod render;
 
-use crate::{
-    render::{self, camera::Camera},
-    world::{RoomID, World},
+use winit::{
+    event::{DeviceEvent, KeyEvent},
+    keyboard::{KeyCode, PhysicalKey},
 };
+
+use crate::world::{self, RoomID, Segment, World};
+
+use self::camera::Camera;
 
 pub struct Player {
     camera: Camera,
 
+    physics: bool,
     current_room: RoomID,
     in_portal: bool,
 }
@@ -17,6 +23,7 @@ impl Player {
         Self {
             camera,
 
+            physics: false,
             current_room,
             in_portal: false,
         }
@@ -26,7 +33,7 @@ impl Player {
         self.camera.update(frame_time);
         // Teleportation between rooms
         let room = world.get_room_data(self.current_room);
-        let position = self.camera.origin();
+        let position = self.camera.origin;
         // Check if player is on a tile
         if let Some(tile) = room.segment.get_tile(position.x as i64, position.z as i64) {
             // Check if tile has a portal
@@ -47,6 +54,23 @@ impl Player {
             } else {
                 self.in_portal = false;
             }
+        }
+
+        if self.physics {
+            self.collision_detection(room.segment)
+        }
+    }
+
+    fn collision_detection(&mut self, segment: &Segment) {
+        let position = self.camera.origin;
+        let current_tile = match segment.get_tile(position.x as i64, position.z as i64) {
+            Some(t) => t,
+            None => return,
+        };
+        if position.y <= current_tile.ground_level
+            || position.y >= current_tile.ceiling_level
+        {
+            return;
         }
     }
 
@@ -72,6 +96,12 @@ impl Player {
 
     #[inline]
     pub fn process_keyboard_input(&mut self, event: KeyEvent) {
+        match event.physical_key {
+            PhysicalKey::Code(KeyCode::KeyP) if !event.state.is_pressed() => {
+                self.physics = !self.physics
+            }
+            _ => (),
+        }
         self.camera.process_keyboard_input(event)
     }
 }

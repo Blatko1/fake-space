@@ -1,8 +1,9 @@
-use crate::render::{PointXZ, Side};
 use crate::world::portal::{Portal, PortalRotationDifference};
 use glam::Vec3;
 
-use super::camera::Camera;
+use crate::player::camera::Camera;
+
+use super::{PointXZ, Side};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Ray {

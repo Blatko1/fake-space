@@ -1,5 +1,7 @@
-use crate::render::PointXZ;
-use crate::world::{RoomID, TilePosition};
+use crate::{
+    player::render::PointXZ,
+    world::{RoomID, TilePosition},
+};
 
 #[derive(Debug, Clone, Copy)]
 pub struct PortalID(pub usize);

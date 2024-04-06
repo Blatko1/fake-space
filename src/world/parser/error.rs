@@ -36,8 +36,6 @@ pub enum SegmentParseError {
     DimensionsErr(DimensionError, u64),
     PresetErr(PresetError, u64),
     RowErr(RowError, u64),
-    
-    TileErr(TileError, u64),
 
     InvalidLevels(usize, f32, f32, f32, f32),
     NoPortalsSpecified,
@@ -48,7 +46,6 @@ pub enum RowError {
     SufficientRow,
     RowLengthNotMatchingDimension(u64, u64),
     TilePresetNonExistent(String),
-
 }
 
 #[derive(Debug)]
@@ -85,12 +82,6 @@ pub enum TextureError {
 #[derive(Debug)]
 pub enum PresetError {
     InvalidFormat(String),
-    InvalidPreset(TileError),
-}
-
-#[derive(Debug)]
-pub enum TileError {
-    InvalidFormat(String),
     InvalidExpressionFormat(String),
 
     InvalidIndexFormat(String),
@@ -104,12 +95,6 @@ pub enum TileError {
     UnknownTexture(String),
     FloatParseFail(String),
     BoolParseFail(String),
-}
-
-impl From<TileError> for PresetError {
-    fn from(value: TileError) -> Self {
-        Self::InvalidPreset(value)
-    }
 }
 
 impl From<io::Error> for ParseError {
