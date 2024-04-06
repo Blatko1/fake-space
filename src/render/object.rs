@@ -10,19 +10,16 @@ use crate::voxel::VoxelModelDataRef;
 use glam::Vec3;
 
 pub fn draw_objects(objects: Vec<ObjectDrawData>, camera: &Camera, column: &mut [u8]) {
-    if objects.is_empty() {
-        return;
-    }
-    let column_iter = column.chunks_exact_mut(4).enumerate();
-    column_iter.for_each(|(screen_y, pixel)| {
-        // Filter models which are covered by walls or platforms
-        let visible_objects = objects.iter().rev().filter(|object| {
-            object.bottom_draw_bound <= screen_y && object.top_draw_bound > screen_y
+    column
+        .chunks_exact_mut(4)
+        .enumerate()
+        .for_each(|(screen_y, pixel)| {
+            // Filter objects which are not visible
+            let visible_objects = objects.iter().rev().filter(|object| {
+                object.bottom_draw_bound <= screen_y && object.top_draw_bound > screen_y
+            });
+            visible_objects.for_each(|obj| obj.draw_pixel(screen_y as f32, camera, pixel))
         });
-        for object in visible_objects {
-            object.draw_pixel(screen_y as f32, camera, pixel)
-        }
-    });
 }
 
 pub struct ObjectDrawData<'a> {

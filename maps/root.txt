@@ -10,59 +10,33 @@
 $ground = groundL:0, bottomL:-1, groundT:MetalFloor, bottomT:MetalFloor
 $ceiling = ceilingL:6, topL:100, ceilingT:Bricks, topT:Bricks
 $wall = groundL:9, ceilingL:10, bottomT:Stone
-$NPortal = $ground, portalDir:N, ceilingL:3
-$SPortal = $ground, portalDir:S, ceilingL:3
-$EPortal = $ground, portalDir:E, ceilingL:3
-$WPortal = $ground, portalDir:W, ceilingL:3
-$fall = bottomL:-100, groundL:-99
 
-// Modifying the tiles
-// Add surrounding pillars
-1-187 = $ground, $ceiling
-1-24 = $wall
-32-35 = $wall
-43-46 = $wall
-54-57 = $wall
-65-68 = $wall
-76-79 = $wall
-87-90 = $wall
-98-101 = $wall
-109-112 = $wall
-120-123 = $wall
-131-134 = $wall
-142-145 = $wall
-153-156 = $wall
-164-187 = $wall
+$. = $ground, $ceiling
+$# = $., $wall
+$o = $ceiling, bottomL:-100, groundL:-99
 
-25-26 = $fall
-30-31 = $fall
-36-37 = $fall
-41-42 = $fall
+$N = $., portalDir:N, ceilingL:3
+$S = $., portalDir:S, ceilingL:3
+$E = $., portalDir:E, ceilingL:3
+$W = $., portalDir:W, ceilingL:3
 
-58-59 = $fall
-63-64 = $fall
-69-70 = $fall
-74-75 = $fall
-80-81 = $fall
-85-86 = $fall
-
-102-103 = $fall
-107-108 = $fall
-113-114 = $fall
-118-119 = $fall
-124-125 = $fall
-129-130 = $fall
-
-146-147 = $fall
-151-152 = $fall
-157-158 = $fall
-162-163 = $fall
-
-17 = $NPortal
-46 = $EPortal
-54 = $WPortal
-90 = $EPortal
-98 = $WPortal
-134 = $EPortal
-142 = $WPortal
-171 = $SPortal
+// .  1  2  3  4  5  6  7  8  9 10 11
+//  -----------------------------------
+    | #  #  #  #  #  #  #  #  #  #  # | // 17
+    | #  #  #  #  #  S  #  #  #  #  # | // 16
+    | #  #  o  o  .  .  .  o  o  #  # | // 15
+    | #  #  o  o  .  .  .  o  o  #  # | // 14
+    | #  E  .  .  .  .  .  .  .  W  # | // 13
+    | #  #  o  o  .  .  .  o  o  #  # | // 12
+    | #  #  o  o  .  .  .  o  o  #  # | // 11
+    | #  #  o  o  .  .  .  o  o  #  # | // 10
+    | #  E  .  .  .  .  .  .  .  W  # | // 9 
+    | #  #  o  o  .  .  .  o  o  #  # | // 8 
+    | #  #  o  o  .  .  .  o  o  #  # | // 7 
+    | #  #  o  o  .  .  .  o  o  #  # | // 6 
+    | #  E  .  .  .  .  .  .  .  W  # | // 5 
+    | #  #  o  o  .  .  .  o  o  #  # | // 4 
+    | #  #  o  o  .  .  .  o  o  #  # | // 3 
+    | #  #  #  #  #  N  #  #  #  #  # | // 2 
+    | #  #  #  #  #  #  #  #  #  #  # | // 1 
+//  -----------------------------------

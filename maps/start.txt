@@ -1,92 +1,51 @@
 // Declare the segment dimensions
 20x20
 
-//Parameters: pillar1->bottom pillar, pillar2->top pillar, lvl1->bottom starting bound of bottom pillar,
-// lvl2->top ending bound of bottom pillar, lvl3->bottom starting bound of top pillar,
-// lvl4->top ending bound of top pillar, bottom->texture of bottom platform,
-// top->texture of top platform
-
 // Declare the presets used in modifying the tiles
 $noRoof = ceilingL:100000.0, topL:100000.0
 $pillar = groundL:5.0, bottomT:Stone, groundT:Stone
-$tallPillar = $pillar, groundL:100.0, ceilingL:100.1
-$pillarsTopBottom1 = $pillar, groundL:9.8, ceilingL:11.7, ceilingT:Stone, topT:Stone
-$pillarsTopBottom2 = $pillar, groundL:9.0, ceilingL:12.0, ceilingT:Stone, topT:Stone
-$pillarsTopBottom3 = $pillar, groundL:8.0, ceilingL:13.0, ceilingT:Stone, topT:Stone
-$pillarsTopBottom4 = $pillar, groundL:6.0, ceilingL:18.0, ceilingT:Stone, topT:Stone
-$pillarsTopBottom5 = $pillar, groundL:2.3, ceilingL:24.0, ceilingT:Stone, topT:Stone
+$grass = groundL:0.0, groundT:Grass
 
-$tower = groundL:5.0, bottomT:Bricks, groundT:Grass
-$topTower = groundL:5.0, topT:Bricks, ceilingT:Bricks
+$pt = $pillar, groundL:100.0, ceilingL:100.1
+$p1 = $pillar, groundL:9.8, ceilingL:11.7, ceilingT:Stone, topT:Stone
+$p2 = $pillar, groundL:9.0, ceilingL:12.0, ceilingT:Stone, topT:Stone
+$p3 = $pillar, groundL:8.0, ceilingL:13.0, ceilingT:Stone, topT:Stone
+$p4 = $pillar, groundL:6.0, ceilingL:18.0, ceilingT:Stone, topT:Stone
+$p5 = $pillar, groundL:2.3, ceilingL:24.0, ceilingT:Stone, topT:Stone
 
-$grass = groundL:0.0, groundT:Grass,
+$s1 = $grass, groundL: -0.3
+$s2 = $grass, groundL: -0.7
+$s3 = $grass, groundL: -0.8
+$s4 = $grass, groundL: -0.9
+$s5 = $grass, groundL: -1.0
+$s6 = $grass, groundL: -1.7
+$s7 = $grass, groundL: -2.6
 
-// Modifying the tiles
-// Add surrounding pillars
-1-400 = $pillar, $noRoof
-22-39 = $grass
-42-59 = $grass
-62-79 = $grass
-82-99 = $grass
-102-119 = $grass
-122-139 = $grass
-142-159 = $grass
-162-179 = $grass
-182-199 = $grass
-202-219 = $grass
-222-239 = $grass
-242-259 = $grass
-262-279 = $grass
-282-299 = $grass
-302-319 = $grass
-322-339 = $grass
-342-359 = $grass
-362-379 = $grass
+$P = groundL:-2.8, portalDir:S, ceilingL:3.0, topT:Bricks
 
-// Mountain 1
-22 = $pillarsTopBottom1
-23 = $pillarsTopBottom2
-42 = $pillarsTopBottom2
-24 = $pillarsTopBottom3
-43 = $pillarsTopBottom3
-62 = $pillarsTopBottom3
-25 = $pillarsTopBottom4
-26 = $pillarsTopBottom5
-44 = $pillarsTopBottom4
-45 = $pillarsTopBottom5
-63 = $pillarsTopBottom5
-82 = $pillarsTopBottom5
-5 = $tallPillar
-61 = $tallPillar
+$# = $pillar, $noRoof,
+$. = $noRoof, $grass
 
-// Entrance mountain
-226 = $tower, groundL:5.0,
-227 = $tower, groundL:5.9, $topTower, ceilingL: 10.0
-
-
-
-
-// Stairs down
-248 = groundL:-0.3,
-249 = groundL:-0.8,
-250 = groundL:-0.3,
-
-268 = groundL:-1.0,
-269 = groundL:-1.1,
-270 = groundL:-1.0,
-
-288 = groundL:-1.7,
-289 = groundL:-1.74,
-290 = groundL:-0.7,
-
-308 = groundL:-2.6,
-309 = groundL:-2.7,
-310 = groundL:-0.9,
-
-329 = groundL:-2.8, portalDir:S, ceilingL:3.0, topT:Bricks
-
-
-//331 = portalDir:E
-//333 = portalDir:S
-//335 = portalDir:W
-
+// .  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
+//  --------------------------------------------------------------
+    | #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  # | // 20
+    | #  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  # | // 19
+    | #  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  # | // 18
+    | #  .  .  .  .  .  .  .  P  .  .  .  .  .  .  .  .  .  .  # | // 17
+    | #  .  .  .  .  .  .  s7 s7 s4 .  .  .  .  .  .  .  .  .  # | // 16
+    | #  .  .  .  .  .  .  s6 s6 s2 .  .  .  .  .  .  .  .  .  # | // 15
+    | #  .  .  .  .  .  .  s5 s5 s5 .  .  .  .  .  .  .  .  .  # | // 14
+    | #  .  .  .  .  .  .  s1 s3 s1 .  .  .  .  .  .  .  .  .  # | // 13
+    | #  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  # | // 12
+    | #  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  # | // 11
+    | #  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  # | // 10
+    | #  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  # | // 9 
+    | #  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  # | // 8 
+    | #  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  # | // 7 
+    | #  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  # | // 6 
+    | #  p5 .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  # | // 5 
+    | pt p3 p5 .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  # | // 4 
+    | #  p2 p3 p4 p5 .  .  .  .  .  .  .  .  .  .  .  .  .  .  # | // 3 
+    | #  p1 p2 p3 p4 p5 .  .  .  .  .  .  .  .  .  .  .  .  .  # | // 2 
+    | #  #  #  #  pt #  #  #  #  #  #  #  #  #  #  #  #  #  #  # | // 1 
+//  --------------------------------------------------------------

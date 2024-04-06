@@ -7,34 +7,39 @@ use crate::world::portal::{DummyPortal, PortalDirection, PortalID};
 use crate::world::textures::TextureID;
 use crate::world::{Tile, TilePosition};
 
+use super::error::RowError;
 use super::{
     error::{DimensionError, PresetError, SegmentParseError, TileError},
     Settings,
 };
 
 #[derive(Debug)]
-pub(super) struct SegmentDataParser<'a> {
+pub(super) struct SegmentParser<'a> {
+    dimensions: (u64, u64),
     data: &'a str,
     settings: &'a Settings,
 
     preset_map: HashMap<String, TilePreset>,
     texture_map: &'a HashMap<String, TextureID>,
     tiles: Vec<TilePreset>,
+    processed_tiles: usize,
 }
 
-impl<'a> SegmentDataParser<'a> {
+impl<'a> SegmentParser<'a> {
     pub(super) fn new(
         data: &'a str,
         settings: &'a Settings,
         texture_map: &'a HashMap<String, TextureID>,
     ) -> Self {
         Self {
+            dimensions: (0, 0),
             data,
             settings,
 
             preset_map: HashMap::new(),
             texture_map,
             tiles: Vec::new(),
+            processed_tiles: 0
         }
     }
     pub(super) fn parse(mut self) -> Result<((u64, u64), Vec<Tile>), SegmentParseError> {
@@ -53,6 +58,7 @@ impl<'a> SegmentDataParser<'a> {
             },
             None => return Err(SegmentParseError::Invalid),
         };
+        self.dimensions = dimensions;
         self.tiles = vec![TilePreset::default(); (dimensions.0 * dimensions.1) as usize];
 
         for (i, line) in lines {
@@ -64,9 +70,9 @@ impl<'a> SegmentDataParser<'a> {
                     }
                     Err(e) => return Err(SegmentParseError::PresetErr(e, i)),
                 },
-                k if k.is_ascii_digit() => {
-                    if let Err(e) = self.parse_tile_def(line) {
-                        return Err(SegmentParseError::TileErr(e, i));
+                '|' => {
+                    if let Err(e) = self.parse_segment_row(line) {
+                        return Err(SegmentParseError::RowErr(e, i));
                     }
                 }
                 _ => return Err(SegmentParseError::UnknownKey(key.to_string(), i)),
@@ -126,7 +132,7 @@ impl<'a> SegmentDataParser<'a> {
                 top_level,
                 portal,
                 // TODO this is temporary hard-coded
-                voxel_model,
+                voxel_model: None,
             };
 
             tiles.push(t);
@@ -170,66 +176,28 @@ impl<'a> SegmentDataParser<'a> {
         Ok((identifier.to_owned(), preset))
     }
 
-    fn parse_tile_def(&mut self, line: &str) -> Result<(), TileError> {
-        // Split the line and check for formatting errors
-        let split: Vec<&str> = line.split('=').collect();
-        if split.len() != 2 {
-            return Err(TileError::InvalidFormat(line.to_owned()));
+    fn parse_segment_row(&mut self, line: &str) -> Result<(), RowError> {
+        let filtered = line.replace('|', "");
+        let tiles = filtered.split_whitespace();
+        if self.processed_tiles as u64 >= self.dimensions.1 {
+            return Err(RowError::SufficientRow)
         }
-        let index_str = split[0].trim();
-        let expressions_str = split[1].trim();
-
-        let index = Self::parse_index(index_str)?;
-        let new_tile = self.parse_tile_expressions(expressions_str)?;
-
-        for i in index {
-            if let Some(tile) = self.tiles.get_mut(i) {
-                tile.overwrite_with(&new_tile)
-            } else {
-                return Err(TileError::IndexOutOfRange(
-                    index_str.to_owned(),
-                    self.tiles.len(),
-                ));
-            }
+        if tiles.clone().count() as u64 != self.dimensions.0 {
+            return Err(RowError::RowLengthNotMatchingDimension(tiles.count() as u64, self.dimensions.0))
         }
+
+        for (i, tile) in tiles.enumerate() {
+            let tile = match self.preset_map.get(tile) {
+                Some(t) => t,
+                None => return Err(RowError::TilePresetNonExistent(tile.to_owned())),
+            };
+            let index = (self.dimensions.1 as usize - self.processed_tiles - 1) * self.dimensions.0 as usize + i;
+            let old_tile = self.tiles.get_mut(index).unwrap();
+            old_tile.overwrite_with(tile);
+        }
+        self.processed_tiles += 1;
 
         Ok(())
-    }
-
-    fn parse_index(index: &str) -> Result<RangeInclusive<usize>, TileError> {
-        let split: Vec<&str> = index.split('-').collect();
-        match split[..] {
-            // If the index is only one number
-            [i_str] => match i_str.trim().parse::<usize>() {
-                Ok(i) => {
-                    if i == 0 {
-                        return Err(TileError::IndexIsZero(index.to_owned()));
-                    }
-                    Ok((i - 1)..=(i - 1))
-                }
-                Err(_) => Err(TileError::IndexUsizeParseFail(i_str.to_string())),
-            },
-            // If index is an inclusive range
-            [from_str, to_str] => {
-                let from = match from_str.trim().parse::<usize>() {
-                    Ok(i) => i,
-                    Err(_) => {
-                        return Err(TileError::IndexUsizeParseFail(from_str.to_string()))
-                    }
-                };
-                let to = match to_str.trim().parse::<usize>() {
-                    Ok(i) => i,
-                    Err(_) => {
-                        return Err(TileError::IndexUsizeParseFail(to_str.to_string()))
-                    }
-                };
-                if from > to || from == 0 {
-                    return Err(TileError::InvalidIndexRange(index.to_owned(), from, to));
-                }
-                Ok((from - 1)..=(to - 1))
-            }
-            _ => Err(TileError::InvalidIndexFormat(index.to_owned())),
-        }
     }
 
     fn parse_tile_expressions(&self, expressions: &str) -> Result<TilePreset, TileError> {

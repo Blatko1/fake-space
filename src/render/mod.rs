@@ -220,7 +220,9 @@ where
         let mut column_drawer = ColumnDrawer::new(ray, player, world);
         let encountered_objects = column_drawer.draw(column);
 
-        object::draw_objects(encountered_objects, camera, column);
+        if !encountered_objects.is_empty() {
+            object::draw_objects(encountered_objects, camera, column);
+        }
     })
 }
 

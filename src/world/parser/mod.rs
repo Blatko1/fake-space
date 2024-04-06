@@ -2,7 +2,8 @@
 mod tests;
 
 pub mod error;
-mod segment_parser;
+//mod segment_parser;
+mod segment;
 
 use std::path::PathBuf;
 
@@ -13,7 +14,7 @@ use super::textures::TextureID;
 use super::{SkyboxTextureIDs, TextureData};
 
 use self::error::{ParseError, SegmentError, SettingError, TextureError};
-use self::segment_parser::SegmentDataParser;
+use self::segment::SegmentParser;
 
 use super::{Segment, SegmentID, World};
 
@@ -120,7 +121,7 @@ impl WorldParser {
                 "src" => {
                     let full_path = self.dir_path.join(value);
                     let data = std::fs::read_to_string(full_path.clone())?;
-                    let parsed = match SegmentDataParser::new(
+                    let parsed = match SegmentParser::new(
                         &data,
                         &self.settings,
                         &self.texture_map,

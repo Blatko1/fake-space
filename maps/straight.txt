@@ -11,24 +11,21 @@ $ground = groundL:0, bottomL:-1, groundT:Carpet
 $ceiling = ceilingL:5, topL:20, ceilingT:DropCeiling, topT:DropCeiling
 $wall = groundL:7, ceilingL:8, bottomT:Wallpaper
 $windowWall = groundL:1.8, ceilingL:2.45, bottomT:BlueBrick
+$. = $ground, $ceiling
+$# = $., $wall
+$w = $., $windowWall
+
 $portalTile = ceilingL:3, topL:11
-$NPortal = portalDir:N, $portalTile
-$SPortal = portalDir:S, $portalTile
-$EPortal = portalDir:E, $portalTile
-$WPortal = portalDir:W, $portalTile
-$fall = bottomL:-100, groundL:-99
+$N = $., portalDir:N, $portalTile
+$S = $., portalDir:S, $portalTile
 
-// Modifying the tiles
-// Add surrounding pillars
-1-21 = $ground, $ceiling
-1-4 = $wall
-6 = $wall
-7 = $windowWall
-9-10 = $windowWall
-12-13 = $windowWall
-15 = $windowWall
-16 = $wall
-18-21 = $wall
-
-5 = $NPortal
-17 = $SPortal
+// .  1 2 3
+//  ---------
+    | # # # | // 7
+    | # S # | // 6
+    | w . w | // 5
+    | w . w | // 4
+    | w . w | // 3
+    | # N # | // 2
+    | # # # | // 1
+//  ---------
