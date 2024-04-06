@@ -60,18 +60,18 @@ pub struct Camera {
     pub(super) f_half_width: f32,
 
     // Variables for controlling and moving the scene.
-    turn_left: f32,
-    turn_right: f32,
-    strafe_left: f32,
-    strafe_right: f32,
-    increase_fov: f32,
-    decrease_fov: f32,
-    increase_y_shearing: f32,
-    decrease_y_shearing: f32,
-    fly_up: f32,
-    fly_down: f32,
-    forward: f32,
-    backward: f32,
+    pub(super) turn_left: f32,
+    pub(super) turn_right: f32,
+    pub(super) strafe_left: f32,
+    pub(super) strafe_right: f32,
+    pub(super) increase_fov: f32,
+    pub(super) decrease_fov: f32,
+    pub(super) increase_y_shearing: f32,
+    pub(super) decrease_y_shearing: f32,
+    pub(super) fly_up: f32,
+    pub(super) fly_down: f32,
+    pub(super) forward: f32,
+    pub(super) backward: f32,
 }
 
 impl Camera {
@@ -215,44 +215,6 @@ impl Camera {
                 self.yaw_angle -= delta.0 as f32 * ONE_DEGREE_RAD * MOUSE_ROTATION_SPEED;
             }
             _ => (),
-        }
-    }
-
-    pub fn process_keyboard_input(&mut self, event: KeyEvent) {
-        let value = match event.state {
-            ElementState::Pressed => 1.0,
-            ElementState::Released => 0.0,
-        };
-        if let PhysicalKey::Code(key) = event.physical_key {
-            match key {
-                // Turn left:
-                KeyCode::KeyQ => self.turn_left = value,
-                // Turn right:
-                KeyCode::KeyE => self.turn_right = value,
-                // Move forward:
-                KeyCode::KeyW => self.forward = value,
-                // Move backward:
-                KeyCode::KeyS => self.backward = value,
-                // Strafe left:
-                KeyCode::KeyA => self.strafe_left = value,
-                // Strafe right:
-                KeyCode::KeyD => self.strafe_right = value,
-                // Increase FOV:
-                KeyCode::ArrowUp => self.increase_fov = value,
-                // Increase FOV:
-                KeyCode::ArrowDown => self.decrease_fov = value,
-                // Look more up (y_shearing):
-                KeyCode::PageUp => self.increase_y_shearing = value,
-                // Look more down (y_shearing):
-                KeyCode::PageDown => self.decrease_y_shearing = value,
-                // Reset look (y_shearing):
-                KeyCode::Home => self.y_shearing = 0.0,
-                // Reset look (y_shearing):
-                KeyCode::Space => self.fly_up = value,
-                // Reset look (y_shearing):
-                KeyCode::ShiftLeft => self.fly_down = value,
-                _ => (),
-            }
         }
     }
 

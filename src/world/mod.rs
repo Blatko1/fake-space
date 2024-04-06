@@ -2,10 +2,12 @@ mod parser;
 pub mod portal;
 pub mod textures;
 
+use glam::Vec3;
 use rand::{rngs::ThreadRng, seq::SliceRandom};
 use std::path::PathBuf;
 
 use crate::player::render::PointXZ;
+use crate::player::CylinderBoundingBox;
 use crate::voxel::{VoxelModelDataRef, VoxelModelID, VoxelModelManager};
 use crate::world::portal::{DummyPortal, Portal, PortalID};
 use parser::{error::ParseError, WorldParser};
