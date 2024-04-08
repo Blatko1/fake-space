@@ -143,6 +143,8 @@ impl<'a> ColumnDrawer<'a> {
                     }
                     None => break,
                 };
+                self.ray.portal_teleport(src_portal, dest_portal);
+
                 self.current_room = dest_room;
                 next_tile = match self.current_room.segment.get_tile(
                     dest_portal.position.x as i64,
@@ -151,7 +153,6 @@ impl<'a> ColumnDrawer<'a> {
                     Some(&t) => t,
                     None => break,
                 };
-                self.ray.portal_teleport(src_portal, dest_portal);
             }
 
             if let Some(model_id) = next_tile.voxel_model {

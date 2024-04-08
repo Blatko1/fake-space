@@ -1,12 +1,21 @@
 use crate::backend::gfx::Gfx;
 use crate::backend::Canvas;
-use crate::state::State;
+use crate::player::PlayerDebugData;
+use crate::world::WorldDebugData;
 use wgpu::RenderPass;
 use wgpu_text::glyph_brush::ab_glyph::FontVec;
 use wgpu_text::glyph_brush::{
     BuiltInLineBreaker, Extra, Layout, OwnedSection, Section, Text, VerticalAlign,
 };
 use wgpu_text::{BrushBuilder, BrushError, TextBrush};
+
+pub struct DebugData {
+    pub current_fps: i32,
+    pub avg_fps_time: f64,
+
+    pub player_data: PlayerDebugData,
+    pub world_data: WorldDebugData,
+}
 
 pub struct Dbg {
     screen_position: (f32, f32),
@@ -33,37 +42,43 @@ impl Dbg {
         }
     }
 
-    pub fn update(&mut self, state: &State, avg_fps_time: f64, fps: i32) {
-        let world = state.world();
-        let player = state.player();
-        let camera = player.camera();
-        let position = camera.origin();
-        let direction = camera.direction();
-        let angle = camera.yaw_angle().to_degrees();
-
-        self.content = Section::default()
-            .with_text(vec![Text::new(&format!(
+    pub fn update(&mut self, data: DebugData) {
+        let mut data_str = format!(
                 "FPS: {}\n\
                     Average frame time: {:.2} ms\n\
                     Position: x: {:.3}, y: {:.3}, z: {:.3}\n\
-                    Direction: Vec3[{:.3}, {:.3}, {:.3}]\n\
+                    Direction: Vec3({:.3}, {:.3}, {:.3})\n\
                     Angle: {:.2} degrees\n\
+                    Y-shearing: {}\n\
                     RoomID: {}\n\
-                    Room count: {}",
-                fps,
-                avg_fps_time,
-                position.x,
-                position.y,
-                position.z,
-                direction.x,
-                direction.y,
-                direction.z,
-                angle,
-                player.current_room_id().0,
-                world.room_count()
-            ))
-            .with_scale(30.0)
-            .with_color([0.9, 0.2, 0.3, 1.0])])
+                    Room count: {}\n\n\
+                    Physics switch: {}",
+                    data.current_fps,
+                data.avg_fps_time,
+                data.player_data.camera_origin.x,
+                data.player_data.camera_origin.y,
+                data.player_data.camera_origin.z,
+                data.player_data.camera_direction.x,
+                data.player_data.camera_direction.y,
+                data.player_data.camera_direction.z,
+                data.player_data.camera_angle,
+                data.player_data.y_shearing,
+                data.player_data.current_room_id,
+                data.world_data.room_count,
+                data.player_data.physics_switch);
+        if data.player_data.physics_switch {
+            data_str = format!("{}\n\
+            \x20  | Player on ground: {}\n\
+            \x20  | Velocity: \n\
+            \x20     | x: {:.4}\n\
+            \x20     | y: {:.4}\n\
+            \x20     | z: {:.4}\n", data_str, !data.player_data.is_in_air, 
+            data.player_data.velocity.x, data.player_data.velocity.y, data.player_data.velocity.z)
+        }
+        self.content = Section::default()
+            .with_text(vec![Text::new(&data_str)
+            .with_scale(40.0)
+            .with_color([1.0, 1.0, 0.9, 1.0])])
             .with_screen_position(self.screen_position)
             .with_layout(
                 Layout::default()

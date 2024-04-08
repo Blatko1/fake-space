@@ -8,6 +8,7 @@ mod player;
 mod state;
 mod voxel;
 mod world;
+mod control;
 
 use std::fs;
 use std::sync::Arc;
@@ -16,10 +17,11 @@ use std::time::{Duration, Instant};
 use crate::dbg::Dbg;
 use crate::world::World;
 use backend::Canvas;
+use glam::Vec2;
 use pollster::block_on;
 use state::State;
 use wgpu_text::glyph_brush::ab_glyph::FontVec;
-use winit::event::KeyEvent;
+use winit::event::{DeviceEvent, KeyEvent};
 use winit::keyboard::{Key, NamedKey};
 use winit::{
     event::{Event, WindowEvent},
@@ -43,7 +45,7 @@ fn main() {
 
     let mut canvas = block_on(Canvas::init(winit_window.clone(), 240 * 1, 135 * 1));
     // TODO change/fix this
-    let font_data = fs::read("res/DejaVuSans.ttf").unwrap();
+    let font_data = fs::read("res/Minecraft.ttf").unwrap();
     let font = FontVec::try_from_vec(font_data).unwrap();
     let mut dbg = Dbg::new(canvas.gfx(), font);
 
@@ -97,7 +99,9 @@ fn main() {
                     }
                     WindowEvent::RedrawRequested => {
                         state.update(frame_time);
-                        dbg.update(&state, 1000.0 / current_fps as f64, current_fps);
+
+                        let dbg_data = state.collect_dbg_data(1000.0 / current_fps as f64, current_fps);
+                        dbg.update(dbg_data);
 
                         // TODO check result instead of unwrap
                         dbg.queue_data(canvas.gfx()).unwrap();
@@ -119,7 +123,15 @@ fn main() {
                     }
                     _ => (),
                 },
-                Event::DeviceEvent { event, .. } => state.process_mouse_input(event),
+                Event::DeviceEvent { event, .. } => {
+                    match event {
+                        DeviceEvent::MouseMotion { delta } => {
+                            let delta = Vec2::new(delta.0 as f32, delta.1 as f32);
+                            state.on_mouse_move(event)
+                        }
+                        _ => (),
+                    }
+                },
                 Event::LoopExiting => println!("Exited!"),
                 _ => (),
             }

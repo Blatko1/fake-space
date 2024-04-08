@@ -4,19 +4,19 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-wgpu = "0.19.1"
-winit = "0.29.10"
-wgpu_text = "0.8.6"
+wgpu = "0.19.3"
+winit = "0.29.15"
+wgpu_text = "0.8.7"
 
 pollster = "0.3.0"
-bytemuck = { version = "1.14.3", features = [ "derive" ] }
-glam = "0.25.0"
-image = "0.24.8"
+bytemuck = { version = "1.15.0", features = [ "derive" ] }
+glam = "0.27.0"
+image = "0.25.1"
 hashbrown = "0.14.3"
 rand = "0.8.5"
 
-log = "0.4.20"
-env_logger = "0.11.2"
+log = "0.4.21"
+env_logger = "0.11.3"
 
 [profile.flamegraph]
 inherits = "release"

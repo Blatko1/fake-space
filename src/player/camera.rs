@@ -1,9 +1,8 @@
 use std::f32::consts::{PI, TAU};
 
 use crate::world::portal::{Portal, PortalRotationDifference};
-use glam::Vec3;
-use winit::event::{DeviceEvent, ElementState, KeyEvent};
-use winit::keyboard::{KeyCode, PhysicalKey};
+use glam::{Vec2, Vec3};
+use winit::event::DeviceEvent;
 
 const MOVEMENT_SPEED: f32 = 4.0;
 const ROTATION_SPEED: f32 = 1.8;
@@ -166,12 +165,11 @@ impl Camera {
             self.dir.x * (self.forward - self.backward) * MOVEMENT_SPEED * frame_time;
         self.origin.z +=
             self.dir.z * (self.forward - self.backward) * MOVEMENT_SPEED * frame_time;
-        let horizontal_plane_norm = self.horizontal_plane.normalize();
-        self.origin.x += horizontal_plane_norm.x
+        self.origin.x += self.dir.z
             * (self.strafe_right - self.strafe_left)
             * MOVEMENT_SPEED
             * frame_time;
-        self.origin.z += horizontal_plane_norm.z
+        self.origin.z += -self.dir.x
             * (self.strafe_right - self.strafe_left)
             * MOVEMENT_SPEED
             * frame_time;
@@ -207,31 +205,9 @@ impl Camera {
         self.update(0.0);
     }
 
-    pub fn process_mouse_input(&mut self, event: DeviceEvent) {
-        match event {
-            DeviceEvent::MouseMotion { delta } => {
-                self.y_shearing += delta.1 as f32 * Y_SHEARING_SENSITIVITY;
-
-                self.yaw_angle -= delta.0 as f32 * ONE_DEGREE_RAD * MOUSE_ROTATION_SPEED;
-            }
-            _ => (),
-        }
-    }
-
-    pub fn origin(&self) -> Vec3 {
-        self.origin
-    }
-
-    pub fn direction(&self) -> Vec3 {
-        self.dir
-    }
-
-    pub fn yaw_angle(&self) -> f32 {
-        self.yaw_angle
-    }
-
-    pub fn y_shearing(&self) -> f32 {
-        self.y_shearing
+    pub fn on_mouse_move(&mut self, delta: Vec2) {
+        self.y_shearing += delta.1 * Y_SHEARING_SENSITIVITY;
+        self.yaw_angle -= delta.0 * ONE_DEGREE_RAD * MOUSE_ROTATION_SPEED;
     }
 }
 

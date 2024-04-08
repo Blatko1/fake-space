@@ -1,8 +1,7 @@
 use crate::{
-    backend::Canvas,
-    player::{camera::Camera, Player},
-    world::{RoomID, World},
+    backend::Canvas, dbg::DebugData, player::{camera::Camera, Player}, world::{RoomID, World}
 };
+use glam::Vec2;
 use winit::event::DeviceEvent;
 use winit::event::KeyEvent;
 
@@ -47,8 +46,21 @@ impl State {
     }
 
     #[inline]
-    pub fn process_mouse_input(&mut self, event: DeviceEvent) {
-        self.player.process_mouse_input(event);
+    pub fn on_mouse_move(&mut self, delta: Vec2) {
+        self.player.on_mouse_move(delta);
+    }
+
+    pub fn collect_dbg_data(&self, avg_fps_time: f64, current_fps: i32) -> DebugData {
+        let player_dbg_data = self.player.collect_dbg_data();
+        let world_dbg_data = self.world.collect_dbg_data();
+
+        DebugData {
+            current_fps,
+            avg_fps_time,
+            
+            player_data: player_dbg_data,
+            world_data: world_dbg_data
+        }
     }
 
     pub fn player(&self) -> &Player {

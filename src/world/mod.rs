@@ -7,7 +7,6 @@ use rand::{rngs::ThreadRng, seq::SliceRandom};
 use std::path::PathBuf;
 
 use crate::player::render::PointXZ;
-use crate::player::CylinderBoundingBox;
 use crate::voxel::{VoxelModelDataRef, VoxelModelID, VoxelModelManager};
 use crate::world::portal::{DummyPortal, Portal, PortalID};
 use parser::{error::ParseError, WorldParser};
@@ -149,10 +148,6 @@ impl World {
         }
     }
 
-    pub fn room_count(&self) -> usize {
-        self.rooms.len()
-    }
-
     pub fn get_texture(&self, id: TextureID) -> TextureDataRef {
         self.texture_manager.get_texture_data(id)
     }
@@ -170,6 +165,12 @@ impl World {
 
     pub fn get_voxel_model(&self, id: VoxelModelID) -> VoxelModelDataRef {
         self.voxel_model_manager.get_model(id)
+    }
+
+    pub fn collect_dbg_data(&self) -> WorldDebugData {
+        WorldDebugData {
+            room_count: self.rooms.len() as u64,
+        }
     }
 }
 
@@ -344,4 +345,9 @@ pub struct SkyboxTexturesRef<'a> {
     pub west: TextureDataRef<'a>,
     pub top: TextureDataRef<'a>,
     pub bottom: TextureDataRef<'a>,
+}
+
+#[derive(Debug)]
+pub struct WorldDebugData {
+    pub room_count: u64
 }
