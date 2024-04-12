@@ -1,7 +1,6 @@
 pub mod camera;
-pub mod render;
 mod physics;
-mod controller;
+pub mod render;
 
 use glam::{Vec2, Vec3};
 use winit::{
@@ -9,9 +8,12 @@ use winit::{
     keyboard::{KeyCode, PhysicalKey},
 };
 
-use crate::world::{RoomID, Segment, World};
+use crate::{
+    control::GameInput,
+    world::{RoomID, Segment, World},
+};
 
-use self::{camera::Camera, controller::Controller, physics::CylinderBody};
+use self::{camera::Camera, physics::CylinderBody};
 
 const FLY_STRENGTH: f32 = 5.5;
 const MOVEMENT_SPEED: f32 = 1.0;
@@ -21,78 +23,43 @@ const MAX_WALK_HEIGHT_OFFSET: f32 = 0.5;
 pub struct Player {
     camera: Camera,
 
-    physics_switch: bool,
     body: CylinderBody,
 
     current_room: RoomID,
     in_portal: bool,
 
-    /// Physics controls:
-    jump: bool,
-    forward: bool,
-    backward: bool,
-    strafe_left: bool,
-    strafe_right: bool,
-
-    controller: Controller
+    input_state: PlayerInputState,
 }
 
 impl Player {
     pub fn new(camera: Camera, current_room: RoomID) -> Self {
-        // TODO currently hard-coded
-        // TODO must be radius < 0.5
-        let body = CylinderBody::new(0.2, 1.8, 0.9, -2.0, 20.0);
-        let bb = CylinderBoundingBox {
-            radius: 0.2,
-            height: 1.8,
-            eye_height: 0.9 * 1.8,
-        };
+        let body = CylinderBody::new(0.2, 1.8, 0.9, 
+            1.0, 3.5, 3.0, 
+            -2.0, 2.0, 0.0);
+
         Self {
             camera,
 
-            physics_switch: false,
             body,
 
             current_room,
             in_portal: false,
 
-            jump: false,
-            forward: false,
-            backward: false,
-            strafe_left: false,
-            strafe_right: false,
-
-            controller: Controller::new()
+            input_state: PlayerInputState::default(),
         }
     }
 
-    pub fn update(&mut self, world: &World, frame_time: f32) {
-        self.camera.update(frame_time);
+    pub fn update(&mut self, world: &World, delta: f32) {
+        let room = world.get_room_data(self.current_room);
 
-        let room = world.get_room_data(self.current_room);
-        if self.physics_switch {
-            if self.jump && !self.on_ground {
-                self.velocity.y = JUMP_VELOCITY;
-            }
-            if self.forward {
-                self.velocity.x += self.camera.dir.x * frame_time * MOVEMENT_SPEED;
-                self.velocity.z += self.camera.dir.z * frame_time * MOVEMENT_SPEED;
-            }
-            if self.backward {
-                self.velocity.x -= self.camera.dir.x * frame_time * MOVEMENT_SPEED;
-                self.velocity.z -= self.camera.dir.z * frame_time * MOVEMENT_SPEED;
-            }
-            if self.strafe_right {
-                self.velocity.x += self.camera.dir.z * frame_time * MOVEMENT_SPEED;
-                self.velocity.z += -self.camera.dir.x * frame_time * MOVEMENT_SPEED;
-            }
-            if self.strafe_left {
-                self.velocity.x += -self.camera.dir.z * frame_time * MOVEMENT_SPEED;
-                self.velocity.z += self.camera.dir.x * frame_time * MOVEMENT_SPEED;
-            }
-            self.process_physics(world, frame_time);
-        }
-        let room = world.get_room_data(self.current_room);
+        self.camera.update(&self.input_state, delta);
+        self.body.move_with_camera(
+            &mut self.camera,
+            room.segment,
+            &self.input_state,
+            delta,
+        );
+
         // Teleportation between rooms
         let position = self.camera.origin;
         // Check if player is on a tile
@@ -118,7 +85,7 @@ impl Player {
         }
     }
 
-    fn process_physics(&mut self, world: &World, frame_time: f32) {
+    /*fn process_physics(&mut self, world: &World, frame_time: f32) {
         let mut bb_pos = self.camera.origin;
         bb_pos.y = self.camera.origin.y - self.bb.eye_height;
 
@@ -364,7 +331,7 @@ impl Player {
         // Apply the new position
         self.camera.origin = bb_pos;
         self.camera.origin.y += self.bb.eye_height;
-    }
+    }*/
 
     pub fn cast_and_draw<'a, C>(&self, world: &World, column_iter: C)
     where
@@ -386,96 +353,26 @@ impl Player {
         self.camera.on_mouse_move(delta)
     }
 
-    #[inline]
-    pub fn process_keyboard_input(&mut self, event: KeyEvent) {
-        match event.physical_key {
-            PhysicalKey::Code(KeyCode::KeyP) if !event.state.is_pressed() => {
-                self.physics_switch = !self.physics_switch;
-                self.camera.forward = 0.0;
-                self.camera.backward = 0.0;
-                self.camera.strafe_left = 0.0;
-                self.camera.strafe_right = 0.0;
-                self.jump = false;
-                self.forward = false;
-                self.backward = false;
-                self.strafe_left = false;
-                self.strafe_right = false;
+    pub fn process_input(&mut self, input: GameInput, is_pressed: bool) {
+        match input {
+            GameInput::MoveForward => self.input_state.forward = is_pressed,
+            GameInput::MoveBackward => self.input_state.backward = is_pressed,
+            GameInput::StrafeLeft => self.input_state.left = is_pressed,
+            GameInput::StrafeRight => self.input_state.right = is_pressed,
+            GameInput::IncreaseFOV => self.input_state.increase_fov = is_pressed,
+            GameInput::DecreaseFOV => self.input_state.decrease_fov = is_pressed,
+            GameInput::PhysicsSwitch if !is_pressed => {
+                self.body.toggle_physics();
             }
+            GameInput::Jump => self.input_state.jump = is_pressed,
+            GameInput::FlyUp => self.input_state.fly_up = is_pressed,
+            GameInput::FlyDown => self.input_state.fly_down = is_pressed,
+            // the rest is not interpretable by player
             _ => (),
         }
-
-        let value = match event.state {
-            ElementState::Pressed => 1.0,
-            ElementState::Released => 0.0,
-        };
-        if !self.physics_switch {
-            if let PhysicalKey::Code(key) = event.physical_key {
-                match key {
-                    KeyCode::KeyQ => self.camera.turn_left = value,
-                    KeyCode::KeyE => self.camera.turn_right = value,
-                    KeyCode::KeyW => self.camera.forward = value,
-                    KeyCode::KeyS => self.camera.backward = value,
-                    KeyCode::Space => self.camera.fly_up = value,
-                    KeyCode::ShiftLeft => self.camera.fly_down = value,
-                    KeyCode::KeyA => self.camera.strafe_left = value,
-                    KeyCode::KeyD => self.camera.strafe_right = value,
-                    KeyCode::ArrowUp => self.camera.increase_fov = value,
-                    KeyCode::ArrowDown => self.camera.decrease_fov = value,
-                    // Look more up (y_shearing):
-                    KeyCode::PageUp => self.camera.increase_y_shearing = value,
-                    // Look more down (y_shearing):
-                    KeyCode::PageDown => self.camera.decrease_y_shearing = value,
-                    // Reset look (y_shearing):
-                    KeyCode::Home => self.camera.y_shearing = 0.0,
-                    _ => (),
-                }
-            }
-        } else {
-            let is_pressed = event.state.is_pressed();
-            if let PhysicalKey::Code(key) = event.physical_key {
-                match key {
-                    KeyCode::KeyW => self.forward = is_pressed,
-                    KeyCode::KeyS => self.backward = is_pressed,
-                    KeyCode::KeyA => self.strafe_left = is_pressed,
-                    KeyCode::KeyD => self.strafe_right = is_pressed,
-                    KeyCode::Space => self.jump = is_pressed,
-                    KeyCode::ArrowUp => self.camera.increase_fov = value,
-                    KeyCode::ArrowDown => self.camera.decrease_fov = value,
-                    // Look more up (y_shearing):
-                    KeyCode::PageUp => self.camera.increase_y_shearing = value,
-                    // Look more down (y_shearing):
-                    KeyCode::PageDown => self.camera.decrease_y_shearing = value,
-                    // Reset look (y_shearing):
-                    KeyCode::Home => self.camera.y_shearing = 0.0,
-                    _ => (),
-                }
-            }
-        }
     }
 
-    pub fn process_keyboard_input(&mut self, event: KeyEvent) {
-        let is_pressed = event.state.is_pressed();
-        if let PhysicalKey::Code(key) = event.physical_key {
-            match key {
-                KeyCode::KeyW => self.pressed_forward = is_pressed,
-                KeyCode::KeyS => self.pressed_backward = is_pressed,
-                KeyCode::KeyA => self.pressed_strafe_left = is_pressed,
-                KeyCode::KeyD => self.pressed_strafe_right = is_pressed,
-                KeyCode::Space => self.pressed_jump = is_pressed,
-                KeyCode::ArrowUp => self.pressed_increase_fov = is_pressed,
-                KeyCode::ArrowDown => self.pressed_decrease_fov = is_pressed,
-                // Look more up (y_shearing):
-                KeyCode::PageUp => self.camera.increase_y_shearing = value,
-                // Look more down (y_shearing):
-                KeyCode::PageDown => self.camera.decrease_y_shearing = value,
-                // Reset look (y_shearing):
-                KeyCode::Home => self.camera.y_shearing = 0.0,
-                _ => (),
-            }
-        }
-    }
-
-    pub fn collect_dbg_data(&self) -> PlayerDebugData {
+    /*pub fn collect_dbg_data(&self) -> PlayerDebugData {
         PlayerDebugData {
             camera_origin: self.camera.origin,
             camera_direction: self.camera.dir,
@@ -488,7 +385,7 @@ impl Player {
 
             current_room_id: self.current_room.0,
         }
-    }
+    }*/
 }
 
 enum TileSide {
@@ -496,13 +393,6 @@ enum TileSide {
     Right,
     Front,
     Back,
-}
-
-/// Player bounding box which is a cylinder
-pub struct CylinderBoundingBox {
-    radius: f32,
-    height: f32,
-    eye_height: f32,
 }
 
 #[derive(Debug)]
@@ -517,4 +407,36 @@ pub struct PlayerDebugData {
     pub velocity: Vec3,
 
     pub current_room_id: usize,
+}
+
+#[derive(Debug, Default)]
+pub struct PlayerInputState {
+    pub jump: bool,
+    pub fly_up: bool,
+    pub fly_down: bool,
+    pub forward: bool,
+    pub backward: bool,
+    pub left: bool,
+    pub right: bool,
+    pub increase_fov: bool,
+    pub decrease_fov: bool,
+}
+
+impl PlayerInputState {
+    pub fn move_direction(&self) -> Vec2 {
+        let x = if self.left { -1.0 } else { 0.0 } + if self.right { 1.0 } else { 0.0 };
+        let z =
+            if self.forward { 1.0 } else { 0.0 } + if self.backward { -1.0 } else { 0.0 };
+        Vec2::new(x, z).try_normalize().unwrap_or_default()
+    }
+
+    pub fn fly_direction(&self) -> f32 {
+        return if self.fly_up { 1.0 } else { 0.0 }
+            - if self.fly_down { 1.0 } else { 0.0 };
+    }
+
+    pub fn fov_change(&self) -> f32 {
+        return if self.increase_fov { 1.0 } else { 0.0 }
+            + if self.decrease_fov { -1.0 } else { 0.0 };
+    }
 }

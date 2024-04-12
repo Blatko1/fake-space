@@ -2,11 +2,11 @@ use std::f32::consts::{PI, TAU};
 
 use crate::world::portal::{Portal, PortalRotationDifference};
 use glam::{Vec2, Vec3};
-use winit::event::DeviceEvent;
 
-const MOVEMENT_SPEED: f32 = 4.0;
+use super::PlayerInputState;
+
 const ROTATION_SPEED: f32 = 1.8;
-const FLY_UP_DOWN_SPEED: f32 = 6.0;
+const FLY_SPEED: f32 = 6.0;
 const ONE_DEGREE_RAD: f32 = PI / 180.0;
 const FOV_CHANGE_SPEED: f32 = ONE_DEGREE_RAD * 50.0;
 const MAX_FOV_RAD: f32 = 119.0 * ONE_DEGREE_RAD;
@@ -31,7 +31,8 @@ pub struct Camera {
     /// Direction of the raycaster. Raycaster game engines can't make the player
     /// look up the 'normal' way and instead uses y-shearing.
     /// y-coord is always 0.
-    pub(super) dir: Vec3,
+    pub(super) forward_dir: Vec3,
+    pub(super) right_dir: Vec3,
     /// Raycaster (camera) horizontal plane.
     /// y-coord is always 0.
     pub(super) horizontal_plane: Vec3,
@@ -57,20 +58,6 @@ pub struct Camera {
     pub(super) height_recip: f32,
     pub(super) f_half_height: f32,
     pub(super) f_half_width: f32,
-
-    // Variables for controlling and moving the scene.
-    pub(super) turn_left: f32,
-    pub(super) turn_right: f32,
-    pub(super) strafe_left: f32,
-    pub(super) strafe_right: f32,
-    pub(super) increase_fov: f32,
-    pub(super) decrease_fov: f32,
-    pub(super) increase_y_shearing: f32,
-    pub(super) decrease_y_shearing: f32,
-    pub(super) fly_up: f32,
-    pub(super) fly_down: f32,
-    pub(super) forward: f32,
-    pub(super) backward: f32,
 }
 
 impl Camera {
@@ -93,17 +80,18 @@ impl Camera {
         let view_aspect = f_width / f_height;
 
         let origin = Vec3::new(pos_x, pos_y, pos_z);
-        let dir = Vec3::new(yaw_angle.cos(), 0.0, yaw_angle.sin());
+        let forward_dir = Vec3::new(yaw_angle.cos(), 0.0, yaw_angle.sin());
 
         let vertical_plane = DEFAULT_PLANE_V / plane_dist;
         let horizontal_plane =
-            Vec3::cross(DEFAULT_PLANE_V, dir) * view_aspect / plane_dist;
+            Vec3::cross(DEFAULT_PLANE_V, forward_dir) * view_aspect / plane_dist;
 
         Self {
             fov,
             plane_dist,
             origin,
-            dir,
+            forward_dir,
+            right_dir: Vec3::new(forward_dir.z, forward_dir.y, -forward_dir.x),
             horizontal_plane,
             vertical_plane,
             yaw_angle,
@@ -118,62 +106,21 @@ impl Camera {
             height_recip: f_height.recip(),
             f_half_height: view_height as f32 * 0.5,
             f_half_width: view_width as f32 * 0.5,
-
-            turn_left: 0.0,
-            turn_right: 0.0,
-            strafe_left: 0.0,
-            strafe_right: 0.0,
-            increase_fov: 0.0,
-            decrease_fov: 0.0,
-            increase_y_shearing: 0.0,
-            decrease_y_shearing: 0.0,
-            fly_up: 0.0,
-            fly_down: 0.0,
-            forward: 0.0,
-            backward: 0.0,
         }
     }
 
-    pub fn update(&mut self, frame_time: f32) {
-        // Change FOV and vertical FOV
-        self.fov = (self.fov
-            + (self.increase_fov - self.decrease_fov) * FOV_CHANGE_SPEED * frame_time)
+    pub fn update(&mut self, input_state: &PlayerInputState, delta: f32) {
+        // Changing FOV
+        let fov_change = input_state.fov_change();
+        self.fov = (self.fov + fov_change * FOV_CHANGE_SPEED * delta)
             .clamp(ONE_DEGREE_RAD, MAX_FOV_RAD);
+
+        // Reposition camera planes
         self.plane_dist = 1.0 / f32::tan(self.fov * 0.5);
-
-        // Change y_shearing (look up/down)
-        self.y_shearing = (self.y_shearing
-            + (self.decrease_y_shearing - self.increase_y_shearing)
-                * Y_SHEARING_SPEED
-                * frame_time)
-            .clamp(-self.f_height, self.f_height);
-
-        // Update rotation and direction
-        self.yaw_angle = normalize_rad(
-            self.yaw_angle
-                + (self.turn_left - self.turn_right) * ROTATION_SPEED * frame_time,
-        );
-        self.dir = Vec3::new(self.yaw_angle.cos(), 0.0, self.yaw_angle.sin());
-
-        // Rotate camera planes
         self.vertical_plane = DEFAULT_PLANE_V / self.plane_dist;
-        self.horizontal_plane =
-            Vec3::cross(DEFAULT_PLANE_V, self.dir) * self.view_aspect / self.plane_dist;
-
-        // Update origin position
-        self.origin.x +=
-            self.dir.x * (self.forward - self.backward) * MOVEMENT_SPEED * frame_time;
-        self.origin.z +=
-            self.dir.z * (self.forward - self.backward) * MOVEMENT_SPEED * frame_time;
-        self.origin.x += self.dir.z
-            * (self.strafe_right - self.strafe_left)
-            * MOVEMENT_SPEED
-            * frame_time;
-        self.origin.z += -self.dir.x
-            * (self.strafe_right - self.strafe_left)
-            * MOVEMENT_SPEED
-            * frame_time;
-        self.origin.y += (self.fly_up - self.fly_down) * FLY_UP_DOWN_SPEED * frame_time;
+        self.horizontal_plane = Vec3::cross(DEFAULT_PLANE_V, self.forward_dir)
+            * self.view_aspect
+            / self.plane_dist;
     }
 
     pub fn portal_teleport(&mut self, src: Portal, dest: Portal) {
@@ -202,12 +149,20 @@ impl Camera {
             }
         }
         self.origin = Vec3::new(x, y, z);
-        self.update(0.0);
+
+        //self.update(0.0);
+        panic!()
     }
 
     pub fn on_mouse_move(&mut self, delta: Vec2) {
-        self.y_shearing += delta.1 * Y_SHEARING_SENSITIVITY;
-        self.yaw_angle -= delta.0 * ONE_DEGREE_RAD * MOUSE_ROTATION_SPEED;
+        self.y_shearing = (self.y_shearing + delta.y * Y_SHEARING_SENSITIVITY)
+            .clamp(-self.f_height, self.f_height);
+        self.yaw_angle = normalize_rad(
+            self.yaw_angle - delta.x * ONE_DEGREE_RAD * MOUSE_ROTATION_SPEED,
+        );
+        self.forward_dir = Vec3::new(self.yaw_angle.cos(), 0.0, self.yaw_angle.sin());
+        self.right_dir =
+            Vec3::new(self.forward_dir.z, self.forward_dir.y, -self.forward_dir.x);
     }
 }
 

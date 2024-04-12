@@ -56,7 +56,7 @@ pub struct Ray {
 impl Ray {
     pub fn cast_with_camera(column_index: usize, cam: &Camera) -> Self {
         let origin = cam.origin;
-        let camera_dir = cam.dir;
+        let camera_dir = cam.forward_dir;
         let horizontal_plane = cam.horizontal_plane;
 
         // X-coordinate on the horizontal camera plane (range [-1.0, 1.0])

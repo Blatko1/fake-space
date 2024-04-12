@@ -1,13 +1,15 @@
 use crate::{
-    backend::Canvas, dbg::DebugData, player::{camera::Camera, Player}, world::{RoomID, World}
+    backend::Canvas, control::ControllerSettings, dbg::DebugData, player::{camera::Camera, Player}, world::{RoomID, World}
 };
 use glam::Vec2;
-use winit::event::DeviceEvent;
+use winit::{event::DeviceEvent, keyboard::PhysicalKey};
 use winit::event::KeyEvent;
 
 pub struct State {
     world: World,
     player: Player,
+
+    controls: ControllerSettings
 }
 
 impl State {
@@ -25,6 +27,8 @@ impl State {
         Self {
             world,
             player: Player::new(camera, RoomID(0)),
+
+            controls: ControllerSettings::init()
         }
     }
 
@@ -42,7 +46,15 @@ impl State {
 
     #[inline]
     pub fn process_keyboard_input(&mut self, event: KeyEvent) {
-        self.player.process_keyboard_input(event);
+        match event.physical_key {
+            PhysicalKey::Code(key) => if let Some(game_input) = self.controls.get_input_binding(&key) {
+                let is_pressed = event.state.is_pressed();
+                for input in game_input.iter() {
+                    self.player.process_input(*input, is_pressed)
+                }
+            },
+            _ => ()
+        }
     }
 
     #[inline]
@@ -50,7 +62,7 @@ impl State {
         self.player.on_mouse_move(delta);
     }
 
-    pub fn collect_dbg_data(&self, avg_fps_time: f64, current_fps: i32) -> DebugData {
+    /*pub fn collect_dbg_data(&self, avg_fps_time: f64, current_fps: i32) -> DebugData {
         let player_dbg_data = self.player.collect_dbg_data();
         let world_dbg_data = self.world.collect_dbg_data();
 
@@ -61,13 +73,5 @@ impl State {
             player_data: player_dbg_data,
             world_data: world_dbg_data
         }
-    }
-
-    pub fn player(&self) -> &Player {
-        &self.player
-    }
-
-    pub fn world(&self) -> &World {
-        &self.world
-    }
+    }*/
 }

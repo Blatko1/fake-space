@@ -349,5 +349,5 @@ pub struct SkyboxTexturesRef<'a> {
 
 #[derive(Debug)]
 pub struct WorldDebugData {
-    pub room_count: u64
+    pub room_count: u64,
 }

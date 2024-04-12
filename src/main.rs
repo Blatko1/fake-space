@@ -100,8 +100,8 @@ fn main() {
                     WindowEvent::RedrawRequested => {
                         state.update(frame_time);
 
-                        let dbg_data = state.collect_dbg_data(1000.0 / current_fps as f64, current_fps);
-                        dbg.update(dbg_data);
+                        //let dbg_data = state.collect_dbg_data(1000.0 / current_fps as f64, current_fps);
+                        //dbg.update(dbg_data);
 
                         // TODO check result instead of unwrap
                         dbg.queue_data(canvas.gfx()).unwrap();
@@ -127,7 +127,7 @@ fn main() {
                     match event {
                         DeviceEvent::MouseMotion { delta } => {
                             let delta = Vec2::new(delta.0 as f32, delta.1 as f32);
-                            state.on_mouse_move(event)
+                            state.on_mouse_move(delta)
                         }
                         _ => (),
                     }
