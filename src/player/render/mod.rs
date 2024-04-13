@@ -131,6 +131,23 @@ impl<'a> ColumnDrawer<'a> {
                 Some(&t) => t,
                 None => break,
             };
+            // Draw bottom wall
+            let bottom_wall_data = WallDrawData {
+                texture_data: self.world.get_texture(next_tile.bottom_wall_tex),
+                bottom_wall_level: next_tile.bottom_level,
+                top_wall_level: next_tile.ground_level,
+            };
+            let (_, drawn_to) = self.draw_wall(bottom_wall_data, column);
+            self.bottom_draw_bound = drawn_to;
+
+            // Draw top wall
+            let top_wall_data = WallDrawData {
+                texture_data: self.world.get_texture(next_tile.top_wall_tex),
+                bottom_wall_level: next_tile.ceiling_level,
+                top_wall_level: next_tile.top_level,
+            };
+            let (drawn_from, _) = self.draw_wall(top_wall_data, column);
+            self.top_draw_bound = drawn_from;
 
             // Switch to the different room if portal is hit
             if let Some(src_dummy_portal) = next_tile.portal {
@@ -175,24 +192,6 @@ impl<'a> ColumnDrawer<'a> {
                     top_draw_bound: self.top_draw_bound,
                 });
             }
-
-            // Draw bottom wall
-            let bottom_wall_data = WallDrawData {
-                texture_data: self.world.get_texture(next_tile.bottom_wall_tex),
-                bottom_wall_level: next_tile.bottom_level,
-                top_wall_level: next_tile.ground_level,
-            };
-            let (_, drawn_to) = self.draw_wall(bottom_wall_data, column);
-            self.bottom_draw_bound = drawn_to;
-
-            // Draw top wall
-            let top_wall_data = WallDrawData {
-                texture_data: self.world.get_texture(next_tile.top_wall_tex),
-                bottom_wall_level: next_tile.ceiling_level,
-                top_wall_level: next_tile.top_level,
-            };
-            let (drawn_from, _) = self.draw_wall(top_wall_data, column);
-            self.top_draw_bound = drawn_from;
 
             self.ray.previous_wall_dist = self.ray.wall_dist;
         }

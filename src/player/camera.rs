@@ -1,19 +1,15 @@
-use std::f32::consts::{PI, TAU};
-
-use crate::world::portal::{Portal, PortalRotationDifference};
 use glam::{Vec2, Vec3};
+use std::f32::consts::{PI, TAU};
 
 use super::PlayerInputState;
 
-const ROTATION_SPEED: f32 = 1.8;
-const FLY_SPEED: f32 = 6.0;
 const ONE_DEGREE_RAD: f32 = PI / 180.0;
 const FOV_CHANGE_SPEED: f32 = ONE_DEGREE_RAD * 50.0;
 const MAX_FOV_RAD: f32 = 119.0 * ONE_DEGREE_RAD;
-const Y_SHEARING_SPEED: f32 = 200.0;
 pub(super) const DEFAULT_PLANE_V: Vec3 = Vec3::new(0.0, 0.5, 0.0);
 const Y_SHEARING_SENSITIVITY: f32 = 0.8;
-const MOUSE_ROTATION_SPEED: f32 = 0.08;
+const MOUSE_DRAG_SPEED: f32 = 0.08;
+const YAW_CHANGE_FACTOR: f32 = ONE_DEGREE_RAD * MOUSE_DRAG_SPEED;
 
 #[derive(Debug)]
 /// Draws the player view on the screen framebuffer.
@@ -123,46 +119,25 @@ impl Camera {
             / self.plane_dist;
     }
 
-    pub fn portal_teleport(&mut self, src: Portal, dest: Portal) {
-        let x;
-        let y = self.origin.y + dest.ground_level - src.ground_level;
-        let z;
-        match src.direction.rotation_difference(dest.direction) {
-            PortalRotationDifference::None => {
-                x = dest.position.x as f32 + self.origin.x.fract();
-                z = dest.position.z as f32 + self.origin.z.fract();
-            }
-            PortalRotationDifference::ClockwiseDeg90 => {
-                self.yaw_angle -= PI * 0.5;
-                x = dest.center.x - (src.center.z - self.origin.z);
-                z = dest.center.z + (src.center.x - self.origin.x);
-            }
-            PortalRotationDifference::AnticlockwiseDeg90 => {
-                self.yaw_angle += PI * 0.5;
-                x = dest.center.x + (src.center.z - self.origin.z);
-                z = dest.center.z - (src.center.x - self.origin.x);
-            }
-            PortalRotationDifference::Deg180 => {
-                self.yaw_angle += PI;
-                x = dest.center.x + (src.center.x) - self.origin.x;
-                z = dest.center.z + (src.center.z) - self.origin.z;
-            }
-        }
-        self.origin = Vec3::new(x, y, z);
-
-        //self.update(0.0);
-        panic!()
-    }
-
     pub fn on_mouse_move(&mut self, delta: Vec2) {
         self.y_shearing = (self.y_shearing + delta.y * Y_SHEARING_SENSITIVITY)
             .clamp(-self.f_height, self.f_height);
-        self.yaw_angle = normalize_rad(
-            self.yaw_angle - delta.x * ONE_DEGREE_RAD * MOUSE_ROTATION_SPEED,
-        );
+
+        self.add_yaw_angle(-delta.x * YAW_CHANGE_FACTOR);
+    }
+
+    pub fn set_yaw(&mut self, yaw_angle_rad: f32) {
+        self.yaw_angle = normalize_rad(yaw_angle_rad);
         self.forward_dir = Vec3::new(self.yaw_angle.cos(), 0.0, self.yaw_angle.sin());
         self.right_dir =
             Vec3::new(self.forward_dir.z, self.forward_dir.y, -self.forward_dir.x);
+        self.horizontal_plane = Vec3::cross(DEFAULT_PLANE_V, self.forward_dir)
+            * self.view_aspect
+            / self.plane_dist;
+    }
+
+    pub fn add_yaw_angle(&mut self, rad: f32) {
+        self.set_yaw(self.yaw_angle + rad);
     }
 }
 

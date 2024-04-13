@@ -4,7 +4,7 @@ use winit::keyboard::KeyCode;
 
 pub struct ControllerSettings {
     keybindings: HashMap<GameInput, KeyCode>,
-    inverse_keybindings: HashMap<KeyCode, HashSet<GameInput>>
+    inverse_keybindings: HashMap<KeyCode, HashSet<GameInput>>,
 }
 
 impl ControllerSettings {
@@ -27,7 +27,7 @@ impl ControllerSettings {
             GameInput::FlyDown => KeyCode::ShiftLeft,
             GameInput::IncreaseFOV => KeyCode::ArrowDown,
             GameInput::DecreaseFOV => KeyCode::ArrowUp,
-            GameInput::PhysicsSwitch => KeyCode::Equal
+            GameInput::PhysicsSwitch => KeyCode::Equal,
         }
     }
 }
@@ -41,7 +41,10 @@ impl Default for ControllerSettings {
         for input in GameInput::iter() {
             let default_binding = Self::default_binding(input);
             new.keybindings.insert(input, default_binding);
-            new.inverse_keybindings.entry(default_binding).or_default().insert(input);
+            new.inverse_keybindings
+                .entry(default_binding)
+                .or_default()
+                .insert(input);
         }
 
         new
@@ -59,6 +62,5 @@ pub enum GameInput {
     FlyDown,
     IncreaseFOV,
     DecreaseFOV,
-    PhysicsSwitch
+    PhysicsSwitch,
 }
-

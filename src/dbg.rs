@@ -44,7 +44,7 @@ impl Dbg {
 
     pub fn update(&mut self, data: DebugData) {
         let mut data_str = format!(
-                "FPS: {}\n\
+            "FPS: {}\n\
                     Average frame time: {:.2} ms\n\
                     Position: x: {:.3}, y: {:.3}, z: {:.3}\n\
                     Direction: Vec3({:.3}, {:.3}, {:.3})\n\
@@ -52,33 +52,38 @@ impl Dbg {
                     Y-shearing: {}\n\
                     RoomID: {}\n\
                     Room count: {}\n\n\
-                    Physics switch: {}",
-                    data.current_fps,
-                data.avg_fps_time,
-                data.player_data.camera_origin.x,
-                data.player_data.camera_origin.y,
-                data.player_data.camera_origin.z,
-                data.player_data.camera_direction.x,
-                data.player_data.camera_direction.y,
-                data.player_data.camera_direction.z,
-                data.player_data.camera_angle,
-                data.player_data.y_shearing,
-                data.player_data.current_room_id,
-                data.world_data.room_count,
-                data.player_data.physics_switch);
-        if data.player_data.physics_switch {
-            data_str = format!("{}\n\
+                    Can fly: {}",
+            data.current_fps,
+            data.avg_fps_time,
+            data.player_data.camera_origin.x,
+            data.player_data.camera_origin.y,
+            data.player_data.camera_origin.z,
+            data.player_data.camera_direction.x,
+            data.player_data.camera_direction.y,
+            data.player_data.camera_direction.z,
+            data.player_data.camera_angle,
+            data.player_data.y_shearing,
+            data.player_data.current_room_id,
+            data.world_data.room_count,
+            data.player_data.can_fly
+        );
+        if !data.player_data.can_fly {
+            data_str = format!(
+                "{}\n\
             \x20  | Player on ground: {}\n\
             \x20  | Velocity: \n\
             \x20     | x: {:.4}\n\
-            \x20     | y: {:.4}\n\
-            \x20     | z: {:.4}\n", data_str, !data.player_data.is_in_air, 
-            data.player_data.velocity.x, data.player_data.velocity.y, data.player_data.velocity.z)
+            \x20     | z: {:.4}\n",
+                data_str,
+                !data.player_data.is_in_air,
+                data.player_data.velocity.x,
+                data.player_data.velocity.y
+            )
         }
         self.content = Section::default()
             .with_text(vec![Text::new(&data_str)
-            .with_scale(40.0)
-            .with_color([1.0, 1.0, 0.9, 1.0])])
+                .with_scale(40.0)
+                .with_color([1.0, 1.0, 0.9, 1.0])])
             .with_screen_position(self.screen_position)
             .with_layout(
                 Layout::default()

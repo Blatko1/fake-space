@@ -1,3 +1,7 @@
+use std::f32::consts::PI;
+
+use glam::Vec3;
+
 use crate::{
     player::render::PointXZ,
     world::{RoomID, TilePosition},
@@ -20,6 +24,37 @@ pub struct Portal {
     pub center: PointXZ<f32>,
     pub ground_level: f32,
     pub link: Option<(RoomID, PortalID)>,
+}
+
+impl Portal {
+    pub fn teleport_to(&self, mut origin: Vec3, dest: Portal) -> (Vec3, f32) {
+        let mut yaw_angle_difference = 0.0;
+        let offset_x = self.center.x - origin.x;
+        let offset_z = self.center.z - origin.z;
+        origin.y += dest.ground_level - self.ground_level;
+        match self.direction.rotation_difference(dest.direction) {
+            PortalRotationDifference::None => {
+                origin.x = dest.position.x as f32 + origin.x.fract();
+                origin.z = dest.position.z as f32 + origin.z.fract();
+            }
+            PortalRotationDifference::ClockwiseDeg90 => {
+                yaw_angle_difference = -PI * 0.5;
+                origin.x = dest.center.x - offset_z;
+                origin.z = dest.center.z + offset_x;
+            }
+            PortalRotationDifference::AnticlockwiseDeg90 => {
+                yaw_angle_difference = PI * 0.5;
+                origin.x = dest.center.x + offset_z;
+                origin.z = dest.center.z - offset_x;
+            }
+            PortalRotationDifference::Deg180 => {
+                yaw_angle_difference = PI;
+                origin.x = dest.center.x + offset_x;
+                origin.z = dest.center.z + offset_z;
+            }
+        }
+        (origin, yaw_angle_difference)
+    }
 }
 
 #[derive(Debug, Clone, Copy)]

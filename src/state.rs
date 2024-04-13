@@ -1,15 +1,16 @@
 use crate::{
-    backend::Canvas, control::ControllerSettings, dbg::DebugData, player::{camera::Camera, Player}, world::{RoomID, World}
+    backend::Canvas,
+    control::GameInput,
+    dbg::DebugData,
+    player::{camera::Camera, Player},
+    world::{RoomID, World},
 };
 use glam::Vec2;
-use winit::{event::DeviceEvent, keyboard::PhysicalKey};
-use winit::event::KeyEvent;
+use hashbrown::HashSet;
 
 pub struct State {
     world: World,
     player: Player,
-
-    controls: ControllerSettings
 }
 
 impl State {
@@ -27,8 +28,6 @@ impl State {
         Self {
             world,
             player: Player::new(camera, RoomID(0)),
-
-            controls: ControllerSettings::init()
         }
     }
 
@@ -45,15 +44,13 @@ impl State {
     }
 
     #[inline]
-    pub fn process_keyboard_input(&mut self, event: KeyEvent) {
-        match event.physical_key {
-            PhysicalKey::Code(key) => if let Some(game_input) = self.controls.get_input_binding(&key) {
-                let is_pressed = event.state.is_pressed();
-                for input in game_input.iter() {
-                    self.player.process_input(*input, is_pressed)
-                }
-            },
-            _ => ()
+    pub fn process_game_input(
+        &mut self,
+        game_input: &HashSet<GameInput>,
+        is_pressed: bool,
+    ) {
+        for input in game_input.iter() {
+            self.player.process_input(*input, is_pressed)
         }
     }
 
@@ -62,16 +59,16 @@ impl State {
         self.player.on_mouse_move(delta);
     }
 
-    /*pub fn collect_dbg_data(&self, avg_fps_time: f64, current_fps: i32) -> DebugData {
+    pub fn collect_dbg_data(&self, avg_fps_time: f64, current_fps: i32) -> DebugData {
         let player_dbg_data = self.player.collect_dbg_data();
         let world_dbg_data = self.world.collect_dbg_data();
 
         DebugData {
             current_fps,
             avg_fps_time,
-            
+
             player_data: player_dbg_data,
-            world_data: world_dbg_data
+            world_data: world_dbg_data,
         }
-    }*/
+    }
 }
