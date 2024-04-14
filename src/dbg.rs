@@ -43,46 +43,41 @@ impl Dbg {
     }
 
     pub fn update(&mut self, data: DebugData) {
-        let mut data_str = format!(
+        let player = data.player_data;
+        let data_str = format!(
             "FPS: {}\n\
-                    Average frame time: {:.2} ms\n\
-                    Position: x: {:.3}, y: {:.3}, z: {:.3}\n\
-                    Direction: Vec3({:.3}, {:.3}, {:.3})\n\
-                    Angle: {:.2} degrees\n\
-                    Y-shearing: {}\n\
-                    RoomID: {}\n\
-                    Room count: {}\n\n\
-                    Can fly: {}",
+            Average frame time: {:.2} ms\n\
+            Position: x: {:.2}, y: {:.2}, z: {:.2}\n\
+            Direction: Vec3({:.2}, {:.2}, {:.2})\n\
+            Angle: {:.2} degrees\n\
+            Y-shearing: {}\n\
+            Room: {} of {} total\n\
+            Fly: {}, Ghost: {}\n\
+            On ground: {}\n\
+            Velocity: x: {:.2}, z: {:.2}\n\
+            Air velocity: {:.2}",
             data.current_fps,
             data.avg_fps_time,
-            data.player_data.camera_origin.x,
-            data.player_data.camera_origin.y,
-            data.player_data.camera_origin.z,
-            data.player_data.camera_direction.x,
-            data.player_data.camera_direction.y,
-            data.player_data.camera_direction.z,
-            data.player_data.camera_angle,
-            data.player_data.y_shearing,
-            data.player_data.current_room_id,
-            data.world_data.room_count,
-            data.player_data.can_fly
+            player.eye_pos.x,
+            player.eye_pos.y,
+            player.eye_pos.z,
+            player.forward_dir.x,
+            player.forward_dir.y,
+            player.forward_dir.z,
+            player.yaw_angle,
+            player.y_shearing,
+            player.current_room_id,
+            data.world_data.room_count - 1,
+            player.physics_state.can_fly,
+            player.physics_state.is_ghost,
+            player.physics_state.is_grounded,
+            player.physics_state.movement_velocity.x,
+            player.physics_state.movement_velocity.y,
+            player.physics_state.air_velocity
         );
-        if !data.player_data.can_fly {
-            data_str = format!(
-                "{}\n\
-            \x20  | Player on ground: {}\n\
-            \x20  | Velocity: \n\
-            \x20     | x: {:.4}\n\
-            \x20     | z: {:.4}\n",
-                data_str,
-                !data.player_data.is_in_air,
-                data.player_data.velocity.x,
-                data.player_data.velocity.y
-            )
-        }
         self.content = Section::default()
             .with_text(vec![Text::new(&data_str)
-                .with_scale(40.0)
+                .with_scale(35.0)
                 .with_color([1.0, 1.0, 0.9, 1.0])])
             .with_screen_position(self.screen_position)
             .with_layout(

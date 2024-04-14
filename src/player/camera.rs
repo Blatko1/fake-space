@@ -17,7 +17,7 @@ const YAW_CHANGE_FACTOR: f32 = ONE_DEGREE_RAD * MOUSE_DRAG_SPEED;
 /// z-axis forwards and x-axis to the right.
 pub struct Camera {
     /// Field of view in radians.
-    fov: f32,
+    pub(super) fov: f32,
     /// Distance from the raycaster position to the camera plane.
     pub(super) plane_dist: f32,
     /// Position of the raycaster. Whole number represents the tile and

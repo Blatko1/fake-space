@@ -9,7 +9,10 @@ use crate::{
     world::{RoomID, World},
 };
 
-use self::{camera::Camera, physics::CylinderBody};
+use self::{
+    camera::Camera,
+    physics::{CylinderBody, PhysicsStateDebugData},
+};
 
 pub struct Player {
     camera: Camera,
@@ -17,7 +20,6 @@ pub struct Player {
     body: CylinderBody,
 
     current_room: RoomID,
-    in_portal: bool,
 
     input_state: PlayerInputState,
 }
@@ -32,7 +34,6 @@ impl Player {
             body,
 
             current_room,
-            in_portal: false,
 
             input_state: PlayerInputState::default(),
         }
@@ -58,31 +59,21 @@ impl Player {
         {
             // Check if tile has a portal
             if let Some(src_dummy_portal) = tile.portal {
-                // Check if player has just teleported
-                if !self.in_portal {
-                    // Check if portal has a linked portal
-                    let src_portal = room.get_portal(src_dummy_portal.id);
-                    if let Some((room_id, portal_id)) = src_portal.link {
-                        // Teleport the player
-                        self.in_portal = true;
-                        self.current_room = room_id;
-                        let dest_room = world.get_room_data(room_id);
-                        let dest_portal = dest_room.get_portal(portal_id);
-                        room = dest_room;
+                // Check if portal has a linked portal
+                let src_portal = room.get_portal(src_dummy_portal.id);
+                if let Some((room_id, portal_id)) = src_portal.link {
+                    // Teleport the player
+                    self.current_room = room_id;
+                    let dest_room = world.get_room_data(room_id);
+                    let dest_portal = dest_room.get_portal(portal_id);
+                    room = dest_room;
 
-                        let (new_origin, yaw_angle_difference) =
-                            src_portal.teleport_to(self.camera.origin, dest_portal);
-                        println!(
-                            "teleported from: {:?} to: {:?}",
-                            src_portal.direction, dest_portal.direction
-                        );
-                        self.camera.origin = new_origin;
-                        self.camera.add_yaw_angle(yaw_angle_difference);
-                        self.body.rotate_velocity(yaw_angle_difference);
-                    }
+                    let (new_origin, yaw_angle_difference) =
+                        src_portal.teleport_to(self.camera.origin, dest_portal);
+                    self.camera.origin = new_origin;
+                    self.camera.add_yaw_angle(yaw_angle_difference);
+                    self.body.rotate_velocity(yaw_angle_difference);
                 }
-            } else {
-                self.in_portal = false;
             }
         }
         let new_origin = self
@@ -133,32 +124,26 @@ impl Player {
 
     pub fn collect_dbg_data(&self) -> PlayerDebugData {
         PlayerDebugData {
-            camera_origin: self.camera.origin,
-            camera_direction: self.camera.forward_dir,
-            camera_angle: self.camera.yaw_angle.to_degrees(),
+            eye_pos: self.camera.origin,
+            forward_dir: self.camera.forward_dir,
+            yaw_angle: self.camera.yaw_angle.to_degrees(),
             y_shearing: self.camera.y_shearing,
-
-            is_in_air: self.body.is_grounded,
-            can_fly: self.body.can_fly,
-            velocity: self.body.movement_velocity,
-
+            fov: self.camera.fov,
             current_room_id: self.current_room.0,
+            physics_state: self.body.collect_dbg_data(),
         }
     }
 }
 
 #[derive(Debug)]
 pub struct PlayerDebugData {
-    pub camera_origin: Vec3,
-    pub camera_direction: Vec3,
-    pub camera_angle: f32,
+    pub eye_pos: Vec3,
+    pub forward_dir: Vec3,
+    pub yaw_angle: f32,
     pub y_shearing: f32,
-
-    pub is_in_air: bool,
-    pub can_fly: bool,
-    pub velocity: Vec2,
-
+    pub fov: f32,
     pub current_room_id: usize,
+    pub physics_state: PhysicsStateDebugData,
 }
 
 #[derive(Debug, Default)]

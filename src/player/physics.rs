@@ -10,15 +10,14 @@ const TILE_COLLISION_OFFSET: f32 = 0.4;
 const ACCELERATION_CONST: f32 = 10.0;
 const SLOWDOWN_CONST: f32 = 10.0;
 
-// TODO pub(super) are TEMP!!!!
 pub struct CylinderBody {
-    pub(super) radius: f32,
+    radius: f32,
     height: f32,
     eye_height: f32,
 
     is_ghost: bool,
-    pub(super) can_fly: bool,
-    pub(super) movement_velocity: Vec2,
+    can_fly: bool,
+    movement_velocity: Vec2,
     air_velocity: f32,
     movement_accel: f32,
     max_movement_vel: f32,
@@ -27,7 +26,7 @@ pub struct CylinderBody {
     jump_velocity: f32,
     slowdown_friction: f32,
     friction: f32,
-    pub(super) is_grounded: bool,
+    is_grounded: bool,
 }
 
 impl CylinderBody {
@@ -90,7 +89,8 @@ impl CylinderBody {
             if (feet_position.x + self.radius) > (pos_x as f32 + 1.0) {
                 if let Some(tile) = segment.get_tile(pos_x + 1, pos_z) {
                     if (tile.ground_level - TILE_COLLISION_OFFSET) > feet_position.y
-                        || tile.ceiling_level < (feet_position.y + self.height)
+                        || (tile.ceiling_level + TILE_COLLISION_OFFSET)
+                            < (feet_position.y + self.height)
                     {
                         feet_position.x = (pos_x as f32 + 1.0) - self.radius;
                         self.movement_velocity.x = 0.0;
@@ -103,7 +103,8 @@ impl CylinderBody {
             } else if (feet_position.x - self.radius) < pos_x as f32 {
                 if let Some(tile) = segment.get_tile(pos_x - 1, pos_z) {
                     if (tile.ground_level - TILE_COLLISION_OFFSET) > feet_position.y
-                        || tile.ceiling_level < (feet_position.y + self.height)
+                        || (tile.ceiling_level + TILE_COLLISION_OFFSET)
+                            < (feet_position.y + self.height)
                     {
                         feet_position.x = pos_x as f32 + self.radius;
                         self.movement_velocity.x = 0.0;
@@ -120,7 +121,8 @@ impl CylinderBody {
             if (feet_position.z + self.radius) > (pos_z as f32 + 1.0) {
                 if let Some(tile) = segment.get_tile(pos_x, pos_z + 1) {
                     if (tile.ground_level - TILE_COLLISION_OFFSET) > feet_position.y
-                        || tile.ceiling_level < (feet_position.y + self.height)
+                        || (tile.ceiling_level + TILE_COLLISION_OFFSET)
+                            < (feet_position.y + self.height)
                     {
                         feet_position.z = (pos_z as f32 + 1.0) - self.radius;
                         self.movement_velocity.y = 0.0;
@@ -133,7 +135,8 @@ impl CylinderBody {
             } else if (feet_position.z - self.radius) < pos_z as f32 {
                 if let Some(tile) = segment.get_tile(pos_x, pos_z - 1) {
                     if (tile.ground_level - TILE_COLLISION_OFFSET) > feet_position.y
-                        || tile.ceiling_level < (feet_position.y + self.height)
+                        || (tile.ceiling_level + TILE_COLLISION_OFFSET)
+                            < (feet_position.y + self.height)
                     {
                         feet_position.z = pos_z as f32 + self.radius;
                         self.movement_velocity.y = 0.0;
@@ -149,11 +152,10 @@ impl CylinderBody {
         if let (Some(v), Some(h)) = (intersected_vertical, intersected_horizontal) {
             let offset = (v as i64, h as i64);
             let (offset_x, offset_z) = (offset.0 * 2 - 1, offset.1 * 2 - 1);
-            if let Some(adjacent_tile) =
-                segment.get_tile(pos_x + offset_x, pos_z + offset_z)
-            {
-                if (adjacent_tile.ground_level - TILE_COLLISION_OFFSET) > feet_position.y
-                    || adjacent_tile.ceiling_level < (feet_position.y + self.height)
+            if let Some(tile) = segment.get_tile(pos_x + offset_x, pos_z + offset_z) {
+                if (tile.ground_level - TILE_COLLISION_OFFSET) > feet_position.y
+                    || (tile.ceiling_level + TILE_COLLISION_OFFSET)
+                        < (feet_position.y + self.height)
                 {
                     let edge_x = (pos_x + offset.0) as f32;
                     let edge_z = (pos_z + offset.1) as f32;
@@ -166,19 +168,24 @@ impl CylinderBody {
                         feet_position.z = edge_z - offset_z as f32 * self.radius;
                         self.movement_velocity.y = 0.0;
                     }
+                } else {
+                    ground_level = ground_level.max(tile.ground_level);
+                    ceiling_level = ceiling_level.min(tile.ceiling_level);
                 }
             }
         }
 
         if feet_position.y < ground_level {
             feet_position.y = ground_level;
-
             self.air_velocity = 0.0;
         } else if (feet_position.y + self.height) > ceiling_level {
             feet_position.y = ceiling_level - self.height;
             self.air_velocity = 0.0;
         }
         self.is_grounded = feet_position.y <= ground_level;
+        if self.is_grounded {
+            self.air_velocity = 0.0;
+        }
 
         Vec3::new(
             feet_position.x,
@@ -258,6 +265,18 @@ impl CylinderBody {
     pub fn toggle_fly(&mut self) {
         self.can_fly = !self.can_fly
     }
+
+    pub fn collect_dbg_data(&self) -> PhysicsStateDebugData {
+        PhysicsStateDebugData {
+            radius: self.radius,
+            height: self.height,
+            is_ghost: self.is_ghost,
+            can_fly: self.can_fly,
+            movement_velocity: self.movement_velocity,
+            air_velocity: self.air_velocity,
+            is_grounded: self.is_grounded,
+        }
+    }
 }
 
 enum IntersectedVerticalSide {
@@ -268,4 +287,15 @@ enum IntersectedVerticalSide {
 enum IntersectedHorizontalSide {
     Bottom,
     Top,
+}
+
+#[derive(Debug)]
+pub struct PhysicsStateDebugData {
+    pub radius: f32,
+    pub height: f32,
+    pub is_ghost: bool,
+    pub can_fly: bool,
+    pub movement_velocity: Vec2,
+    pub air_velocity: f32,
+    pub is_grounded: bool,
 }
