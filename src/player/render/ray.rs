@@ -118,6 +118,24 @@ impl Ray {
         }
     }
 
+    pub fn dda_step(&mut self) {
+        if self.side_dist_x < self.side_dist_z {
+            self.wall_dist = self.side_dist_x.max(0.0);
+            self.next_tile.x += self.step_x;
+            self.side_dist_x += self.delta_dist_x;
+            self.hit_wall_side = Side::Vertical;
+            let wall_offset = self.origin.z + self.wall_dist * self.dir.z;
+            self.wall_offset = wall_offset - wall_offset.floor();
+        } else {
+            self.wall_dist = self.side_dist_z.max(0.0);
+            self.next_tile.z += self.step_z;
+            self.side_dist_z += self.delta_dist_z;
+            self.hit_wall_side = Side::Horizontal;
+            let wall_offset = self.origin.x + self.wall_dist * self.dir.x;
+            self.wall_offset = wall_offset - wall_offset.floor();
+        }
+    }
+
     pub fn portal_teleport(&mut self, src: Portal, dest: Portal) {
         self.origin.x += (dest.position.x as i64 - self.next_tile.x) as f32;
         self.origin.z += (dest.position.z as i64 - self.next_tile.z) as f32;
@@ -126,13 +144,22 @@ impl Ray {
             x: dest.position.x as i64,
             z: dest.position.z as i64,
         };
+        match self.hit_wall_side {
+            Side::Vertical => {
+                self.side_dist_x -= self.delta_dist_x;
+            }
+            Side::Horizontal => {
+                self.side_dist_z -= self.delta_dist_z;
+            }
+        }
 
         match src.direction.rotation_difference(dest.direction) {
-            PortalRotationDifference::None => (),
+            PortalRotationDifference::None => {}
             PortalRotationDifference::ClockwiseDeg90 => {
                 // Rotate 90 degrees clockwise and reposition the origin
                 let origin_x = dest.center.x - (dest.center.z - self.origin.z);
                 let origin_z = dest.center.z + (dest.center.x - self.origin.x);
+
                 self.origin.x = origin_x;
                 self.origin.z = origin_z;
                 self.dir = Vec3::new(self.dir.z, 0.0, -self.dir.x);
@@ -153,6 +180,7 @@ impl Ray {
                 // Rotate 90 degrees anticlockwise and reposition the origin
                 let origin_x = dest.center.x + (dest.center.z - self.origin.z);
                 let origin_z = dest.center.z - (dest.center.x - self.origin.x);
+
                 self.origin.x = origin_x;
                 self.origin.z = origin_z;
                 self.dir = Vec3::new(-self.dir.z, 0.0, self.dir.x);
@@ -173,6 +201,7 @@ impl Ray {
                 // Rotate 180 degrees and reposition the origin
                 self.origin.x = dest.center.x + (dest.center.x - self.origin.x);
                 self.origin.z = dest.center.z + (dest.center.z - self.origin.z);
+
                 self.dir = -self.dir;
                 self.camera_dir = -self.camera_dir;
                 self.horizontal_plane = -self.horizontal_plane;

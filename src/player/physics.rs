@@ -12,7 +12,7 @@ const SLOWDOWN_CONST: f32 = 10.0;
 
 // TODO pub(super) are TEMP!!!!
 pub struct CylinderBody {
-    radius: f32,
+    pub(super) radius: f32,
     height: f32,
     eye_height: f32,
 
@@ -43,7 +43,7 @@ impl CylinderBody {
         friction: f32,
     ) -> Self {
         assert!(
-            eye_height_factor <= 1.0 && eye_height_factor >= 0.0,
+            (0.0..=1.0).contains(&eye_height_factor),
             "Eye height not in range [0, 1]!"
         );
         Self {
@@ -146,32 +146,28 @@ impl CylinderBody {
             } else {
                 None
             };
-        match (intersected_vertical, intersected_horizontal) {
-            (Some(v), Some(h)) => {
-                let offset = (v as i64, h as i64);
-                let (offset_x, offset_z) = (offset.0 * 2 - 1, offset.1 * 2 - 1);
-                if let Some(adjacent_tile) =
-                    segment.get_tile(pos_x + offset_x, pos_z + offset_z)
+        if let (Some(v), Some(h)) = (intersected_vertical, intersected_horizontal) {
+            let offset = (v as i64, h as i64);
+            let (offset_x, offset_z) = (offset.0 * 2 - 1, offset.1 * 2 - 1);
+            if let Some(adjacent_tile) =
+                segment.get_tile(pos_x + offset_x, pos_z + offset_z)
+            {
+                if (adjacent_tile.ground_level - TILE_COLLISION_OFFSET) > feet_position.y
+                    || adjacent_tile.ceiling_level < (feet_position.y + self.height)
                 {
-                    if (adjacent_tile.ground_level - TILE_COLLISION_OFFSET)
-                        > feet_position.y
-                        || adjacent_tile.ceiling_level < (feet_position.y + self.height)
-                    {
-                        let edge_x = (pos_x + offset.0) as f32;
-                        let edge_z = (pos_z + offset.1) as f32;
-                        let dist_x = edge_x - feet_position.x;
-                        let dist_z = edge_z - feet_position.z;
-                        if dist_x.abs() > dist_z.abs() {
-                            feet_position.x = edge_x - offset_x as f32 * self.radius;
-                            self.movement_velocity.x = 0.0;
-                        } else {
-                            feet_position.z = edge_z - offset_z as f32 * self.radius;
-                            self.movement_velocity.y = 0.0;
-                        }
+                    let edge_x = (pos_x + offset.0) as f32;
+                    let edge_z = (pos_z + offset.1) as f32;
+                    let dist_x = edge_x - feet_position.x;
+                    let dist_z = edge_z - feet_position.z;
+                    if dist_x.abs() > dist_z.abs() {
+                        feet_position.x = edge_x - offset_x as f32 * self.radius;
+                        self.movement_velocity.x = 0.0;
+                    } else {
+                        feet_position.z = edge_z - offset_z as f32 * self.radius;
+                        self.movement_velocity.y = 0.0;
                     }
                 }
             }
-            _ => (),
         }
 
         if feet_position.y < ground_level {

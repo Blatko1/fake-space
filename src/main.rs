@@ -45,7 +45,7 @@ fn main() {
     let controls = ControllerSettings::init();
     let world = World::from_path("maps/world.txt").unwrap();
 
-    let mut canvas = block_on(Canvas::init(winit_window.clone(), 240 * 2, 135 * 2));
+    let mut canvas = block_on(Canvas::init(winit_window.clone(), 240 * 1, 135 * 1));
     // TODO change/fix this
     let font_data = fs::read("res/Minecraft.ttf").unwrap();
     let font = FontVec::try_from_vec(font_data).unwrap();
@@ -92,15 +92,11 @@ fn main() {
                         ..
                     } => elwt.exit(),
                     WindowEvent::KeyboardInput { event, .. } => {
-                        match event.physical_key {
-                            PhysicalKey::Code(key) => {
-                                if let Some(game_input) = controls.get_input_binding(&key)
-                                {
-                                    let is_pressed = event.state.is_pressed();
-                                    state.process_game_input(game_input, is_pressed);
-                                }
+                        if let PhysicalKey::Code(key) = event.physical_key {
+                            if let Some(game_input) = controls.get_input_binding(&key) {
+                                let is_pressed = event.state.is_pressed();
+                                state.process_game_input(game_input, is_pressed);
                             }
-                            _ => (),
                         }
                     }
                     WindowEvent::Resized(new_size) => {

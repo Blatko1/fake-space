@@ -2,10 +2,7 @@ use std::f32::consts::PI;
 
 use glam::Vec3;
 
-use crate::{
-    player::render::PointXZ,
-    world::{RoomID, TilePosition},
-};
+use crate::{player::render::PointXZ, world::RoomID};
 
 #[derive(Debug, Clone, Copy)]
 pub struct PortalID(pub usize);
@@ -20,7 +17,7 @@ pub struct DummyPortal {
 pub struct Portal {
     pub id: PortalID,
     pub direction: PortalDirection,
-    pub position: TilePosition,
+    pub position: PointXZ<u64>,
     pub center: PointXZ<f32>,
     pub ground_level: f32,
     pub link: Option<(RoomID, PortalID)>,
@@ -32,27 +29,92 @@ impl Portal {
         let offset_x = self.center.x - origin.x;
         let offset_z = self.center.z - origin.z;
         origin.y += dest.ground_level - self.ground_level;
-        match self.direction.rotation_difference(dest.direction) {
-            PortalRotationDifference::None => {
-                origin.x = dest.position.x as f32 + origin.x.fract();
-                origin.z = dest.position.z as f32 + origin.z.fract();
-            }
-            PortalRotationDifference::ClockwiseDeg90 => {
-                yaw_angle_difference = -PI * 0.5;
-                origin.x = dest.center.x - offset_z;
-                origin.z = dest.center.z + offset_x;
-            }
-            PortalRotationDifference::AnticlockwiseDeg90 => {
-                yaw_angle_difference = PI * 0.5;
-                origin.x = dest.center.x + offset_z;
-                origin.z = dest.center.z - offset_x;
-            }
-            PortalRotationDifference::Deg180 => {
-                yaw_angle_difference = PI;
-                origin.x = dest.center.x + offset_x;
-                origin.z = dest.center.z + offset_z;
-            }
-        }
+        match self.direction {
+            PortalDirection::North => match dest.direction {
+                PortalDirection::North => {
+                    yaw_angle_difference = PI;
+                    origin.x = dest.center.x + offset_x;
+                    origin.z = dest.center.z + 1.0 + offset_z;
+                }
+                PortalDirection::South => {
+                    origin.x = dest.center.x - offset_x;
+                    origin.z = dest.center.z - 1.0 - offset_z;
+                }
+                PortalDirection::East => {
+                    yaw_angle_difference = PI * 0.5;
+                    origin.x = dest.center.x + 1.0 + offset_z;
+                    origin.z = dest.center.z - offset_x;
+                }
+                PortalDirection::West => {
+                    yaw_angle_difference = -PI * 0.5;
+                    origin.x = dest.center.x - 1.0 - offset_z;
+                    origin.z = dest.center.z + offset_x;
+                }
+            },
+            PortalDirection::South => match dest.direction {
+                PortalDirection::North => {
+                    origin.x = dest.center.x - offset_x;
+                    origin.z = dest.center.z + 1.0 - offset_z;
+                }
+                PortalDirection::South => {
+                    yaw_angle_difference = PI;
+                    origin.x = dest.center.x + offset_x;
+                    origin.z = dest.center.z - 1.0 + offset_z;
+                }
+                PortalDirection::East => {
+                    yaw_angle_difference = -PI * 0.5;
+                    origin.x = dest.center.x + 1.0 - offset_z;
+                    origin.z = dest.center.z + offset_x;
+                }
+                PortalDirection::West => {
+                    yaw_angle_difference = PI * 0.5;
+                    origin.x = dest.center.x - 1.0 + offset_z;
+                    origin.z = dest.center.z - offset_x;
+                }
+            },
+            PortalDirection::East => match dest.direction {
+                PortalDirection::North => {
+                    yaw_angle_difference = -PI * 0.5;
+                    origin.x = dest.center.x - offset_z;
+                    origin.z = dest.center.z + 1.0 + offset_x;
+                }
+                PortalDirection::South => {
+                    yaw_angle_difference = PI * 0.5;
+                    origin.x = dest.center.x + offset_z;
+                    origin.z = dest.center.z - 1.0 - offset_x;
+                }
+                PortalDirection::East => {
+                    yaw_angle_difference = PI;
+                    origin.x = dest.center.x + 1.0 + offset_x;
+                    origin.z = dest.center.z + offset_z;
+                }
+                PortalDirection::West => {
+                    origin.x = dest.center.x - 1.0 - offset_x;
+                    origin.z = dest.center.z - offset_z;
+                }
+            },
+            PortalDirection::West => match dest.direction {
+                PortalDirection::North => {
+                    yaw_angle_difference = PI * 0.5;
+                    origin.x = dest.center.x + offset_z;
+                    origin.z = dest.center.z + 1.0 - offset_x;
+                }
+                PortalDirection::South => {
+                    yaw_angle_difference = -PI * 0.5;
+                    origin.x = dest.center.x - offset_z;
+                    origin.z = dest.center.z - 1.0 + offset_x;
+                }
+                PortalDirection::East => {
+                    origin.x = dest.center.x + 1.0 - offset_x;
+                    origin.z = dest.center.z - offset_z;
+                }
+                PortalDirection::West => {
+                    yaw_angle_difference = PI;
+                    origin.x = dest.center.x - 1.0 + offset_x;
+                    origin.z = dest.center.z + offset_z;
+                }
+            },
+        };
         (origin, yaw_angle_difference)
     }
 }
@@ -102,4 +164,174 @@ pub enum PortalRotationDifference {
     AnticlockwiseDeg90,
     ClockwiseDeg90,
     Deg180,
+}
+
+#[test]
+fn teleportation_test() {
+    let mut src = Portal {
+        id: PortalID(0),
+        direction: PortalDirection::North,
+        position: PointXZ::new(2, 3),
+        center: PointXZ::new(2.5, 3.5),
+        ground_level: 2.0,
+        link: None,
+    };
+    let mut dest = Portal {
+        id: PortalID(0),
+        direction: PortalDirection::North,
+        position: PointXZ::new(2, 3),
+        center: PointXZ::new(2.5, 3.5),
+        ground_level: 3.0,
+        link: None,
+    };
+    let origin = Vec3::new(2.2, 0.0, 3.8);
+    dest.direction = PortalDirection::North;
+    assert_eq!(
+        (Vec3::new(2.8, 1.0, 4.2), PI),
+        src.teleport_to(origin, dest),
+        "from: {:?}, to: {:?}",
+        src.direction,
+        dest.direction
+    );
+
+    dest.direction = PortalDirection::South;
+    assert_eq!(
+        (Vec3::new(2.2, 1.0, 2.8), 0.0),
+        src.teleport_to(origin, dest),
+        "from: {:?}, to: {:?}",
+        src.direction,
+        dest.direction
+    );
+
+    dest.direction = PortalDirection::East;
+    assert_eq!(
+        (Vec3::new(3.2, 1.0, 3.2), PI * 0.5),
+        src.teleport_to(origin, dest),
+        "from: {:?}, to: {:?}",
+        src.direction,
+        dest.direction
+    );
+
+    dest.direction = PortalDirection::West;
+    assert_eq!(
+        (Vec3::new(1.8, 1.0, 3.8), -PI * 0.5),
+        src.teleport_to(origin, dest),
+        "from: {:?}, to: {:?}",
+        src.direction,
+        dest.direction
+    );
+
+    src.direction = PortalDirection::South;
+    let origin = Vec3::new(2.4, 0.0, 3.2);
+    dest.direction = PortalDirection::North;
+    assert_eq!(
+        (Vec3::new(2.4, 1.0, 4.2), 0.0),
+        src.teleport_to(origin, dest),
+        "from: {:?}, to: {:?}",
+        src.direction,
+        dest.direction
+    );
+
+    dest.direction = PortalDirection::South;
+    assert_eq!(
+        (Vec3::new(2.6, 1.0, 2.8), PI),
+        src.teleport_to(origin, dest),
+        "from: {:?}, to: {:?}",
+        src.direction,
+        dest.direction
+    );
+
+    dest.direction = PortalDirection::East;
+    assert_eq!(
+        (Vec3::new(3.2, 1.0, 3.6), -PI * 0.5),
+        src.teleport_to(origin, dest),
+        "from: {:?}, to: {:?}",
+        src.direction,
+        dest.direction
+    );
+
+    dest.direction = PortalDirection::West;
+    assert_eq!(
+        (Vec3::new(1.8, 1.0, 3.4), PI * 0.5),
+        src.teleport_to(origin, dest),
+        "from: {:?}, to: {:?}",
+        src.direction,
+        dest.direction
+    );
+
+    src.direction = PortalDirection::East;
+    let origin = Vec3::new(2.8, 0.0, 3.2);
+    dest.direction = PortalDirection::North;
+    assert_eq!(
+        (Vec3::new(2.2, 1.0, 4.2), -PI * 0.5),
+        src.teleport_to(origin, dest),
+        "from: {:?}, to: {:?}",
+        src.direction,
+        dest.direction
+    );
+
+    dest.direction = PortalDirection::South;
+    assert_eq!(
+        (Vec3::new(2.8, 1.0, 2.8), PI * 0.5),
+        src.teleport_to(origin, dest),
+        "from: {:?}, to: {:?}",
+        src.direction,
+        dest.direction
+    );
+
+    dest.direction = PortalDirection::East;
+    assert_eq!(
+        (Vec3::new(3.2, 1.0, 3.8), PI),
+        src.teleport_to(origin, dest),
+        "from: {:?}, to: {:?}",
+        src.direction,
+        dest.direction
+    );
+
+    dest.direction = PortalDirection::West;
+    assert_eq!(
+        (Vec3::new(1.8, 1.0, 3.2), 0.0),
+        src.teleport_to(origin, dest),
+        "from: {:?}, to: {:?}",
+        src.direction,
+        dest.direction
+    );
+
+    src.direction = PortalDirection::West;
+    let origin = Vec3::new(2.2, 0.0, 3.2);
+    dest.direction = PortalDirection::North;
+    assert_eq!(
+        (Vec3::new(2.8, 1.0, 4.2), PI * 0.5),
+        src.teleport_to(origin, dest),
+        "from: {:?}, to: {:?}",
+        src.direction,
+        dest.direction
+    );
+
+    dest.direction = PortalDirection::South;
+    assert_eq!(
+        (Vec3::new(2.2, 1.0, 2.8), -PI * 0.5),
+        src.teleport_to(origin, dest),
+        "from: {:?}, to: {:?}",
+        src.direction,
+        dest.direction
+    );
+
+    dest.direction = PortalDirection::East;
+    assert_eq!(
+        (Vec3::new(3.2, 1.0, 3.2), 0.0),
+        src.teleport_to(origin, dest),
+        "from: {:?}, to: {:?}",
+        src.direction,
+        dest.direction
+    );
+
+    dest.direction = PortalDirection::West;
+    assert_eq!(
+        (Vec3::new(1.8, 1.0, 3.8), PI),
+        src.teleport_to(origin, dest),
+        "from: {:?}, to: {:?}",
+        src.direction,
+        dest.direction
+    );
 }

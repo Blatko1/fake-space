@@ -37,6 +37,12 @@ pub struct PointXZ<T> {
     pub z: T,
 }
 
+impl<T> PointXZ<T> {
+    pub fn new(x: T, z: T) -> Self {
+        Self { x, z }
+    }
+}
+
 struct ColumnDrawer<'a> {
     world: &'a World,
     camera: &'a Camera,
@@ -71,26 +77,7 @@ impl<'a> ColumnDrawer<'a> {
             let current_tile_x = self.ray.next_tile.x;
             let current_tile_z = self.ray.next_tile.z;
 
-            // DDA steps
-            {
-                if self.ray.side_dist_x < self.ray.side_dist_z {
-                    self.ray.wall_dist = self.ray.side_dist_x.max(0.0);
-                    self.ray.next_tile.x += self.ray.step_x;
-                    self.ray.side_dist_x += self.ray.delta_dist_x;
-                    self.ray.hit_wall_side = Side::Vertical;
-                    let wall_offset =
-                        self.ray.origin.z + self.ray.wall_dist * self.ray.dir.z;
-                    self.ray.wall_offset = wall_offset - wall_offset.floor();
-                } else {
-                    self.ray.wall_dist = self.ray.side_dist_z.max(0.0);
-                    self.ray.next_tile.z += self.ray.step_z;
-                    self.ray.side_dist_z += self.ray.delta_dist_z;
-                    self.ray.hit_wall_side = Side::Horizontal;
-                    let wall_offset =
-                        self.ray.origin.x + self.ray.wall_dist * self.ray.dir.x;
-                    self.ray.wall_offset = wall_offset - wall_offset.floor();
-                }
-            }
+            self.ray.dda_step();
 
             // Tile which the ray just traveled over before hitting a wall.
             let current_tile = match self
@@ -102,7 +89,7 @@ impl<'a> ColumnDrawer<'a> {
                 None => break,
             };
 
-            // Drawing top and bottom platforms
+            // Draw ground platform
             let ground_platform = PlatformDrawData {
                 texture_data: self.world.get_texture(current_tile.ground_tex),
                 height_level: current_tile.ground_level,
@@ -113,6 +100,7 @@ impl<'a> ColumnDrawer<'a> {
             let (_, drawn_to) = self.draw_platform(ground_platform, column);
             self.bottom_draw_bound = drawn_to;
 
+            // Draw ceiling platform
             let ceiling_platform = PlatformDrawData {
                 texture_data: self.world.get_texture(current_tile.ceiling_tex),
                 height_level: current_tile.ceiling_level,
@@ -123,7 +111,8 @@ impl<'a> ColumnDrawer<'a> {
             let (drawn_from, _) = self.draw_platform(ceiling_platform, column);
             self.top_draw_bound = drawn_from;
 
-            let mut next_tile = match self
+            // The next tile ray is going to travel over
+            let next_tile = match self
                 .current_room
                 .segment
                 .get_tile(self.ray.next_tile.x, self.ray.next_tile.z)
@@ -149,29 +138,7 @@ impl<'a> ColumnDrawer<'a> {
             let (drawn_from, _) = self.draw_wall(top_wall_data, column);
             self.top_draw_bound = drawn_from;
 
-            // Switch to the different room if portal is hit
-            if let Some(src_dummy_portal) = next_tile.portal {
-                let src_portal = self.current_room.get_portal(src_dummy_portal.id);
-                let (dest_room, dest_portal) = match src_portal.link {
-                    Some((room_id, portal_id)) => {
-                        let dest_room = self.world.get_room_data(room_id);
-                        let dest_portal = dest_room.get_portal(portal_id);
-                        (dest_room, dest_portal)
-                    }
-                    None => break,
-                };
-                self.ray.portal_teleport(src_portal, dest_portal);
-
-                self.current_room = dest_room;
-                next_tile = match self.current_room.segment.get_tile(
-                    dest_portal.position.x as i64,
-                    dest_portal.position.z as i64,
-                ) {
-                    Some(&t) => t,
-                    None => break,
-                };
-            }
-
+            // If a voxel object is hit, store it for later rendering
             if let Some(model_id) = next_tile.voxel_model {
                 let model_data = self.world.get_voxel_model(model_id);
                 let dimensions = model_data.dimension as f32;
@@ -191,6 +158,19 @@ impl<'a> ColumnDrawer<'a> {
                     bottom_draw_bound: self.bottom_draw_bound,
                     top_draw_bound: self.top_draw_bound,
                 });
+            }
+
+            // Switch to the different room if portal is hit
+            if let Some(src_dummy_portal) = next_tile.portal {
+                let src_portal = self.current_room.get_portal(src_dummy_portal.id);
+                if let Some((room_id, portal_id)) = src_portal.link {
+                    let dest_room = self.world.get_room_data(room_id);
+                    let dest_portal = dest_room.get_portal(portal_id);
+                    self.ray.portal_teleport(src_portal, dest_portal);
+                    self.current_room = dest_room;
+                } else {
+                    break;
+                }
             }
 
             self.ray.previous_wall_dist = self.ray.wall_dist;

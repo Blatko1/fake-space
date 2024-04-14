@@ -24,7 +24,7 @@ pub struct Player {
 
 impl Player {
     pub fn new(camera: Camera, current_room: RoomID) -> Self {
-        let body = CylinderBody::new(0.2, 1.8, 0.9, 1.0, 3.5, 3.0, -2.0, 2.5, 0.0);
+        let body = CylinderBody::new(0.2, 2.0, 0.9, 1.0, 3.5, 3.0, -2.0, 2.5, 0.0);
 
         Self {
             camera,
@@ -72,6 +72,10 @@ impl Player {
 
                         let (new_origin, yaw_angle_difference) =
                             src_portal.teleport_to(self.camera.origin, dest_portal);
+                        println!(
+                            "teleported from: {:?} to: {:?}",
+                            src_portal.direction, dest_portal.direction
+                        );
                         self.camera.origin = new_origin;
                         self.camera.add_yaw_angle(yaw_angle_difference);
                         self.body.rotate_velocity(yaw_angle_difference);
@@ -131,7 +135,7 @@ impl Player {
         PlayerDebugData {
             camera_origin: self.camera.origin,
             camera_direction: self.camera.forward_dir,
-            camera_angle: self.camera.yaw_angle,
+            camera_angle: self.camera.yaw_angle.to_degrees(),
             y_shearing: self.camera.y_shearing,
 
             is_in_air: self.body.is_grounded,
@@ -179,12 +183,11 @@ impl PlayerInputState {
     }
 
     pub fn fly_direction(&self) -> f32 {
-        return if self.fly_up { 1.0 } else { 0.0 }
-            - if self.fly_down { 1.0 } else { 0.0 };
+        (if self.fly_up { 1.0 } else { 0.0 } - if self.fly_down { 1.0 } else { 0.0 })
     }
 
     pub fn fov_change(&self) -> f32 {
-        return if self.increase_fov { 1.0 } else { 0.0 }
-            + if self.decrease_fov { -1.0 } else { 0.0 };
+        (if self.increase_fov { 1.0 } else { 0.0 }
+            + if self.decrease_fov { -1.0 } else { 0.0 })
     }
 }

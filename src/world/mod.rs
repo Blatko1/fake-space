@@ -2,7 +2,6 @@ mod parser;
 pub mod portal;
 pub mod textures;
 
-use glam::Vec3;
 use rand::{rngs::ThreadRng, seq::SliceRandom};
 use std::path::PathBuf;
 
@@ -293,16 +292,10 @@ impl Segment {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct TilePosition {
-    pub x: u64,
-    pub z: u64,
-}
-
 // TODO try removing Clone and Copy
 #[derive(Debug, Clone, Copy)]
 pub struct Tile {
-    pub position: TilePosition,
+    pub position: PointXZ<u64>,
     /// Texture of the bottom wall walls.
     pub bottom_wall_tex: TextureID,
     /// Texture of the top wall walls.

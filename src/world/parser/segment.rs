@@ -1,11 +1,12 @@
 use std::str::FromStr;
 
+use crate::player::render::PointXZ;
 use crate::voxel::VoxelModelID;
 use hashbrown::HashMap;
 
 use crate::world::portal::{DummyPortal, PortalDirection, PortalID};
 use crate::world::textures::TextureID;
-use crate::world::{Tile, TilePosition};
+use crate::world::Tile;
 
 use super::error::RowError;
 use super::{
@@ -111,7 +112,7 @@ impl<'a> SegmentParser<'a> {
                 }
                 None => None,
             };
-            let position = TilePosition {
+            let position = PointXZ {
                 x: i as u64 % dimensions.0,
                 z: i as u64 / dimensions.0,
             };
