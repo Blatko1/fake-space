@@ -26,7 +26,9 @@ pub struct Player {
 
 impl Player {
     pub fn new(camera: Camera, current_room: RoomID) -> Self {
-        let body = CylinderBody::new(0.2, 2.0, 0.9, 1.0, 3.5, 3.0, -2.0, 2.5, 0.0);
+        let body = CylinderBody::new(0.2, 2.0, 0.9, 
+            1.2, 3.5, 3.0, 
+            -4.0, 2.5, 0.0);
 
         Self {
             camera,
@@ -128,7 +130,7 @@ impl Player {
             forward_dir: self.camera.forward_dir,
             yaw_angle: self.camera.yaw_angle.to_degrees(),
             y_shearing: self.camera.y_shearing,
-            fov: self.camera.fov,
+            fov: self.camera.fov.to_degrees(),
             current_room_id: self.current_room.0,
             physics_state: self.body.collect_dbg_data(),
         }

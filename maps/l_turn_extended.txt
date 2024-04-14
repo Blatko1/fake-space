@@ -1,0 +1,45 @@
+// Declare the segment dimensions
+11x11
+
+//Parameters: pillar1->bottom pillar, pillar2->top pillar, lvl1->bottom starting bound of bottom pillar,
+// lvl2->top ending bound of bottom pillar, lvl3->bottom starting bound of top pillar,
+// lvl4->top ending bound of top pillar, bottom->texture of bottom platform,
+// top->texture of top platform
+
+// Declare the presets used in modifying the tiles
+$ground = groundL:0, bottomL:-1, groundT:Carpet
+$ceiling = ceilingL:5, topL:20, ceilingT:DropCeiling, topT:DropCeiling
+$wall = groundL:15, ceilingL:16, bottomT:Wallpaper
+$. = $ground, $ceiling
+$# = $., $wall
+$s1 = $., groundL:0.6, bottomT:Carpet, ceilingL:5.6
+$s2 = $., groundL:1.2, bottomT:Carpet, ceilingL:6.2
+$s3 = $., groundL:1.8, bottomT:Carpet, ceilingL:6.8
+$s4 = $., groundL:2.4, bottomT:Carpet, ceilingL:7.4
+$s5 = $., groundL:3.0, bottomT:Carpet, ceilingL:8.0
+$s6 = $., groundL:3.6, bottomT:Carpet, ceilingL:8.6
+$s7 = $., groundL:4.2, bottomT:Carpet, ceilingL:9.2
+$s8 = $., groundL:4.8, bottomT:Carpet, ceilingL:9.8
+
+$portalTile = groundL:0, ceilingL:3, topL:11
+$N = $., portalDir:N, $portalTile
+$W = $., portalDir:W, $portalTile
+$sS = $., portalDir:S, $portalTile, groundL:5.0, ceilingL:8.0
+
+// Small room
+
+
+// .  1  2  3  4  5  6  7  8  9 10 11
+//  -----------------------------------
+    | #  #  #  #  #  #  #  #  #  #  # | // 11
+    | #  #  #  #  #  #  #  #  #  #  # | // 10
+    | #  #  .  .  .  .  .  .  .  #  # | // 9
+    | #  #  .  .  .  .  .  .  .  W  # | // 8
+    | #  #  .  .  .  .  .  .  .  #  # | // 7
+    | #  #  .  .  .  #  #  .  #  #  # | // 6
+    | #  #  .  .  .  #  s2 s1 #  #  # | // 5
+    | #  #  .  .  .  #  s3 s1 #  sS # | // 4
+    | #  #  .  .  .  #  s4 #  s8 s8 # | // 3
+    | #  #  #  N  #  #  s5 s6 s7 s8 # | // 2
+    | #  #  #  #  #  #  #  #  #  #  # | // 1
+//  -----------------------------------

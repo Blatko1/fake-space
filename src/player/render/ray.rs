@@ -107,10 +107,7 @@ impl Ray {
             // Variables that change per each DDA step
             side_dist_x,
             side_dist_z,
-            next_tile: PointXZ {
-                x: origin.x as i64,
-                z: origin.z as i64,
-            },
+            next_tile: PointXZ::new(origin.x as i64, origin.z as i64),
             wall_dist,
             previous_wall_dist: wall_dist,
             hit_wall_side: side,
@@ -140,10 +137,7 @@ impl Ray {
         self.origin.x += (dest.position.x as i64 - self.next_tile.x) as f32;
         self.origin.z += (dest.position.z as i64 - self.next_tile.z) as f32;
         self.origin.y -= src.ground_level - dest.ground_level;
-        self.next_tile = PointXZ {
-            x: dest.position.x as i64,
-            z: dest.position.z as i64,
-        };
+        self.next_tile = PointXZ::new(dest.position.x as i64, dest.position.z as i64);
         match self.hit_wall_side {
             Side::Vertical => {
                 self.side_dist_x -= self.delta_dist_x;

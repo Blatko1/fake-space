@@ -44,10 +44,12 @@
 *skyboxTop = Sky2Top
 *skyboxBottom = Sky2Bottom
 
+// !!! EVERY PORTALS NEED TO HAVE HEIGHT OF 3.0
 // Declare the segments
 // You can't have multiple segments with the same name
 !start = src:start.txt, repeatable: false, ambient_light: 1.0, skyboxNorth: SkyNorth, skyboxEast: SkyEast, skyboxSouth: SkySouth, skyboxWest: SkyWest, skyboxTop: SkyTop, skyboxBottom: SkyBottom //, light_effect:
-!root = src:root.txt, repeatable: false, ambient_light: 0.1//, light_effect:
+!root = src:root.txt, repeatable: false, ambient_light: 0.15//, light_effect:
 //!straight = src:straight.txt, repeatable: false, ambient_light: 0.3
-!l_turn = src:l_turn.txt, repeatable: true, ambient_light: 0.1//, light_effect:
+!l_turn = src:l_turn.txt, repeatable: true, ambient_light: 0.17//, light_effect:
+!l_turn_extended = src:l_turn_extended.txt, repeatable: true, ambient_light: 0.16//, light_effect:
 !large1 = src:large1.txt, repeatable:true, ambient_light: 0.15//, light_effect:

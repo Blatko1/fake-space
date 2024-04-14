@@ -112,10 +112,7 @@ impl<'a> SegmentParser<'a> {
                 }
                 None => None,
             };
-            let position = PointXZ {
-                x: i as u64 % dimensions.0,
-                z: i as u64 / dimensions.0,
-            };
+            let position = PointXZ::new(i as u64 % dimensions.0, i as u64 / dimensions.0);
             let voxel_model = if rand::random() && rand::random() && rand::random() {
                 Some(VoxelModelID::Damaged)
             } else {

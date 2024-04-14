@@ -8,7 +8,7 @@
 
 // Declare the presets used in modifying the tiles
 $ground = groundL:0, bottomL:-1, groundT:MetalFloor, bottomT:MetalFloor
-$ceiling = ceilingL:6, topL:100, ceilingT:Bricks, topT:Bricks
+$ceiling = ceilingL:7, topL:100, ceilingT:Bricks, topT:Bricks
 $wall = groundL:9, ceilingL:10, bottomT:Stone
 
 $. = $ground, $ceiling

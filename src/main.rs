@@ -131,13 +131,13 @@ fn main() {
                     }
                     _ => (),
                 },
-                Event::DeviceEvent { event, .. } => match event {
-                    DeviceEvent::MouseMotion { delta } => {
-                        let delta = Vec2::new(delta.0 as f32, delta.1 as f32);
-                        state.on_mouse_move(delta)
-                    }
-                    _ => (),
-                },
+                Event::DeviceEvent {
+                    event: DeviceEvent::MouseMotion { delta },
+                    ..
+                } => {
+                    let delta = Vec2::new(delta.0 as f32, delta.1 as f32);
+                    state.on_mouse_move(delta)
+                }
                 Event::LoopExiting => println!("Exited!"),
                 _ => (),
             }

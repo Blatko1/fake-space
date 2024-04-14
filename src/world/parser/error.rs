@@ -84,12 +84,6 @@ pub enum PresetError {
     InvalidFormat(String),
     InvalidExpressionFormat(String),
 
-    InvalidIndexFormat(String),
-    IndexUsizeParseFail(String),
-    IndexIsZero(String),
-    InvalidIndexRange(String, usize, usize),
-    IndexOutOfRange(String, usize),
-
     UnknownPreset(String),
     UnknownParameter(String),
     UnknownTexture(String),

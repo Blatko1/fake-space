@@ -20,7 +20,7 @@ impl State {
             1.0,
             14.5,
             90f32.to_radians(),
-            90f32.to_radians(),
+            100f32.to_radians(),
             canvas.width(),
             canvas.height(),
         );
@@ -36,7 +36,7 @@ impl State {
         self.world.update(self.player.current_room_id());
     }
 
-    pub fn draw<'a, C>(&mut self, canvas_column_iter: C)
+    pub fn draw<'a, C>(&self, canvas_column_iter: C)
     where
         C: Iterator<Item = &'a mut [u8]>,
     {

@@ -23,7 +23,7 @@ pub struct CylinderBody {
     max_movement_vel: f32,
     gravity_accel: f32,
     max_in_air_velocity: f32,
-    jump_velocity: f32,
+    jump_strength: f32,
     slowdown_friction: f32,
     friction: f32,
     is_grounded: bool,
@@ -34,7 +34,7 @@ impl CylinderBody {
         radius: f32,
         height: f32,
         eye_height_factor: f32,
-        jump_velocity: f32,
+        jump_strength: f32,
         movement_accel: f32,
         max_movement_vel: f32,
         gravity_accel: f32,
@@ -58,7 +58,7 @@ impl CylinderBody {
             air_velocity: 0.0,
             gravity_accel,
             max_in_air_velocity: 100.0,
-            jump_velocity,
+            jump_strength,
             slowdown_friction,
             friction,
             is_grounded: false,
@@ -226,9 +226,9 @@ impl CylinderBody {
             .clamp_length_max(self.max_movement_vel);
 
         if self.can_fly {
-            self.air_velocity = self.jump_velocity * input_state.fly_direction();
+            self.air_velocity = self.jump_strength * input_state.fly_direction();
         } else if input_state.jump && self.is_grounded {
-            self.air_velocity = self.jump_velocity;
+            self.air_velocity = self.jump_strength;
         }
     }
 

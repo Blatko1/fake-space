@@ -21,7 +21,7 @@ $s5 = $grass, groundL: -1.0
 $s6 = $grass, groundL: -1.7
 $s7 = $grass, groundL: -2.6
 
-$P = groundL:-2.8, portalDir:S, ceilingL:3.0, topT:Bricks
+$P = groundL:-2.8, portalDir:S, ceilingL:0.2, topT:Bricks
 
 $# = $pillar, $noRoof,
 $. = $noRoof, $grass

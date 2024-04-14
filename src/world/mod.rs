@@ -134,7 +134,6 @@ impl World {
                 })
                 .collect();
             current_room.is_fully_generated = true;
-
             self.rooms.append(&mut adjacent_rooms);
         }
     }
@@ -209,6 +208,10 @@ impl Room {
     pub fn skybox(&self) -> &SkyboxTextureIDs {
         &self.skybox
     }
+
+    pub fn id(&self) -> RoomID {
+        self.id
+    }
 }
 
 // TODO Use a struct or type for dimensions instead
@@ -246,10 +249,10 @@ impl Segment {
                     id: dummy.id,
                     direction: dummy.direction,
                     position: tile.position,
-                    center: PointXZ {
-                        x: tile.position.x as f32 + 0.5,
-                        z: tile.position.z as f32 + 0.5,
-                    },
+                    center: PointXZ::new(
+                        tile.position.x as f32 + 0.5,
+                        tile.position.z as f32 + 0.5,
+                    ),
                     ground_level: tile.ground_level,
                     link: None,
                 }
@@ -285,10 +288,6 @@ impl Segment {
         }
         self.tiles
             .get(z as usize * self.dimensions.0 as usize + x as usize)
-    }
-
-    pub fn get_skybox(&self) -> SkyboxTextureIDs {
-        self.skybox
     }
 }
 
@@ -330,7 +329,7 @@ pub struct SkyboxTextureIDs {
     pub bottom: TextureID,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct SkyboxTexturesRef<'a> {
     pub north: TextureDataRef<'a>,
     pub east: TextureDataRef<'a>,

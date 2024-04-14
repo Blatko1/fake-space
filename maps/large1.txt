@@ -1,17 +1,25 @@
 20x20
 
 // Declare the presets used in modifying the tiles
-$ground = groundL:0, bottomL:-1, groundT:Carpet
-$ceiling = ceilingL:5, topL:20, ceilingT:DropCeiling, topT:DropCeiling
+$ground = groundL:0, bottomL:-1, groundT:Carpet, bottomT: Carpet,
+$ceiling = ceilingL:6.5, topL:20, ceilingT:DropCeiling, topT:DropCeiling
 
 $. = $ground, $ceiling
 $w = groundL:7, ceilingL:8, bottomT:Wallpaper
+
+$s1 = $., groundL:0.6, bottomT:Carpet
+$s2 = $., groundL:1.2, bottomT:Carpet
+$s3 = $., groundL:1.8, bottomT:Carpet
+$s4 = $., groundL:2.4, bottomT:Carpet
+$s5 = $., groundL:3.0, bottomT:Carpet
 
 $portal = ceilingT:DropCeiling, topT:DropCeiling, ceilingL:3, topT: Wallpaper
 $N = $ground, portalDir:N, $portal
 $S = $ground, portalDir:S, $portal
 $E = $ground, portalDir:E, $portal
 $W = $ground, portalDir:W, $portal
+$sE = $E, groundL:3.6, ceilingL:6.6
+$sN = $N, groundL:1.8, ceilingL:4.8
 $fall = bottomL:-100, groundL:-99
 
 //  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
@@ -25,15 +33,15 @@ $fall = bottomL:-100, groundL:-99
   | w  w  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  w  w | // 14
   | w  w  .  .  .  .  .  .  .  .  w  .  w  w  w  .  .  .  .  w | // 13
   | w  w  w  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  w | // 12
-  | w  w  w  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  w | // 11
+  | w  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  w | // 11
   | w  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  w | // 10
-  | w  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  w | // 9
-  | w  .  .  .  w  .  .  .  .  .  .  .  .  .  .  .  w  w  w  w | // 8
-  | w  .  .  .  w  w  w  w  w  w  .  .  .  .  .  .  .  .  W  w | // 7
+  | w  .  .  .  w  w  w  w  .  .  .  .  .  .  .  .  .  .  .  w | // 9
+  | w  .  .  w  sE s5 s4 s3 s2 s1 .  .  .  .  .  .  w  w  w  w | // 8
+  | w  .  .  w  w  w  w  w  w  w  .  .  .  .  .  .  .  .  W  w | // 7
   | w  .  .  .  w  w  w  w  S  w  .  .  .  .  .  .  w  w  w  w | // 6
   | w  .  .  .  .  .  .  .  .  w  .  .  .  .  .  .  .  .  .  w | // 5
-  | w  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  w | // 4
-  | w  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  w | // 3
-  | w  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  w | // 2
-  | w  w  w  w  w  w  w  w  w  w  w  w  w  w  w  w  w  w  w  w | // 1
+  | w  s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 w | // 4
+  | w  s1 s1 s2 s2 s2 s2 s2 s2 s2 s2 s2 s2 s2 s2 s2 s2 s1 s1 w | // 3
+  | w  s1 s2 s3 s3 s3 s3 s3 s3 s3 s3 s3 s3 s3 s3 s3 s3 s2 s1 w | // 2
+  | w  w  w  w  w  w  w  w  w  w  w  w  w  w  sN w  w  w  w  w | // 1
 //--------------------------------------------------------------

@@ -120,6 +120,10 @@ impl<'a> ColumnDrawer<'a> {
                 Some(&t) => t,
                 None => break,
             };
+            if next_tile.portal.is_some() {
+                
+            }
+
             // Draw bottom wall
             let bottom_wall_data = WallDrawData {
                 texture_data: self.world.get_texture(next_tile.bottom_wall_tex),
@@ -186,13 +190,14 @@ where
 {
     let camera = player.camera();
     let player_room = world.get_room_data(player.current_room_id());
+    let skybox_textures = world.get_skybox_textures(player_room.data.skybox());
     column_iter.enumerate().for_each(|(column_index, column)| {
         let ray = Ray::cast_with_camera(column_index, camera);
 
         let skybox = SkyboxSegment::new(
             camera,
             ray,
-            world.get_skybox_textures(player_room.data.skybox()),
+            skybox_textures,
         );
         skybox.draw_skybox(column);
 
