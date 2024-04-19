@@ -8,9 +8,13 @@ use crate::{
 use glam::Vec2;
 use hashbrown::HashSet;
 
+const TIMESTEP: f32 = 0.01;
+
 pub struct State {
     world: World,
     player: Player,
+
+    accumulator: f32
 }
 
 impl State {
@@ -28,11 +32,17 @@ impl State {
         Self {
             world,
             player: Player::new(camera, RoomID(0)),
+
+            accumulator: 0.0
         }
     }
 
-    pub fn update(&mut self, frame_time: f32) {
-        self.player.update(&self.world, frame_time);
+    pub fn update(&mut self, delta: f32) {
+        self.accumulator += delta;
+        while self.accumulator >= TIMESTEP {
+            self.player.update(&self.world, TIMESTEP);
+            self.accumulator -= TIMESTEP;
+        }
         self.world.update(self.player.current_room_id());
     }
 

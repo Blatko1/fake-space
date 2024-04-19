@@ -51,6 +51,7 @@ impl Player {
             &self.input_state,
             delta,
         );
+
         let new_origin = self.body.apply_physics(self.camera.origin, delta);
         self.camera.origin = new_origin;
 
