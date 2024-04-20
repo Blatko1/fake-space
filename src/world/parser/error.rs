@@ -1,4 +1,7 @@
 use std::io;
+use std::str::FromStr;
+use nom::error::ErrorKind as NomErrorKind;
+use nom::error::ParseError as NomParseError;
 
 #[derive(Debug)]
 pub enum ParseError {
@@ -79,6 +82,12 @@ pub enum TextureError {
     UnspecifiedTransparency,
 }
 
+impl From<io::Error> for TextureError {
+    fn from(value: io::Error) -> Self {
+        Self::TextureFileErr(value.kind())
+    }
+}
+
 #[derive(Debug)]
 pub enum PresetError {
     InvalidFormat(String),
@@ -100,12 +109,6 @@ impl From<io::Error> for ParseError {
 impl From<io::Error> for SegmentError {
     fn from(value: io::Error) -> Self {
         Self::FileErr(value.kind())
-    }
-}
-
-impl From<io::Error> for TextureError {
-    fn from(value: io::Error) -> Self {
-        Self::TextureFileErr(value.kind())
     }
 }
 

@@ -6,6 +6,13 @@ use std::path::PathBuf;
 
 use hashbrown::HashMap;
 use image::{io::Reader as ImageReader, EncodableLayout};
+use nom::branch::alt;
+use nom::bytes::complete::{tag, take_till, take_until};
+use nom::character::complete::{alpha1, alphanumeric1, space0};
+use nom::combinator::map;
+use nom::sequence::{delimited, preceded};
+use nom::{IResult, Parser};
+use rand::rngs::ThreadRng;
 
 use super::textures::TextureID;
 use super::{SkyboxTextureIDs, TextureData};
@@ -15,9 +22,120 @@ use self::segment::SegmentParser;
 
 use super::{Segment, SegmentID, World};
 
-pub struct WorldParser {
+pub struct WorldParser2 {
+    path: PathBuf,
+    parent_path: PathBuf,
+    rng: ThreadRng,
+
+    settings: Settings,
+    textures: Vec<TextureData>,
+    texture_map: HashMap<String, TextureID>,
+    texture_counter: usize,
+    segments: Vec<Segment>,
+}
+
+impl WorldParser2 {
+    pub fn new<I, P: Into<PathBuf>>(path: P) -> Result<Self, ParseError> {
+        let path: PathBuf = path.into().canonicalize()?;
+        let parent_path = path.parent().unwrap().to_path_buf();
+        Ok(Self {
+            path,
+            parent_path,
+            rng: rand::thread_rng(),
+
+            settings: Settings::default(),
+            textures: Vec::new(),
+            texture_map: HashMap::new(),
+            texture_counter: 2,
+            segments: Vec::new(),
+        })
+    }
+
+    pub fn parse<I>(self) -> Result<World, ParseError> {
+        let data = std::fs::read_to_string(self.path.clone())?;
+
+        // Remove comments, empty lines and trim
+        let lines = data
+            .lines()
+            .enumerate()
+            .map(|(i, line)| (1 + i as u64, line.split("//").next().unwrap().trim()))
+            .filter(|(_, line)| !line.is_empty());
+
+        lines.for_each(|(i, line)| {
+            let key = line.chars().next().unwrap();
+            match key {
+                // Mutates setting values through the function
+                '*' => {
+                    if let Err(e) = Self::parse_texture(&line[1..]) {
+                        return Err(ParseError::SettingErr(e, i));
+                    }
+                }
+                '#' => match self.parse_texture(line) {
+                    Ok((name, texture)) => {
+                        self.textures.push(texture);
+                        self.texture_map
+                            .insert(name, TextureID(self.texture_counter));
+                        self.texture_counter += 1;
+                    }
+                    Err(e) => return Err(ParseError::TextureErr(e, i)),
+                },
+                '!' => match self.parse_segment(line, SegmentID(self.segments.len())) {
+                    Ok(segment) => self.segments.push(segment),
+                    Err(e) => return Err(ParseError::SegmentErr(e, i)),
+                },
+                _ => return Err(ParseError::UnknownKey(key.to_string(), i)),
+            }
+        });
+
+        Ok(World::new(self.segments, self.textures))
+    }
+
+    pub fn parse_line(&self, line: &str) -> Result<(), ParseError> {
+        if let Ok((input, _)) = tag::<&str, &str, ()>("#")(line) {
+            match Self::parse_texture(input) {
+                Ok(_) => (),
+                Err(e) => todo!(),
+            }
+            
+        } else if let Ok((input, _)) = tag::<&str, &str, ()>("*")(line) {
+            
+        } else if let Ok((input, _)) = tag::<&str, &str, ()>("!")(line) {
+            
+        } else {
+            return Err(ParseError::UnknownKey(key.to_string(), i));
+        }
+        
+        Ok(())
+    }
+
+    pub fn parse_texture(input: &str) -> IResult<&str, (), TextureError<&str>> {
+        let (input, texture_name) = preceded(space0, alphanumeric1).parse(input)?;
+        let (input, _) = preceded(space0, tag("=")).parse(input)?;
+
+        let parse_path = |input: &str| -> IResult<&str, &str> {
+            let (input, _) = tag("path:")(input)?;
+            preceded(space0, preceded(tag("\""), take_until("\""))).parse(input)
+        };
+        let parse_transparency = |input: &str| -> IResult<&str, bool> {
+            let (input, _) = tag("transparency:")(input)?;
+            let (input, value) = preceded(space0, alpha1).parse(input)?;
+            let transparency = match value.parse() {
+                
+            };
+            Ok((input, transparency))
+        };
+
+
+        preceded(space0, alt((parse_path, parse_transparency))).parse(input)
+
+        Ok(())
+    }
+}
+
+/*pub struct WorldParser {
     data: String,
     dir_path: PathBuf,
+    rng: ThreadRng,
 
     settings: Settings,
     textures: Vec<TextureData>,
@@ -33,6 +151,7 @@ impl WorldParser {
         Ok(Self {
             data,
             dir_path: path.parent().unwrap().to_path_buf(),
+            rng: rand::thread_rng(),
 
             settings: Settings::default(),
             textures: Vec::new(),
@@ -85,7 +204,7 @@ impl WorldParser {
         Ok(World::new(self.segments, self.textures))
     }
 
-    fn parse_segment(&self, line: &str, id: SegmentID) -> Result<Segment, SegmentError> {
+    fn parse_segment(&mut self, line: &str, id: SegmentID) -> Result<Segment, SegmentError> {
         // Split the line and check for formatting errors
         let split: Vec<&str> = line.split('=').collect();
         if split.len() != 2 {
@@ -225,7 +344,7 @@ impl WorldParser {
             bottom: skybox_bottom.unwrap_or(self.settings.skybox_bottom),
         };
 
-        Ok(Segment::new(
+        Ok(Segment::generate_rand(
             id,
             name.to_owned(),
             dimensions,
@@ -233,6 +352,8 @@ impl WorldParser {
             skybox,
             repeatable,
             ambient_light,
+            &mut self.rng,
+            &[]
         ))
     }
 
@@ -379,7 +500,7 @@ impl WorldParser {
 
         Ok((texture_name.to_owned(), texture))
     }
-}
+}*/
 
 #[derive(Debug)]
 pub(super) struct Settings {

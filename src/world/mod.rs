@@ -2,6 +2,7 @@ mod parser;
 pub mod portal;
 pub mod textures;
 
+use rand::Rng;
 use rand::{rngs::ThreadRng, seq::SliceRandom};
 use std::path::PathBuf;
 
@@ -12,6 +13,8 @@ use parser::{error::ParseError, WorldParser};
 use textures::{TextureData, TextureID, TextureManager};
 
 use self::textures::TextureDataRef;
+
+const VOXEL_CHANCE: f64 = 0.1;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RoomID(pub usize);
@@ -230,7 +233,7 @@ pub struct Segment {
 }
 
 impl Segment {
-    pub fn new(
+    pub fn generate(
         id: SegmentID,
         name: String,
         dimensions: (u64, u64),
@@ -268,6 +271,43 @@ impl Segment {
             repeatable,
             ambient_light_intensity,
         }
+    }
+
+    pub fn generate_rand(
+        id: SegmentID,
+        name: String,
+        dimensions: (u64, u64),
+        tiles: Vec<Tile>,
+        skybox: SkyboxTextureIDs,
+        repeatable: bool,
+        ambient_light_intensity: f32,
+        rng: &mut ThreadRng,
+        voxels: &[VoxelModelID],
+    ) -> Self {
+        let mut segment = Self::generate(
+            id,
+            name,
+            dimensions,
+            tiles,
+            skybox,
+            repeatable,
+            ambient_light_intensity,
+        );
+
+        if !voxels.is_empty() {
+            segment
+                .tiles
+                .iter_mut()
+                .filter(|tile| tile.allow_voxels)
+                .for_each(|tile| {
+                    if rng.gen_bool(VOXEL_CHANCE) {
+                        let rand_voxel_model = *voxels.choose(rng).unwrap();
+                        tile.voxel_model.replace(rand_voxel_model);
+                    }
+                });
+        }
+
+        segment
     }
 
     /// Returns the value at the provided map coordinates.
@@ -316,6 +356,7 @@ pub struct Tile {
     pub top_level: f32,
     /// If the current tile should be a portal to different segment (map).
     pub portal: Option<DummyPortal>,
+    pub allow_voxels: bool,
     pub voxel_model: Option<VoxelModelID>,
 }
 

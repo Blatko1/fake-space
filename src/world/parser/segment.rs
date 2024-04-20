@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
 use crate::player::render::PointXZ;
-use crate::voxel::VoxelModelID;
 use hashbrown::HashMap;
 
 use crate::world::portal::{DummyPortal, PortalDirection, PortalID};
@@ -112,12 +111,8 @@ impl<'a> SegmentParser<'a> {
                 }
                 None => None,
             };
+            let allow_voxels = tile.allow_voxels.unwrap_or(false);
             let position = PointXZ::new(i as u64 % dimensions.0, i as u64 / dimensions.0);
-            let voxel_model = if rand::random() && rand::random() && rand::random() {
-                Some(VoxelModelID::Damaged)
-            } else {
-                None
-            };
             let t = Tile {
                 position,
                 bottom_wall_tex: tile.bottom_wall_tex.unwrap_or_default(),
@@ -129,7 +124,8 @@ impl<'a> SegmentParser<'a> {
                 ceiling_level,
                 top_level,
                 portal,
-                // TODO this is temporary hard-coded
+                allow_voxels,
+                // The voxel models will be randomly generated after all tiles were loaded
                 voxel_model: None,
             };
 
@@ -181,7 +177,7 @@ impl<'a> SegmentParser<'a> {
                     if let Some(preset_str) = e.strip_prefix('$') {
                         match self.preset_map.get(preset_str) {
                             Some(preset_expr) => {
-                                preset.overwrite_with(preset_expr);
+                                preset.overwrite(preset_expr);
                                 continue;
                             }
                             None => {
@@ -235,6 +231,15 @@ impl<'a> SegmentParser<'a> {
                     let parsed = value.parse::<PortalDirection>()?;
                     preset.portal_dir = Some(parsed);
                 }
+                "allowVoxels" => {
+                    let allow_voxels =  match value.parse::<bool>() {
+                        Ok(b) => Some(b),
+                        Err(_) => {
+                            return Err(PresetError::BoolParseFail(value.to_owned()))
+                        }
+                    };
+                    preset.allow_voxels = allow_voxels;
+                }
                 _ => return Err(PresetError::UnknownParameter(parameter.to_owned())),
             }
         }
@@ -264,7 +269,7 @@ impl<'a> SegmentParser<'a> {
                 * self.dimensions.0 as usize
                 + i;
             let old_tile = self.tiles.get_mut(index).unwrap();
-            old_tile.overwrite_with(tile);
+            old_tile.overwrite(tile);
         }
         self.processed_tiles += 1;
 
@@ -283,38 +288,42 @@ struct TilePreset {
     ceiling_level: Option<f32>,
     top_level: Option<f32>,
     portal_dir: Option<PortalDirection>,
+    allow_voxels: Option<bool>
 }
 
 impl TilePreset {
     /// Overwrites all old values with new ones.
     /// Doesn't replace if the new value is `None`.
-    fn overwrite_with(&mut self, other: &Self) {
-        if let Some(bottom_wall_tex) = other.bottom_wall_tex {
+    fn overwrite(&mut self, src: &Self) {
+        if let Some(bottom_wall_tex) = src.bottom_wall_tex {
             self.bottom_wall_tex.replace(bottom_wall_tex);
         }
-        if let Some(top_wall_tex) = other.top_wall_tex {
+        if let Some(top_wall_tex) = src.top_wall_tex {
             self.top_wall_tex.replace(top_wall_tex);
         }
-        if let Some(ground_tex) = other.ground_tex {
+        if let Some(ground_tex) = src.ground_tex {
             self.ground_tex.replace(ground_tex);
         }
-        if let Some(ceiling_tex) = other.ceiling_tex {
+        if let Some(ceiling_tex) = src.ceiling_tex {
             self.ceiling_tex.replace(ceiling_tex);
         }
-        if let Some(bottom_level) = other.bottom_level {
+        if let Some(bottom_level) = src.bottom_level {
             self.bottom_level.replace(bottom_level);
         }
-        if let Some(ground_level) = other.ground_level {
+        if let Some(ground_level) = src.ground_level {
             self.ground_level.replace(ground_level);
         }
-        if let Some(ceiling_level) = other.ceiling_level {
+        if let Some(ceiling_level) = src.ceiling_level {
             self.ceiling_level.replace(ceiling_level);
         }
-        if let Some(top_level) = other.top_level {
+        if let Some(top_level) = src.top_level {
             self.top_level.replace(top_level);
         }
-        if let Some(portal_dir) = other.portal_dir {
+        if let Some(portal_dir) = src.portal_dir {
             self.portal_dir.replace(portal_dir);
+        }
+        if let Some(allow_voxels) = src.allow_voxels {
+            self.allow_voxels.replace(allow_voxels);
         }
     }
 }
