@@ -2,6 +2,8 @@ mod parser;
 pub mod portal;
 pub mod textures;
 
+use nom::error::convert_error;
+use nom::Finish;
 use rand::Rng;
 use rand::{rngs::ThreadRng, seq::SliceRandom};
 use std::path::PathBuf;
@@ -9,7 +11,7 @@ use std::path::PathBuf;
 use crate::player::render::PointXZ;
 use crate::voxel::{VoxelModelDataRef, VoxelModelID, VoxelModelManager};
 use crate::world::portal::{DummyPortal, Portal, PortalID};
-use parser::{error::ParseError, WorldParser};
+use parser::{error::ParseError, WorldParser2};
 use textures::{TextureData, TextureID, TextureManager};
 
 use self::textures::TextureDataRef;
@@ -33,8 +35,18 @@ pub struct World {
 }
 
 impl World {
-    pub fn from_path<P: Into<PathBuf>>(path: P) -> Result<Self, ParseError> {
-        WorldParser::new(path)?.parse()
+    pub fn from_path<P: Into<PathBuf>>(path: P) -> std::io::Result<Self> {
+        // TODO this 'unwrap()'
+        let path: PathBuf = path.into().canonicalize()?;
+        let parent_path = path.parent().unwrap().to_path_buf();
+        let input = std::fs::read_to_string(path)?;
+        match WorldParser2::new(&input, parent_path)?.parse().finish() {
+            Ok((_, world)) => return Ok(world),
+            Err(e) => {println!(
+                "verbose errors: \n{}",
+                convert_error(input.as_str(), e)
+              ); panic!()},
+        }
     }
 
     // TODO starting segment is always '0' and main room is '1'

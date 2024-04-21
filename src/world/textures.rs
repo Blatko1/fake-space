@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 const DEFAULT_TEXTURE_WIDTH: u32 = 2;
 const DEFAULT_TEXTURE_HEIGHT: u32 = 2;
 const DEFAULT_TEXTURE_RGBA: [u8; 16] = [
@@ -60,9 +62,7 @@ impl TextureData {
             transparency,
         }
     }
-}
 
-impl TextureData {
     fn as_ref(&self) -> TextureDataRef {
         TextureDataRef {
             data: &self.data,
@@ -70,6 +70,21 @@ impl TextureData {
             height: self.height,
             transparency: self.transparency,
         }
+    }
+}
+
+impl Debug for TextureData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TextureData")
+            .field("data size: {}", &self.data.len())
+            .field(
+                "color channels: {}",
+                &(self.data.len() as u32 / (self.width * self.height)),
+            )
+            .field("width", &self.width)
+            .field("height", &self.height)
+            .field("transparency", &self.transparency)
+            .finish()
     }
 }
 

@@ -7,23 +7,33 @@ use std::path::PathBuf;
 use hashbrown::HashMap;
 use image::{io::Reader as ImageReader, EncodableLayout};
 use nom::branch::alt;
-use nom::bytes::complete::{tag, take_till, take_until};
-use nom::character::complete::{alpha1, alphanumeric1, space0};
-use nom::combinator::map;
-use nom::sequence::{delimited, preceded};
-use nom::{IResult, Parser};
+use nom::bytes::complete::{escaped, tag, take, take_till, take_until, take_while};
+use nom::character::complete::{alpha1, alphanumeric1, char, one_of};
+use nom::combinator::{cut, fail, map, opt, value};
+use nom::error::{context, ContextError, ParseError as NomParseError, VerboseError};
+use nom::multi::separated_list0;
+use nom::number::complete::double;
+use nom::sequence::{delimited, preceded, terminated, Tuple};
+use nom::{Finish, IResult, Parser};
 use rand::rngs::ThreadRng;
+use strum::IntoEnumIterator;
+use wgpu::hal::ExposedAdapter;
 
 use super::textures::TextureID;
-use super::{SkyboxTextureIDs, TextureData};
+use super::{SkyboxTextureIDs, TextureData, Tile};
 
-use self::error::{ParseError, SegmentError, SettingError, TextureError};
 use self::segment::SegmentParser;
 
 use super::{Segment, SegmentID, World};
 
-pub struct WorldParser2 {
-    path: PathBuf,
+#[derive(Debug)]
+struct ParsedTexture {
+    name: String,
+    texture: TextureData,
+}
+
+pub struct WorldParser2<'a> {
+    input: &'a str,
     parent_path: PathBuf,
     rng: ThreadRng,
 
@@ -34,13 +44,14 @@ pub struct WorldParser2 {
     segments: Vec<Segment>,
 }
 
-impl WorldParser2 {
-    pub fn new<I, P: Into<PathBuf>>(path: P) -> Result<Self, ParseError> {
-        let path: PathBuf = path.into().canonicalize()?;
-        let parent_path = path.parent().unwrap().to_path_buf();
+impl<'a> WorldParser2<'a> {
+    pub fn new<P: Into<PathBuf>>(
+        input: &'a str,
+        parent_path: P,
+    ) -> std::io::Result<Self> {
         Ok(Self {
-            path,
-            parent_path,
+            input,
+            parent_path: parent_path.into(),
             rng: rand::thread_rng(),
 
             settings: Settings::default(),
@@ -51,170 +62,199 @@ impl WorldParser2 {
         })
     }
 
-    pub fn parse<I>(self) -> Result<World, ParseError> {
-        let data = std::fs::read_to_string(self.path.clone())?;
+    pub fn parse(mut self) -> IResult<&'a str, World, VerboseError<&'a str>> {
+        // TODO Remove comments and empty lines
+        //let lines = data
+        //    .lines()
+        //    .enumerate()
+        //    .map(|(i, line)| (1 + i as u64, line.split("//").next().unwrap().trim()))
+        //    .filter(|(_, line)| !line.is_empty());
 
-        // Remove comments, empty lines and trim
-        let lines = data
-            .lines()
-            .enumerate()
-            .map(|(i, line)| (1 + i as u64, line.split("//").next().unwrap().trim()))
-            .filter(|(_, line)| !line.is_empty());
-
-        lines.for_each(|(i, line)| {
-            let key = line.chars().next().unwrap();
-            match key {
-                // Mutates setting values through the function
-                '*' => {
-                    if let Err(e) = Self::parse_texture(&line[1..]) {
-                        return Err(ParseError::SettingErr(e, i));
-                    }
+        // TODO doesnt need to be reference
+        //let mut input = self.input;
+        let (_, expressions) = separated_list0(tag(";"), take_while(|c| c!= ';'))(self.input)?;
+        for expr in expressions {
+            let expr = expr.trim();
+            if expr.is_empty() {
+                break;
+            }
+            match line_key(expr)? {
+                (i, k) => {
+                    match k {
+                        "#" => {
+                            let (_, texture) =
+                                parse_texture(i, self.parent_path.clone())?;
+                            self.textures.push(texture.texture);
+                            self.texture_map
+                                .insert(texture.name, TextureID(self.texture_counter));
+                            self.texture_counter += 1;
+                        }
+                        "*" => {
+                            let (_, (setting_type, value)) = parse_setting(i, &self.texture_map)?;
+                            self.settings.update(setting_type, value)
+                        }
+                        "!" => {
+                            let (_, (name, dimensions, tiles, skybox, repeatable, ambient_light)) = parse_segment(i, self.parent_path.clone(), &self.settings, &self.texture_map)?;
+                            let segment = Segment::generate_rand(
+                                SegmentID(self.segments.len()),
+                                name.to_owned(),
+                                dimensions,
+                                tiles,
+                                skybox,
+                                repeatable,
+                                ambient_light,
+                                &mut self.rng,
+                                &[]
+                            );
+                            self.segments.push(segment);
+                        },
+                        _ => return context("Unknown line key", fail)(i),
+                    };
                 }
-                '#' => match self.parse_texture(line) {
-                    Ok((name, texture)) => {
-                        self.textures.push(texture);
-                        self.texture_map
-                            .insert(name, TextureID(self.texture_counter));
-                        self.texture_counter += 1;
-                    }
-                    Err(e) => return Err(ParseError::TextureErr(e, i)),
-                },
-                '!' => match self.parse_segment(line, SegmentID(self.segments.len())) {
-                    Ok(segment) => self.segments.push(segment),
-                    Err(e) => return Err(ParseError::SegmentErr(e, i)),
-                },
-                _ => return Err(ParseError::UnknownKey(key.to_string(), i)),
             }
-        });
-
-        Ok(World::new(self.segments, self.textures))
-    }
-
-    pub fn parse_line(&self, line: &str) -> Result<(), ParseError> {
-        if let Ok((input, _)) = tag::<&str, &str, ()>("#")(line) {
-            match Self::parse_texture(input) {
-                Ok(_) => (),
-                Err(e) => todo!(),
-            }
-            
-        } else if let Ok((input, _)) = tag::<&str, &str, ()>("*")(line) {
-            
-        } else if let Ok((input, _)) = tag::<&str, &str, ()>("!")(line) {
-            
-        } else {
-            return Err(ParseError::UnknownKey(key.to_string(), i));
         }
-        
-        Ok(())
+        Ok(("", World::new(self.segments, self.textures)))
+    }
+}
+
+fn parse_texture<'a>(
+    input: &'a str,
+    parent_path: PathBuf,
+) -> IResult<&str, ParsedTexture, VerboseError<&str>> {
+    let (i, (_, name, _, _, expressions_str)) =
+        (space, texture_name, space, char('='), take_all).parse(input)?;
+
+    let mut data = None;
+    let mut transparency = false;
+
+    let (_, expressions) = separated_list0(tag(","), take_while(|c| c!= ','))(expressions_str)?;
+    for expr in expressions {
+        match field_name(expr)? {
+            (i, k) => {
+                match k.trim() {
+                    "src" => {
+                        let (rest, src) = string(i)?;
+                        empty_or_fail(rest, "Invalid expression")?;
+                        let full_path = parent_path.join(src);
+                        match ImageReader::open(full_path) {
+                            Ok(tex) => match tex.decode() {
+                                Ok(d) => data = Some(d),
+                                Err(e) => {
+                                    return context("Texture decoding error", fail)(i)
+                                }
+                            },
+                            Err(e) => return context("Texture not found", fail)(i),
+                        };
+                    }
+                    "transparency" => {
+                        let (rest, value) = boolean(i)?;
+                        empty_or_fail(rest, "Invalid expression")?;
+                        transparency = value;
+                    }
+                    _ => return context("Unknown texture field", fail)(i),
+                };
+            }
+        }
     }
 
-    pub fn parse_texture(input: &str) -> IResult<&str, (), TextureError<&str>> {
-        let (input, texture_name) = preceded(space0, alphanumeric1).parse(input)?;
-        let (input, _) = preceded(space0, tag("=")).parse(input)?;
+    let Some(data) = data else {
+        return context("File path not specified", fail)(i);
+    };
+    let texture = TextureData::new(
+        data.to_rgba8().as_bytes().to_vec(),
+        data.width(),
+        data.height(),
+        transparency,
+    );
 
-        let parse_path = |input: &str| -> IResult<&str, &str> {
-            let (input, _) = tag("path:")(input)?;
-            preceded(space0, preceded(tag("\""), take_until("\""))).parse(input)
-        };
-        let parse_transparency = |input: &str| -> IResult<&str, bool> {
-            let (input, _) = tag("transparency:")(input)?;
-            let (input, value) = preceded(space0, alpha1).parse(input)?;
-            let transparency = match value.parse() {
-                
+    Ok((
+        input,
+        ParsedTexture {
+            name: name.to_owned(),
+            texture,
+        },
+    ))
+}
+
+fn parse_setting<'a>(
+    input: &'a str,
+    textures: &HashMap<String, TextureID>,
+) -> IResult<&'a str, (SettingType, SettingValue), VerboseError<&'a str>> {
+    let (i, (_, name, _, _, value)) =
+        (space, setting_name, space, char('='), take_all).parse(input)?;
+    let value = value.trim();
+    match name {
+        "bottomL" => {
+            let (rest, level) = double(value)?;
+            empty_or_fail(rest, "Invalid expression")?;
+            return Ok((i, (SettingType::BottomLevel, SettingValue::F32(level as f32))));
+        }
+        "groundL" => {
+            let (rest, level) = double(value)?;
+            empty_or_fail(rest, "Invalid expression")?;
+            return Ok((i, (SettingType::GroundLevel, SettingValue::F32(level as f32))));
+        }
+        "ceilingL" => {
+            let (rest, level) = double(value)?;
+            empty_or_fail(rest, "Invalid expression")?;
+            return Ok((i, (SettingType::CeilingLevel, SettingValue::F32(level as f32))));
+        }
+        "topL" => {
+            let (rest, level) = double(value)?;
+            empty_or_fail(rest, "Invalid expression")?;
+            return Ok((i, (SettingType::TopLevel, SettingValue::F32(level as f32))));
+        }
+        "skyboxNorth" => {
+            let Some(&id) = textures.get(value) else {
+                return context("Unknown texture", fail)(value);
             };
-            Ok((input, transparency))
-        };
-
-
-        preceded(space0, alt((parse_path, parse_transparency))).parse(input)
-
-        Ok(())
+            return Ok((i, (SettingType::SkyboxNorth, SettingValue::TextureID(id))));
+        }
+        "skyboxEast" => {
+            let Some(&id) = textures.get(value) else {
+                return context("Unknown texture", fail)(value);
+            };
+            return Ok((i, (SettingType::SkyboxEast, SettingValue::TextureID(id))));
+        }
+        "skyboxSouth" => {
+            let Some(&id) = textures.get(value) else {
+                return context("Unknown texture", fail)(value);
+            };
+            return Ok((i, (SettingType::SkyboxSouth, SettingValue::TextureID(id))));
+        }
+        "skyboxWest" => {
+            let Some(&id) = textures.get(value) else {
+                return context("Unknown texture", fail)(value);
+            };
+            return Ok((i, (SettingType::SkyboxWest, SettingValue::TextureID(id))));
+        }
+        "skyboxTop" => {
+            let Some(&id) = textures.get(value) else {
+                return context("Unknown texture", fail)(value);
+            };
+            return Ok((i, (SettingType::SkyboxTop, SettingValue::TextureID(id))));
+        }
+        "skyboxBottom" => {
+            let Some(&id) = textures.get(value) else {
+                return context("Unknown texture", fail)(value);
+            };
+            return Ok((i, (SettingType::SkyboxBottom, SettingValue::TextureID(id))));
+        }
+        _ => return context("Unknown setting", fail)(name),
     }
 }
 
-/*pub struct WorldParser {
-    data: String,
-    dir_path: PathBuf,
-    rng: ThreadRng,
-
-    settings: Settings,
-    textures: Vec<TextureData>,
-    texture_map: HashMap<String, TextureID>,
-    texture_counter: usize,
-    segments: Vec<Segment>,
-}
-
-impl WorldParser {
-    pub fn new<P: Into<PathBuf>>(path: P) -> Result<Self, ParseError> {
-        let path: PathBuf = path.into().canonicalize()?;
-        let data = std::fs::read_to_string(path.clone())?;
-        Ok(Self {
-            data,
-            dir_path: path.parent().unwrap().to_path_buf(),
-            rng: rand::thread_rng(),
-
-            settings: Settings::default(),
-            textures: Vec::new(),
-            texture_map: HashMap::new(),
-            texture_counter: 2,
-            segments: Vec::new(),
-        })
-    }
-
-    pub fn parse(mut self) -> Result<World, ParseError> {
-        let data = self.data.clone();
-
-        // Remove comments, remove empty lines and trim data
-        let lines = data
-            .lines()
-            .enumerate()
-            .map(|(i, line)| (1 + i as u64, line.split("//").next().unwrap().trim()))
-            .filter(|(_, line)| !line.is_empty());
-
-        // Process each line
-        for (i, line) in lines {
-            // Identify each line by key
-            let key = line.chars().next().unwrap();
-            match key {
-                // Mutates setting values through the function
-                '*' => {
-                    if let Err(e) = self.parse_setting(line) {
-                        return Err(ParseError::SettingErr(e, i));
-                    }
-                }
-                '#' => match self.parse_texture(line) {
-                    Ok((name, texture)) => {
-                        self.textures.push(texture);
-                        self.texture_map
-                            .insert(name, TextureID(self.texture_counter));
-                        self.texture_counter += 1;
-                    }
-                    Err(e) => return Err(ParseError::TextureErr(e, i)),
-                },
-                '!' => match self.parse_segment(line, SegmentID(self.segments.len())) {
-                    Ok(segment) => self.segments.push(segment),
-                    Err(e) => return Err(ParseError::SegmentErr(e, i)),
-                },
-                _ => return Err(ParseError::UnknownKey(key.to_string(), i)),
-            }
-        }
-        if self.segments.len() < 2 {
-            return Err(ParseError::NotEnoughSegments(self.segments.len()));
-        }
-        Ok(World::new(self.segments, self.textures))
-    }
-
-    fn parse_segment(&mut self, line: &str, id: SegmentID) -> Result<Segment, SegmentError> {
-        // Split the line and check for formatting errors
-        let split: Vec<&str> = line.split('=').collect();
-        if split.len() != 2 {
-            return Err(SegmentError::InvalidFormat(line.to_owned()));
-        }
-        let name = split[0].trim();
-        let expressions = split[1].trim();
+fn parse_segment<'a>(
+    input: &'a str,
+    parent_dir: PathBuf,
+    settings: &Settings,
+    textures: &HashMap<String, TextureID>
+) -> IResult<&'a str, (String, (u64, u64), Vec<Tile>, SkyboxTextureIDs, bool, f32), VerboseError<&'a str>> {
+    let (i, (_, name, _, _, expressions_str)) =
+        (space, segment_name, space, char('='), take_all).parse(input)?;
 
         let mut segment_data = None;
-        let mut repeatable = None;
+        let mut repeatable = false;
         let mut ambient_light = None;
         let mut skybox_north = None;
         let mut skybox_east = None;
@@ -222,285 +262,196 @@ impl WorldParser {
         let mut skybox_west = None;
         let mut skybox_top = None;
         let mut skybox_bottom = None;
-
-        for expr in expressions.split(',') {
-            // Split the expression and check for formatting errors
-            let split: Vec<&str> = expr.split(':').collect();
-            if split.len() != 2 {
-                return Err(SegmentError::InvalidFormat(expr.to_owned()));
-            }
-            let parameter = split[0].trim();
-            let value = split[1].trim();
-
-            // Identify the parameter and act accordingly
-            match parameter {
+        
+    let (_, expressions) = separated_list0(tag(","), take_while(|c| c!= ','))(expressions_str)?;
+    for expr in expressions {
+        match field_name(expr)? {
+            (i, name) => {
+                let i = i.trim();
+                match name {
                 "src" => {
-                    let full_path = self.dir_path.join(value);
-                    let data = std::fs::read_to_string(full_path.clone())?;
+                    let full_path = parent_dir.join(i);
+                    let data = match std::fs::read_to_string(full_path.clone()) {
+                        Ok(d) => d,
+                        Err(e) => return context("Segment file not found", fail)(i),
+                    };
                     let parsed = match SegmentParser::new(
                         &data,
-                        &self.settings,
-                        &self.texture_map,
+                        settings,
+                        textures,
                     )
                     .parse()
                     {
                         Ok(p) => p,
-                        Err(e) => {
-                            return Err(SegmentError::SegmentParseErr(
-                                e,
-                                full_path.to_string_lossy().to_string(),
-                            ))
-                        }
+                        Err(e) => return context("Failed to parse segment", fail)(i)
                     };
                     segment_data = Some(parsed);
-                }
+                },
                 "repeatable" => {
-                    repeatable = match value.parse::<bool>() {
-                        Ok(b) => Some(b),
-                        Err(_) => {
-                            return Err(SegmentError::BoolParseFail(value.to_owned()))
+                    let (rest, value) = boolean(i)?;
+                        empty_or_fail(rest, "Invalid expression")?;
+                        repeatable = value;
+                },
+                "ambientLight" => {
+                    let (rest, value) = double(i)?;
+                        empty_or_fail(rest, "Invalid expression")?;
+                        if value < 0.0 {
+                            return context("Invalid ambient light", fail)(i)
                         }
+                        ambient_light = Some(value as f32);
+                },
+                "skyboxNorth" => skybox_north = match textures.get(i) {
+                    Some(&s) => Some(s),
+                    None => {
+                        return context("Unknown texture", fail)(i)
                     }
-                }
-                "ambient_light" => {
-                    ambient_light = match value.parse::<f32>() {
-                        Ok(b) => Some(b),
-                        Err(_) => {
-                            return Err(SegmentError::F32ParseFail(value.to_owned()))
-                        }
+                },
+                "skyboxSouth" => skybox_south = match textures.get(i) {
+                    Some(&s) => Some(s),
+                    None => {
+                        return context("Unknown texture", fail)(i)
                     }
-                }
-                "skyboxNorth" => {
-                    skybox_north = match self.texture_map.get(value) {
-                        Some(&s) => Some(s),
-                        None => {
-                            return Err(SegmentError::UnknownTexture(value.to_owned()))
-                        }
-                    };
-                }
-                "skyboxEast" => {
-                    skybox_east = match self.texture_map.get(value) {
-                        Some(&s) => Some(s),
-                        None => {
-                            return Err(SegmentError::UnknownTexture(value.to_owned()))
-                        }
-                    };
-                }
-                "skyboxSouth" => {
-                    skybox_south = match self.texture_map.get(value) {
-                        Some(&s) => Some(s),
-                        None => {
-                            return Err(SegmentError::UnknownTexture(value.to_owned()))
-                        }
-                    };
-                }
-                "skyboxWest" => {
-                    skybox_west = match self.texture_map.get(value) {
-                        Some(&s) => Some(s),
-                        None => {
-                            return Err(SegmentError::UnknownTexture(value.to_owned()))
-                        }
-                    };
-                }
-                "skyboxTop" => {
-                    skybox_top = match self.texture_map.get(value) {
-                        Some(&s) => Some(s),
-                        None => {
-                            return Err(SegmentError::UnknownTexture(value.to_owned()))
-                        }
-                    };
-                }
-                "skyboxBottom" => {
-                    skybox_bottom = match self.texture_map.get(value) {
-                        Some(&s) => Some(s),
-                        None => {
-                            return Err(SegmentError::UnknownTexture(value.to_owned()))
-                        }
-                    };
-                }
-                _ => return Err(SegmentError::UnknownParameter(parameter.to_owned())),
-            }
+                },
+                "skyboxEast" => skybox_east = match textures.get(i) {
+                    Some(&s) => Some(s),
+                    None => {
+                        return context("Unknown texture", fail)(i)
+                    }
+                },
+                "skyboxWest" => skybox_west = match textures.get(i) {
+                    Some(&s) => Some(s),
+                    None => {
+                        return context("Unknown texture", fail)(i)
+                    }
+                },
+                "skyboxTop" => skybox_top = match textures.get(i) {
+                    Some(&s) => Some(s),
+                    None => {
+                        return context("Unknown texture", fail)(i)
+                    }
+                },
+                "skyboxBottom" => skybox_bottom = match textures.get(i) {
+                    Some(&s) => Some(s),
+                    None => {
+                        return context("Unknown texture", fail)(i)
+                    }
+                },
+                _ => return context("Unknown segment field name", fail)(name)
+            }}
         }
-        // Check if all needed information has been acquired
-        let Some((dimensions, tiles)) = segment_data else {
-            return Err(SegmentError::UnspecifiedSrc);
-        };
-        let Some(repeatable) = repeatable else {
-            return Err(SegmentError::UnspecifiedRepetition);
-        };
-        let Some(ambient_light) = ambient_light else {
-            return Err(SegmentError::UnspecifiedAmbientLight);
-        };
-        if ambient_light < 0.0 {
-            return Err(SegmentError::InvalidAmbientLight(ambient_light.to_string()));
-        }
-
-        let skybox = SkyboxTextureIDs {
-            north: skybox_north.unwrap_or(self.settings.skybox_north),
-            east: skybox_east.unwrap_or(self.settings.skybox_east),
-            south: skybox_south.unwrap_or(self.settings.skybox_south),
-            west: skybox_west.unwrap_or(self.settings.skybox_west),
-            top: skybox_top.unwrap_or(self.settings.skybox_top),
-            bottom: skybox_bottom.unwrap_or(self.settings.skybox_bottom),
-        };
-
-        Ok(Segment::generate_rand(
-            id,
-            name.to_owned(),
-            dimensions,
-            tiles,
-            skybox,
-            repeatable,
-            ambient_light,
-            &mut self.rng,
-            &[]
-        ))
     }
 
-    fn parse_setting(&mut self, line: &str) -> Result<(), SettingError> {
-        // Split the line and check for formatting errors
-        let line = &line[1..];
-        let split: Vec<&str> = line.split('=').collect();
-        if split.len() != 2 {
-            return Err(SettingError::InvalidFormat(line.to_owned()));
-        }
-        let setting = split[0].trim();
-        let val = split[1].trim();
+    // Check if all needed information has been acquired
+    let Some((dimensions, tiles)) = segment_data else {
+        return context("Unspecified src", fail)(input)
+    };
+    let Some(ambient_light) = ambient_light else {
+        return context("Unspecified ambient light", fail)(input)
+    };
 
-        // Identify the setting parameter and act accordingly
-        match setting {
-            "bottomL" => {
-                let Ok(value) = val.parse::<f32>() else {
-                    return Err(SettingError::InvalidF32Value(val.to_owned()));
-                };
-                self.settings.bottom_level = value;
-            }
-            "groundL" => {
-                let Ok(value) = val.parse::<f32>() else {
-                    return Err(SettingError::InvalidF32Value(val.to_owned()));
-                };
-                self.settings.ground_level = value;
-            }
-            "ceilingL" => {
-                let Ok(value) = val.parse::<f32>() else {
-                    return Err(SettingError::InvalidF32Value(val.to_owned()));
-                };
-                self.settings.ceiling_level = value;
-            }
-            "topL" => {
-                let Ok(value) = val.parse::<f32>() else {
-                    return Err(SettingError::InvalidF32Value(val.to_owned()));
-                };
-                self.settings.top_level = value;
-            }
-            "skyboxNorth" => {
-                let Some(&texture_id) = self.texture_map.get(val) else {
-                    return Err(SettingError::UnknownTexture(val.to_owned()));
-                };
-                self.settings.skybox_north = texture_id;
-            }
-            "skyboxEast" => {
-                let Some(&texture_id) = self.texture_map.get(val) else {
-                    return Err(SettingError::UnknownTexture(val.to_owned()));
-                };
-                self.settings.skybox_east = texture_id;
-            }
-            "skyboxSouth" => {
-                let Some(&texture_id) = self.texture_map.get(val) else {
-                    return Err(SettingError::UnknownTexture(val.to_owned()));
-                };
-                self.settings.skybox_south = texture_id;
-            }
-            "skyboxWest" => {
-                let Some(&texture_id) = self.texture_map.get(val) else {
-                    return Err(SettingError::UnknownTexture(val.to_owned()));
-                };
-                self.settings.skybox_west = texture_id;
-            }
-            "skyboxTop" => {
-                let Some(&texture_id) = self.texture_map.get(val) else {
-                    return Err(SettingError::UnknownTexture(val.to_owned()));
-                };
-                self.settings.skybox_top = texture_id;
-            }
-            "skyboxBottom" => {
-                let Some(&texture_id) = self.texture_map.get(val) else {
-                    return Err(SettingError::UnknownTexture(val.to_owned()));
-                };
-                self.settings.skybox_bottom = texture_id;
-            }
-            _ => return Err(SettingError::UnknownSetting(setting.to_owned())),
-        }
+    let skybox = SkyboxTextureIDs {
+        north: skybox_north.unwrap_or(settings.skybox_north),
+        east: skybox_east.unwrap_or(settings.skybox_east),
+        south: skybox_south.unwrap_or(settings.skybox_south),
+        west: skybox_west.unwrap_or(settings.skybox_west),
+        top: skybox_top.unwrap_or(settings.skybox_top),
+        bottom: skybox_bottom.unwrap_or(settings.skybox_bottom),
+    };
 
-        Ok(())
+    Ok((i, (
+        name.to_owned(),
+        dimensions,
+        tiles,
+        skybox,
+        repeatable,
+        ambient_light,
+    )))
+}
+
+fn space<'a, E: NomParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {
+    let chars = " \t\r\n";
+    take_while(|c| chars.contains(c))(i)
+}
+
+fn string<'a, E: NomParseError<&'a str> + ContextError<&'a str>>(
+    i: &'a str,
+) -> IResult<&'a str, &'a str, E> {
+    context(
+        "string",
+        preceded(char('\"'), cut(terminated(take_until("\""), char('\"')))),
+    )(i)
+}
+
+fn take_all<'a, E: NomParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {
+    take_while(|_| true)(i)
+}
+
+fn texture_name<'a, E: NomParseError<&'a str> + ContextError<&'a str>>(
+    i: &'a str,
+) -> IResult<&'a str, &'a str, E> {
+    context("texture name", preceded(space, alphanumeric1))(i)
+}
+
+fn setting_name<'a, E: NomParseError<&'a str> + ContextError<&'a str>>(
+    i: &'a str,
+) -> IResult<&'a str, &'a str, E> {
+    context("setting name", preceded(space, alphanumeric1))(i)
+}
+
+fn segment_name<'a, E: NomParseError<&'a str> + ContextError<&'a str>>(
+    i: &'a str,
+) -> IResult<&'a str, &'a str, E> {
+    context("segment name", preceded(space, alphanumeric1))(i)
+}
+
+fn field_name<'a, E: NomParseError<&'a str> + ContextError<&'a str>>(
+    i: &'a str,
+) -> IResult<&'a str, &'a str, E> {
+    context(
+        "field name",
+        preceded(space, terminated(take_until(":"), char(':'))),
+    )(i)
+}
+
+fn line_key<'a, E: NomParseError<&'a str> + ContextError<&'a str>>(
+    i: &'a str,
+) -> IResult<&'a str, &'a str, E> {
+    context("line key", preceded(space, take(1usize)))(i)
+}
+
+fn boolean<'a, E: NomParseError<&'a str>>(i: &'a str) -> IResult<&'a str, bool, E> {
+    let parse_true = value(true, tag("true"));
+    let parse_false = value(false, tag("false"));
+    alt((parse_true, parse_false))(i)
+}
+
+fn empty_or_fail<'a, E: NomParseError<&'a str> + ContextError<&'a str>>(i: &'a str, err_msg: &'static str) -> IResult<&'a str, &'a str, E> {
+    if !i.is_empty() {
+        context(err_msg, fail)(i)
+    } else {
+        Ok(("", ""))
     }
+}
 
-    fn parse_texture(&self, line: &str) -> Result<(String, TextureData), TextureError> {
-        // Split the line and check for formatting errors
-        let line = &line[1..];
-        let operands: Vec<&str> = line.split('=').collect();
-        if operands.len() != 2 {
-            return Err(TextureError::InvalidFormat(line.to_owned()));
-        }
-        let texture_name = operands[0].trim();
-        let expressions = operands[1].trim();
+#[derive(Debug, strum::EnumIter, PartialEq, Eq, Hash)]
+pub enum SettingType {
+    BottomLevel,
+    GroundLevel,
+    CeilingLevel,
+    TopLevel,
+    SkyboxNorth,
+    SkyboxEast,
+    SkyboxSouth,
+    SkyboxWest,
+    SkyboxTop,
+    SkyboxBottom,
+}
 
-        // There can't be multiple texture with the same name
-        if self.texture_map.contains_key(texture_name) {
-            return Err(TextureError::TextureAlreadyExists(texture_name.to_owned()));
-        }
-
-        let mut texture_data = None;
-        let mut transparency = None;
-        for expr in expressions.split(',') {
-            // Split the expression and check for formatting errors
-            let operands: Vec<&str> = expr.split(':').collect();
-            if operands.len() != 2 {
-                return Err(TextureError::InvalidExpressionFormat(expr.to_owned()));
-            }
-            let parameter = operands[0].trim();
-            let value = operands[1].trim();
-
-            // Identify the parameter and act accordingly
-            match parameter {
-                "path" => {
-                    let full_path = self.dir_path.join(value);
-                    texture_data = Some(ImageReader::open(full_path)?.decode()?);
-                }
-                "transparency" => {
-                    transparency = match value.parse::<bool>() {
-                        Ok(b) => Some(b),
-                        Err(_) => {
-                            return Err(TextureError::BoolParseFail(value.to_owned()))
-                        }
-                    }
-                }
-                _ => {
-                    return Err(TextureError::UnknownExpressionParameter(
-                        parameter.to_owned(),
-                    ))
-                }
-            }
-        }
-        // Check if all needed information is acquired
-        let Some(texture_data) = texture_data else {
-            return Err(TextureError::UnspecifiedSrc);
-        };
-        let Some(transparency) = transparency else {
-            return Err(TextureError::UnspecifiedTransparency);
-        };
-
-        // Store the texture with an unique ID
-        let texture = TextureData::new(
-            texture_data.to_rgba8().as_bytes().to_vec(),
-            texture_data.width(),
-            texture_data.height(),
-            transparency,
-        );
-
-        Ok((texture_name.to_owned(), texture))
-    }
-}*/
+#[derive(Debug)]
+pub enum SettingValue {
+    F32(f32),
+    TextureID(TextureID),
+}
 
 #[derive(Debug)]
 pub(super) struct Settings {
@@ -514,6 +465,29 @@ pub(super) struct Settings {
     pub skybox_west: TextureID,
     pub skybox_top: TextureID,
     pub skybox_bottom: TextureID,
+}
+
+impl Settings {
+    fn update(&mut self, setting_type: SettingType, value: SettingValue) {
+        match value {
+            SettingValue::F32(f) => match setting_type {
+                SettingType::BottomLevel => self.bottom_level = f,
+                SettingType::GroundLevel => self.ground_level = f,
+                SettingType::CeilingLevel => self.ceiling_level = f,
+                SettingType::TopLevel => self.top_level = f,
+                _ => unreachable!()
+            },
+            SettingValue::TextureID(id) => match setting_type {
+                SettingType::SkyboxNorth => self.skybox_north = id,
+                SettingType::SkyboxEast => self.skybox_east = id,
+                SettingType::SkyboxSouth => self.skybox_south = id,
+                SettingType::SkyboxWest => self.skybox_west = id,
+                SettingType::SkyboxTop => self.skybox_top = id,
+                SettingType::SkyboxBottom => self.skybox_bottom = id,
+                _ => unreachable!()
+            },
+        }
+    }
 }
 
 impl Default for Settings {
@@ -532,8 +506,8 @@ impl Default for Settings {
         }
     }
 }
-
-#[test]
+/*#[test]
 fn parsing() {
     WorldParser::new("maps/world.txt").unwrap().parse().unwrap();
 }
+*/

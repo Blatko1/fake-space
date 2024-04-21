@@ -1,15 +1,13 @@
 use std::io;
-use std::str::FromStr;
-use nom::error::ErrorKind as NomErrorKind;
-use nom::error::ParseError as NomParseError;
+use nom::Err;
 
 #[derive(Debug)]
 pub enum ParseError {
     UnknownKey(String, u64),
     FileErr(std::io::ErrorKind),
-    SettingErr(SettingError, u64),
-    TextureErr(TextureError, u64),
-    SegmentErr(SegmentError, u64),
+    SettingErr(Err<SettingError>, u64),
+    TextureErr(Err<TextureError>, u64),
+    SegmentErr(Err<SegmentError>, u64),
 
     NotEnoughSegments(usize),
 }
