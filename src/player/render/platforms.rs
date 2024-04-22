@@ -60,7 +60,7 @@ impl<'a> ColumnDrawer<'a> {
         let tile_step_factor = ray.horizontal_plane * 2.0 * cam.width_recip;
         let pos_factor = ray.camera_dir - ray.horizontal_plane
             + tile_step_factor * ray.column_index as f32;
-        let row_dist_factor = cam.f_half_height * cam.plane_dist;
+        let row_dist_factor = cam.f_half_height;
 
         // Multiply by the canvas aspect ratio so the light has a shape of a circle.
         let flashlight_x = ray.plane_x * cam.view_aspect;

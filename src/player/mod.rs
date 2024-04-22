@@ -44,7 +44,6 @@ impl Player {
     pub fn update(&mut self, world: &World, delta: f32) {
         let mut room = world.get_room_data(self.current_room);
 
-        self.camera.update(&self.input_state, delta);
         self.body.update_physics_state(
             self.camera.forward_dir,
             self.camera.right_dir,
@@ -111,8 +110,6 @@ impl Player {
             GameInput::MoveBackward => self.input_state.backward = is_pressed,
             GameInput::StrafeLeft => self.input_state.left = is_pressed,
             GameInput::StrafeRight => self.input_state.right = is_pressed,
-            GameInput::IncreaseFOV => self.input_state.increase_fov = is_pressed,
-            GameInput::DecreaseFOV => self.input_state.decrease_fov = is_pressed,
             GameInput::PhysicsSwitch if !is_pressed => {
                 self.body.toggle_ghost();
                 self.body.toggle_fly();
@@ -131,7 +128,6 @@ impl Player {
             forward_dir: self.camera.forward_dir,
             yaw_angle: self.camera.yaw_angle.to_degrees(),
             y_shearing: self.camera.y_shearing,
-            fov: self.camera.fov.to_degrees(),
             current_room_id: self.current_room.0,
             physics_state: self.body.collect_dbg_data(),
         }
@@ -144,7 +140,6 @@ pub struct PlayerDebugData {
     pub forward_dir: Vec3,
     pub yaw_angle: f32,
     pub y_shearing: f32,
-    pub fov: f32,
     pub current_room_id: usize,
     pub physics_state: PhysicsStateDebugData,
 }
@@ -158,8 +153,6 @@ pub struct PlayerInputState {
     pub backward: bool,
     pub left: bool,
     pub right: bool,
-    pub increase_fov: bool,
-    pub decrease_fov: bool,
 }
 
 impl PlayerInputState {
@@ -172,10 +165,5 @@ impl PlayerInputState {
 
     pub fn fly_direction(&self) -> f32 {
         (if self.fly_up { 1.0 } else { 0.0 } - if self.fly_down { 1.0 } else { 0.0 })
-    }
-
-    pub fn fov_change(&self) -> f32 {
-        (if self.increase_fov { 1.0 } else { 0.0 }
-            + if self.decrease_fov { -1.0 } else { 0.0 })
     }
 }

@@ -46,7 +46,7 @@ impl<'a> SkyboxSegment<'a> {
             ray.hit_wall_side = Side::Horizontal;
             //half_wall_pixel_height =
             //    cam.f_half_height / (ray.delta_dist_z * 0.5) * cam.plane_dist;
-            half_wall_pixel_height = cam.f_height / ray.delta_dist_z * cam.plane_dist;
+            half_wall_pixel_height = cam.f_height / ray.delta_dist_z;
 
             wall_texture = self.textures.north;
         }
@@ -56,7 +56,7 @@ impl<'a> SkyboxSegment<'a> {
             // ray.wall_offset = 1.0 - (0.5 + t * ray.dir.z);
             ray.wall_offset = 0.5 - t * ray.dir.z;
             ray.hit_wall_side = Side::Vertical;
-            half_wall_pixel_height = cam.f_height / ray.delta_dist_x * cam.plane_dist;
+            half_wall_pixel_height = cam.f_height / ray.delta_dist_x;
 
             wall_texture = self.textures.east;
         }
@@ -65,7 +65,7 @@ impl<'a> SkyboxSegment<'a> {
             let t = 0.5 / ray.dir.x;
             ray.wall_offset = 0.5 - t * ray.dir.z;
             ray.hit_wall_side = Side::Vertical;
-            half_wall_pixel_height = cam.f_height / ray.delta_dist_x * cam.plane_dist;
+            half_wall_pixel_height = cam.f_height / ray.delta_dist_x;
 
             wall_texture = self.textures.west;
         }
@@ -74,7 +74,7 @@ impl<'a> SkyboxSegment<'a> {
             let t = 0.5 / ray.dir.z;
             ray.wall_offset = 0.5 + t * ray.dir.x;
             ray.hit_wall_side = Side::Horizontal;
-            half_wall_pixel_height = cam.f_height / ray.delta_dist_z * cam.plane_dist;
+            half_wall_pixel_height = cam.f_height / ray.delta_dist_z;
 
             wall_texture = self.textures.south;
         };
@@ -110,10 +110,9 @@ impl<'a> SkyboxSegment<'a> {
         let draw_to = self.top_draw_bound;
 
         // Variables used for reducing the amount of calculations and for optimization
-        let ray_dir = ray.camera_dir - ray.horizontal_plane;
-        let tile_step_factor = ray.horizontal_plane * 2.0 * cam.width_recip;
+        let ray_dir = self.camera.forward_dir - self.camera.horizontal_plane;
+        let tile_step_factor = self.camera.horizontal_plane * 2.0 * cam.width_recip;
         let pos_factor = ray_dir + tile_step_factor * ray.column_index as f32;
-        let row_dist_factor = cam.f_half_height * cam.plane_dist;
         let half_h_plus_shearing = cam.f_half_height + cam.y_shearing;
         column
             .chunks_exact_mut(4)
@@ -121,7 +120,7 @@ impl<'a> SkyboxSegment<'a> {
             .skip(draw_from)
             .take(draw_to - draw_from)
             .for_each(|(y, rgba)| {
-                let row_dist = row_dist_factor / (y as f32 - half_h_plus_shearing);
+                let row_dist = cam.f_half_height / (y as f32 - half_h_plus_shearing);
                 let pos = Vec3::new(0.5, 0.5, 0.5) + row_dist * pos_factor;
                 let tex_x = ((tex_width as f32 * pos.x) as usize).min(tex_width - 1);
                 let tex_y = ((tex_height as f32 * pos.z) as usize).min(tex_height - 1);
@@ -164,10 +163,9 @@ impl<'a> SkyboxSegment<'a> {
             .clamp(draw_from, self.top_draw_bound);
 
         // Variables used for reducing the amount of calculations and for optimization
-        let tile_step_factor = ray.horizontal_plane * 2.0 * cam.width_recip;
-        let pos_factor = ray.camera_dir - ray.horizontal_plane
+        let tile_step_factor = self.camera.horizontal_plane * 2.0 * cam.width_recip;
+        let pos_factor = self.camera.forward_dir - self.camera.horizontal_plane
             + tile_step_factor * ray.column_index as f32;
-        let row_dist_factor = cam.f_half_height * cam.plane_dist;
         column
             .chunks_exact_mut(4)
             .enumerate()
@@ -175,7 +173,7 @@ impl<'a> SkyboxSegment<'a> {
             .take(draw_to - draw_from)
             .for_each(|(y, rgba)| {
                 let row_dist =
-                    row_dist_factor / (y as f32 - cam.f_half_height - cam.y_shearing);
+                cam.f_half_height / (y as f32 - cam.f_half_height - cam.y_shearing);
                 let pos = Vec3::new(0.5, 0.5, 0.5) + row_dist * pos_factor;
                 let tex_x =
                     ((tex_width as f32 * (1.0 - pos.x)) as usize).min(tex_width - 1);

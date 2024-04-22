@@ -1,8 +1,6 @@
 use crate::world::portal::{Portal, PortalRotationDifference};
 use glam::Vec3;
 
-use crate::player::camera::Camera;
-
 use super::{PointXZ, Side};
 
 #[derive(Debug, Clone, Copy)]
@@ -11,8 +9,6 @@ pub struct Ray {
     pub column_index: usize,
     /// Direction of the Ray.
     pub dir: Vec3,
-	/// Distance from the raycaster position to the camera plane.
-    pub plane_dist: f32,
     /// Distance the Ray needs to cover to reach a new
     /// vertical wall from the previous vertical wall.
     pub delta_dist_x: f32,
@@ -56,68 +52,6 @@ pub struct Ray {
 }
 
 impl Ray {
-    pub fn cast_with_camera(column_index: usize, cam: &Camera) -> Self {
-        let origin = cam.origin;
-        let camera_dir = cam.forward_dir;
-        let horizontal_plane = cam.horizontal_plane;
-
-        // X-coordinate on the horizontal camera plane (range [-1.0, 1.0])
-        let plane_x = 2.0 * (column_index as f32 * cam.width_recip) - 1.0;
-        // Ray direction for current pixel column
-        let dir = camera_dir + cam.horizontal_plane * plane_x;
-        // Length of ray from one x/z side to next x/z side on the tile_map
-        let delta_dist_z = 1.0 / dir.z.abs();
-        let delta_dist_x = 1.0 / dir.x.abs();
-        // Distance to nearest x side
-        let side_dist_x = delta_dist_x
-            * if dir.x < 0.0 {
-                origin.x.fract()
-            } else {
-                1.0 - origin.x.fract()
-            };
-        // Distance to nearest z side
-        let side_dist_z = delta_dist_z
-            * if dir.z < 0.0 {
-                origin.z.fract()
-            } else {
-                1.0 - origin.z.fract()
-            };
-
-        let wall_dist = 0.0;
-        let (side, wall_offset) = if side_dist_x < side_dist_z {
-            let wall_offset = origin.z + wall_dist * dir.z;
-            (Side::Vertical, wall_offset - wall_offset.floor())
-        } else {
-            let wall_offset = origin.x + wall_dist * dir.x;
-            (Side::Horizontal, wall_offset - wall_offset.floor())
-        };
-
-        Self {
-            column_index,
-            dir,
-			plane_dist: cam.plane_dist,
-            delta_dist_x,
-            delta_dist_z,
-            step_x: dir.x.signum() as i64,
-            step_z: dir.z.signum() as i64,
-            plane_x,
-
-            // Camera data from which the ray was cast
-            origin,
-            camera_dir,
-            horizontal_plane,
-
-            // Variables that change per each DDA step
-            side_dist_x,
-            side_dist_z,
-            next_tile: PointXZ::new(origin.x as i64, origin.z as i64),
-            wall_dist,
-            previous_wall_dist: wall_dist,
-            hit_wall_side: side,
-            wall_offset,
-        }
-    }
-
     pub fn dda_step(&mut self) {
         if self.side_dist_x < self.side_dist_z {
             self.wall_dist = self.side_dist_x.max(0.0);
@@ -126,7 +60,6 @@ impl Ray {
             self.hit_wall_side = Side::Vertical;
             let wall_offset = self.origin.z + self.wall_dist * self.dir.z;
             self.wall_offset = wall_offset - wall_offset.floor();
-			self.wall_dist /= self.plane_dist;
         } else {
             self.wall_dist = self.side_dist_z.max(0.0);
             self.next_tile.z += self.step_z;
@@ -134,7 +67,6 @@ impl Ray {
             self.hit_wall_side = Side::Horizontal;
             let wall_offset = self.origin.x + self.wall_dist * self.dir.x;
             self.wall_offset = wall_offset - wall_offset.floor();
-			self.wall_dist /= self.plane_dist;
         }
     }
 

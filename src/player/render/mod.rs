@@ -1,7 +1,7 @@
 mod colors;
 mod object;
 mod platforms;
-mod ray;
+pub(super) mod ray;
 mod skybox;
 mod wall;
 
@@ -120,9 +120,6 @@ impl<'a> ColumnDrawer<'a> {
                 Some(&t) => t,
                 None => break,
             };
-            if next_tile.portal.is_some() {
-                
-            }
 
             // Draw bottom wall
             let bottom_wall_data = WallDrawData {
@@ -167,13 +164,14 @@ impl<'a> ColumnDrawer<'a> {
             // Switch to the different room if portal is hit
             if let Some(src_dummy_portal) = next_tile.portal {
                 let src_portal = self.current_room.get_portal(src_dummy_portal.id);
-                if let Some((room_id, portal_id)) = src_portal.link {
-                    let dest_room = self.world.get_room_data(room_id);
-                    let dest_portal = dest_room.get_portal(portal_id);
-                    self.ray.portal_teleport(src_portal, dest_portal);
-                    self.current_room = dest_room;
-                } else {
-                    break;
+                match src_portal.link {
+                    Some((room_id, portal_id)) => {
+                        let dest_room = self.world.get_room_data(room_id);
+                        let dest_portal = dest_room.get_portal(portal_id);
+                        self.ray.portal_teleport(src_portal, dest_portal);
+                        self.current_room = dest_room;
+                    }
+                    None => break,
                 }
             }
 
@@ -192,13 +190,9 @@ where
     let player_room = world.get_room_data(player.current_room_id());
     let skybox_textures = world.get_skybox_textures(player_room.data.skybox());
     column_iter.enumerate().for_each(|(column_index, column)| {
-        let ray = Ray::cast_with_camera(column_index, camera);
+        let ray = camera.cast_ray(column_index);
 
-        let skybox = SkyboxSegment::new(
-            camera,
-            ray,
-            skybox_textures,
-        );
+        let skybox = SkyboxSegment::new(camera, ray, skybox_textures);
         skybox.draw_skybox(column);
 
         let mut column_drawer = ColumnDrawer::new(ray, player, world);

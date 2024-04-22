@@ -51,7 +51,6 @@ impl Dbg {
             Direction: Vec3({:.2}, {:.2}, {:.2})\n\
             Angle: {:.2} degrees\n\
             Y-shearing: {}\n\
-            FOV: {:.3}\n\
             Room: {} of {}\n\n\
             Fly: {}, Ghost: {}\n\
             On ground: {}\n\
@@ -67,7 +66,6 @@ impl Dbg {
             player.forward_dir.z,
             player.yaw_angle,
             player.y_shearing,
-            player.fov,
             player.current_room_id,
             data.world_data.room_count - 1,
             player.physics_state.can_fly,

@@ -24,7 +24,6 @@ impl State {
             1.0,
             14.5,
             90f32.to_radians(),
-            100f32.to_radians(),
             canvas.width(),
             canvas.height(),
         );
