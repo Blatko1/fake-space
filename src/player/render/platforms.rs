@@ -40,7 +40,7 @@ impl<'a> ColumnDrawer<'a> {
 
         // Draw from (always drawing from bottom to top):
         let half_wall_pixel_height =
-            cam.f_half_height / platform_data.draw_from_dist * cam.plane_dist;
+            cam.f_half_height / platform_data.draw_from_dist;
         let pixels_to_top = half_wall_pixel_height
             * (platform_data.height_level - ray.origin.y)
             + cam.y_shearing;
@@ -49,7 +49,7 @@ impl<'a> ColumnDrawer<'a> {
 
         // Draw to:
         let half_wall_pixel_height =
-            cam.f_half_height / platform_data.draw_to_dist * cam.plane_dist;
+            cam.f_half_height / platform_data.draw_to_dist;
         let pixels_to_top = half_wall_pixel_height
             * (platform_data.height_level - ray.origin.y)
             + cam.y_shearing;

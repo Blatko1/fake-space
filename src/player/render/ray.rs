@@ -11,6 +11,8 @@ pub struct Ray {
     pub column_index: usize,
     /// Direction of the Ray.
     pub dir: Vec3,
+	/// Distance from the raycaster position to the camera plane.
+    pub plane_dist: f32,
     /// Distance the Ray needs to cover to reach a new
     /// vertical wall from the previous vertical wall.
     pub delta_dist_x: f32,
@@ -64,8 +66,8 @@ impl Ray {
         // Ray direction for current pixel column
         let dir = camera_dir + cam.horizontal_plane * plane_x;
         // Length of ray from one x/z side to next x/z side on the tile_map
-        let delta_dist_x = 1.0 / dir.x.abs();
         let delta_dist_z = 1.0 / dir.z.abs();
+        let delta_dist_x = 1.0 / dir.x.abs();
         // Distance to nearest x side
         let side_dist_x = delta_dist_x
             * if dir.x < 0.0 {
@@ -93,6 +95,7 @@ impl Ray {
         Self {
             column_index,
             dir,
+			plane_dist: cam.plane_dist,
             delta_dist_x,
             delta_dist_z,
             step_x: dir.x.signum() as i64,
@@ -123,6 +126,7 @@ impl Ray {
             self.hit_wall_side = Side::Vertical;
             let wall_offset = self.origin.z + self.wall_dist * self.dir.z;
             self.wall_offset = wall_offset - wall_offset.floor();
+			self.wall_dist /= self.plane_dist;
         } else {
             self.wall_dist = self.side_dist_z.max(0.0);
             self.next_tile.z += self.step_z;
@@ -130,6 +134,7 @@ impl Ray {
             self.hit_wall_side = Side::Horizontal;
             let wall_offset = self.origin.x + self.wall_dist * self.dir.x;
             self.wall_offset = wall_offset - wall_offset.floor();
+			self.wall_dist /= self.plane_dist;
         }
     }
 

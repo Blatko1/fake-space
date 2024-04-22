@@ -53,7 +53,7 @@ impl<'a> ColumnDrawer<'a> {
         );
 
         // Calculate wall pixel height for the parts above and below the middle
-        let half_wall_pixel_height = cam.f_half_height / ray.wall_dist * cam.plane_dist;
+        let half_wall_pixel_height = cam.f_half_height / ray.wall_dist;
         let pixels_to_bottom = half_wall_pixel_height
             * (ray.origin.y - wall_data.bottom_wall_level)
             - cam.y_shearing;

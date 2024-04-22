@@ -72,7 +72,7 @@ impl Camera {
         let f_width = view_width as f32;
         let f_height = view_height as f32;
 
-        let plane_dist = 1.0 / f32::tan(fov / 2.0);
+        let plane_dist = 0.5 / f32::tan(fov * 0.5);
         let view_aspect = f_width / f_height;
 
         let origin = Vec3::new(pos_x, pos_y, pos_z);
@@ -112,9 +112,9 @@ impl Camera {
             .clamp(ONE_DEGREE_RAD, MAX_FOV_RAD);
 
         // Reposition camera planes
-        self.plane_dist = 1.0 / f32::tan(self.fov * 0.5);
+        self.plane_dist = 0.5 / f32::tan(self.fov * 0.5);
         self.vertical_plane = DEFAULT_PLANE_V / self.plane_dist;
-        self.horizontal_plane = Vec3::cross(DEFAULT_PLANE_V, self.forward_dir)
+		self.horizontal_plane = Vec3::cross(DEFAULT_PLANE_V, self.forward_dir)
             * self.view_aspect
             / self.plane_dist;
     }
