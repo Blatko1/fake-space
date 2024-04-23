@@ -4,8 +4,8 @@ use crate::world::Segment;
 
 use super::PlayerInputState;
 
-const MOVEMENT_SPEED: f32 = 5.0;
-const VERTICAL_MOVEMENT_SPEED: f32 = 10.0;
+const MOVEMENT_CONST: f32 = 1.5;
+const VERTICAL_MOVEMENT_CONST: f32 = 10.0;
 const TILE_COLLISION_OFFSET: f32 = 0.4;
 const ACCELERATION_CONST: f32 = 10.0;
 const SLOWDOWN_CONST: f32 = 10.0;
@@ -233,9 +233,9 @@ impl CylinderBody {
     }
 
     pub fn apply_physics(&mut self, mut origin: Vec3, delta: f32) -> Vec3 {
-        origin.x += self.movement_velocity.x * delta;
-        origin.z += self.movement_velocity.y * delta;
-        origin.y += self.air_velocity * delta * VERTICAL_MOVEMENT_SPEED;
+        origin.x += self.movement_velocity.x * delta * MOVEMENT_CONST;
+        origin.z += self.movement_velocity.y * delta * MOVEMENT_CONST;
+        origin.y += self.air_velocity * delta * VERTICAL_MOVEMENT_CONST;
 
         // Apply friction and gravity
         self.movement_velocity /= 1.0 + self.friction * delta;

@@ -2,50 +2,50 @@
 20x20
 
 // Declare the presets used in modifying the tiles
-$noRoof = ceilingL:100000.0, topL:100000.0
-$pillar = groundL:5.0, bottomT:Stone, groundT:Stone
-$grass = groundL:0.0, groundT:Grass, bottomT:Stone,
+$noRoof = ceilingL:100000.0, topL:100000.1;
+$pillar = groundL:5.0, bottomT:Stone, groundT:Stone;
+$grass = groundL:0.0, groundT:Grass, bottomT:Stone;
 
-$pt = $pillar, groundL:100.0, ceilingL:100.1
-$p1 = $pillar, groundL:9.8, ceilingL:11.7, ceilingT:Stone, topT:Stone
-$p2 = $pillar, groundL:9.0, ceilingL:12.0, ceilingT:Stone, topT:Stone
-$p3 = $pillar, groundL:8.0, ceilingL:13.0, ceilingT:Stone, topT:Stone
-$p4 = $pillar, groundL:6.0, ceilingL:18.0, ceilingT:Stone, topT:Stone
-$p5 = $pillar, groundL:2.3, ceilingL:24.0, ceilingT:Stone, topT:Stone
+$pt = $pillar, groundL:100.0, ceilingL:100.1;
+$p1 = $pillar, groundL:9.8, ceilingL:11.7, ceilingT:Stone, topT:Stone;
+$p2 = $pillar, groundL:9.0, ceilingL:12.0, ceilingT:Stone, topT:Stone;
+$p3 = $pillar, groundL:8.0, ceilingL:13.0, ceilingT:Stone, topT:Stone;
+$p4 = $pillar, groundL:6.0, ceilingL:18.0, ceilingT:Stone, topT:Stone;
+$p5 = $pillar, groundL:2.3, ceilingL:24.0, ceilingT:Stone, topT:Stone;
 
-$s1 = $grass, groundL: -0.3
-$s2 = $grass, groundL: -0.7
-$s3 = $grass, groundL: -0.8
-$s4 = $grass, groundL: -0.9
-$s5 = $grass, groundL: -1.0
-$s6 = $grass, groundL: -1.7
-$s7 = $grass, groundL: -2.6
+$s1 = $grass, groundL: -0.3;
+$s2 = $grass, groundL: -0.7;
+$s3 = $grass, groundL: -0.8;
+$s4 = $grass, groundL: -0.9;
+$s5 = $grass, groundL: -1.0;
+$s6 = $grass, groundL: -1.7;
+$s7 = $grass, groundL: -2.6;
 
-$P = groundL:-2.8, portalDir:S, ceilingL:0.2, topT:Bricks
+$P = groundL:-2.8, portalDir:S, ceilingL:0.2, topT:Bricks;
 
-$# = $pillar, $noRoof,
-$. = $noRoof, $grass
+$# = $pillar, $noRoof;
+$. = $noRoof, $grass;
 
 // .  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
 //  --------------------------------------------------------------
-    | #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  # | // 20
-    | #  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  # | // 19
-    | #  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  # | // 18
-    | #  .  .  .  .  .  .  .  P  .  .  .  .  .  .  .  .  .  .  # | // 17
-    | #  .  .  .  .  .  .  s7 s7 s4 .  .  .  .  .  .  .  .  .  # | // 16
-    | #  .  .  .  .  .  .  s6 s6 s2 .  .  .  .  .  .  .  .  .  # | // 15
-    | #  .  .  .  .  .  .  s5 s5 s5 .  .  .  .  .  .  .  .  .  # | // 14
-    | #  .  .  .  .  .  .  s1 s3 s1 .  .  .  .  .  .  .  .  .  # | // 13
-    | #  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  # | // 12
-    | #  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  # | // 11
-    | #  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  # | // 10
-    | #  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  # | // 9 
-    | #  .  .  .  .  .  .  .  s1 .  .  .  .  .  .  .  .  .  .  # | // 8 
-    | #  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  # | // 7 
-    | #  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  # | // 6 
-    | #  p5 .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  # | // 5 
-    | pt p3 p5 .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  # | // 4 
-    | #  p2 p3 p4 p5 .  .  .  .  .  .  .  .  .  .  .  .  .  .  # | // 3 
-    | #  p1 p2 p3 p4 p5 .  .  .  .  .  .  .  .  .  .  .  .  .  # | // 2 
-    | #  #  #  #  pt #  #  #  #  #  #  #  #  #  #  #  #  #  #  # | // 1 
+      #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  // 20
+      #  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  #  // 19
+      #  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  #  // 18
+      #  .  .  .  .  .  .  .  P  .  .  .  .  .  .  .  .  .  .  #  // 17
+      #  .  .  .  .  .  .  s7 s7 s4 .  .  .  .  .  .  .  .  .  #  // 16
+      #  .  .  .  .  .  .  s6 s6 s2 .  .  .  .  .  .  .  .  .  #  // 15
+      #  .  .  .  .  .  .  s5 s5 s5 .  .  .  .  .  .  .  .  .  #  // 14
+      #  .  .  .  .  .  .  s1 s3 s1 .  .  .  .  .  .  .  .  .  #  // 13
+      #  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  #  // 12
+      #  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  #  // 11
+      #  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  #  // 10
+      #  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  #  // 9 
+      #  .  .  .  .  .  .  .  s1 .  .  .  .  .  .  .  .  .  .  #  // 8 
+      #  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  #  // 7 
+      #  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  #  // 6 
+      #  p5 .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  #  // 5 
+      pt p3 p5 .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  #  // 4 
+      #  p2 p3 p4 p5 .  .  .  .  .  .  .  .  .  .  .  .  .  .  #  // 3 
+      #  p1 p2 p3 p4 p5 .  .  .  .  .  .  .  .  .  .  .  .  .  #  // 2 
+      #  #  #  #  pt #  #  #  #  #  #  #  #  #  #  #  #  #  #  #  // 1 
 //  --------------------------------------------------------------

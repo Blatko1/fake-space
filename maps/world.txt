@@ -1,3 +1,7 @@
+// The world file and segment files are read and processed in the line by line order.
+
+// Declare the textures
+// You can't have multiple textures with the same name
 #Grass = src:"../res/grass.jpg", transparency:false;
 #Stone = src:"../res/stone.jpg", transparency:false;
 #Bricks = src:"../res/stone_bricks.jpg", transparency:false;
@@ -14,6 +18,13 @@
 #SkyTop = src:"../res/sky_top.png", transparency:false;
 #SkyBottom = src:"../res/sky_bottom.png", transparency:false;
 
+//#NightNorth = src:"../res/night_north.png", transparency:false;
+//#NightEast = src:"../res/night_east.png", transparency:false;
+//#NightSouth = src:"../res/night_south.png", transparency:false;
+//#NightWest = src:"../res/night_west.png", transparency:false;
+//#NightTop = src:"../res/night_top.png", transparency:false;
+//#NightBottom = src:"../res/night_bottom.png", transparency:false;
+
 #Sky2North = src:"../res/sky2_north.png", transparency:false;
 #Sky2East = src:"../res/sky2_east.png", transparency:false;
 #Sky2South = src:"../res/sky2_south.png", transparency:false;
@@ -21,6 +32,7 @@
 #Sky2Top = src:"../res/sky2_top.png", transparency:false;
 #Sky2Bottom = src:"../res/sky2_bottom.png", transparency:false;
 
+// Determine the constant settings
 *bottomL = -90.0;
 *groundL = -10.0;
 *ceilingL = 20.0;
@@ -32,11 +44,15 @@
 *skyboxTop = Sky2Top;
 *skyboxBottom = Sky2Bottom;
 
-!start = src:start.txt, repeatable: false, ambientLight: 1.0, 
+// !!! EVERY PORTALS NEED TO HAVE HEIGHT OF 3.0
+// Declare the segments
+// You can't have multiple segments with the same name
+!start = src:start.txt, ambientLight: 1.0, 
     skyboxNorth: SkyNorth, skyboxEast: SkyEast, 
     skyboxSouth: SkySouth, skyboxWest: SkyWest, 
-    skyboxTop: SkyTop, skyboxBottom: SkyBottom;
-!root = src:root.txt, repeatable: false, ambientLight: 0.15;
-!lTurn = src:l_turn.txt, repeatable: true, ambientLight: 0.17;
-!lTurnExtended = src:l_turn_extended.txt, repeatable: true, ambientLight: 0.16;
-!large1 = src:large1.txt, repeatable:true, ambientLight: 0.15;
+    skyboxTop: SkyTop, skyboxBottom: SkyBottom; //, light_effect:
+!root = src:root.txt, ambientLight: 0.15;//, light_effect:
+//!straight = src:straight.txt, ambientLight: 0.3;
+!lTurn = src:l_turn.txt, repeatable: true, ambientLight: 0.17;//, light_effect:
+!lTurnExtended = src:l_turn_extended.txt, repeatable: true, ambientLight: 0.16;//, light_effect:
+!large1 = src:large1.txt, repeatable:true, ambientLight: 0.15;//, light_effect:

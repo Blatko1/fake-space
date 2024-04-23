@@ -24,7 +24,7 @@ pub struct Ray {
     /// X-coordinate on the horizontal camera plane through which the Ray passes.
     pub plane_x: f32,
 
-    /// Origin of the Camera from which the ray was cast.
+    /// Ray cast origin.
     pub origin: Vec3,
     /// Direction of the Camera from which the ray was cast.
     pub camera_dir: Vec3,

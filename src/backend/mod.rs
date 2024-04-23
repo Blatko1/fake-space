@@ -224,7 +224,7 @@ impl Canvas {
                     .zip(row.chunks_exact_mut(4))
                     .for_each(|(src, dest)| {
                         //dest.copy_from_slice(src);
-                        // Using unsafe for speed
+                        // Using unsafe for performance
                         unsafe {
                             ptr::copy_nonoverlapping(
                                 src.as_ptr(),

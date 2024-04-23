@@ -1,7 +1,7 @@
 use super::{
     colors::COLOR_LUT, ray::Ray, Side, FLASHLIGHT_DISTANCE, FLASHLIGHT_INTENSITY,
     NORMAL_X_NEGATIVE, NORMAL_X_POSITIVE, NORMAL_Y_NEGATIVE, NORMAL_Y_POSITIVE,
-    NORMAL_Z_NEGATIVE, NORMAL_Z_POSITIVE, SPOTLIGHT_DISTANCE,
+    NORMAL_Z_NEGATIVE, NORMAL_Z_POSITIVE,
 };
 use crate::player::camera::Camera;
 use crate::voxel::VoxelModelDataRef;
@@ -169,6 +169,8 @@ impl<'a> ObjectDrawData<'a> {
                 match voxel {
                     Some(0) => (),
                     Some(&c) => {
+                        // Spotlight doesn't work since distance represents
+                        // distance to whole voxel, not point on voxel
                         let color = &COLOR_LUT[c as usize];
                         let x = grid_x as f32 + obj_pos.x - ray_origin.x;
                         let y = (grid_y as f32 + obj_pos.y - ray_origin.y) * 2.0;
@@ -176,11 +178,6 @@ impl<'a> ObjectDrawData<'a> {
                         let distance =
                             ((x * x + y * y + z * z) / (dimension * dimension)).sqrt();
 
-                        // TODO spotlight not working right
-                        //let t =
-                        //    1.0 - (distance / SPOTLIGHT_DISTANCE).clamp(0.0, 1.0);
-                        //let spotlight =
-                        //    t * t * (3.0 - t * 2.0) * super::SPOTLIGHT_STRENGTH;
                         let normal = side.normal();
                         let diffuse = (-ray_dir.dot(normal)).max(0.0);
                         // Multiply by the canvas aspect ratio so the light has a shape of a circle.

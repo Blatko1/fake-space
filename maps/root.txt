@@ -7,36 +7,36 @@
 // top->texture of top platform
 
 // Declare the presets used in modifying the tiles
-$ground = groundL:0, bottomL:-1, groundT:MetalFloor, bottomT:MetalFloor
-$ceiling = ceilingL:7, topL:100, ceilingT:Bricks, topT:Bricks
-$wall = groundL:9, ceilingL:10, bottomT:Stone
+$ground = groundL:0, bottomL:-1, groundT:MetalFloor, bottomT:MetalFloor;
+$ceiling = ceilingL:7, topL:100, ceilingT:Bricks, topT:Bricks;
+$wall = groundL:9, ceilingL:10, bottomT:Stone;
 
-$. = $ground, $ceiling
-$# = $., $wall
-$o = $ceiling, bottomL:-100, groundL:-99
+$. = $ground, $ceiling;
+$# = $., $wall;
+$o = $ceiling, bottomL:-100, groundL:-99;
 
-$N = $., portalDir:N, ceilingL:3
-$S = $., portalDir:S, ceilingL:3
-$E = $., portalDir:E, ceilingL:3
-$W = $., portalDir:W, ceilingL:3
+$N = $., portalDir:N, ceilingL:3;
+$S = $., portalDir:S, ceilingL:3;
+$E = $., portalDir:E, ceilingL:3;
+$W = $., portalDir:W, ceilingL:3;
 
 // .  1  2  3  4  5  6  7  8  9 10 11
 //  -----------------------------------
-    | #  #  #  #  #  #  #  #  #  #  # | // 17
-    | #  #  #  #  #  S  #  #  #  #  # | // 16
-    | #  #  o  o  .  .  .  o  o  #  # | // 15
-    | #  #  o  o  .  .  .  o  o  #  # | // 14
-    | #  E  .  .  .  .  .  .  .  W  # | // 13
-    | #  #  o  o  .  .  .  o  o  #  # | // 12
-    | #  #  o  o  .  .  .  o  o  #  # | // 11
-    | #  #  o  o  .  .  .  o  o  #  # | // 10
-    | #  E  .  .  .  .  .  .  .  W  # | // 9 
-    | #  #  o  o  .  .  .  o  o  #  # | // 8 
-    | #  #  o  o  .  .  .  o  o  #  # | // 7 
-    | #  #  o  o  .  .  .  o  o  #  # | // 6 
-    | #  E  .  .  .  .  .  .  .  W  # | // 5 
-    | #  #  o  o  .  .  .  o  o  #  # | // 4 
-    | #  #  o  o  .  .  .  o  o  #  # | // 3 
-    | #  #  #  #  #  N  #  #  #  #  # | // 2 
-    | #  #  #  #  #  #  #  #  #  #  # | // 1 
+      #  #  #  #  #  #  #  #  #  #  #  // 17
+      #  #  #  #  #  S  #  #  #  #  #  // 16
+      #  #  o  o  .  .  .  o  o  #  #  // 15
+      #  #  o  o  .  .  .  o  o  #  #  // 14
+      #  E  .  .  .  .  .  .  .  W  #  // 13
+      #  #  o  o  .  .  .  o  o  #  #  // 12
+      #  #  o  o  .  .  .  o  o  #  #  // 11
+      #  #  o  o  .  .  .  o  o  #  #  // 10
+      #  E  .  .  .  .  .  .  .  W  #  // 9 
+      #  #  o  o  .  .  .  o  o  #  #  // 8 
+      #  #  o  o  .  .  .  o  o  #  #  // 7 
+      #  #  o  o  .  .  .  o  o  #  #  // 6 
+      #  E  .  .  .  .  .  .  .  W  #  // 5 
+      #  #  o  o  .  .  .  o  o  #  #  // 4 
+      #  #  o  o  .  .  .  o  o  #  #  // 3 
+      #  #  #  #  #  N  #  #  #  #  #  // 2 
+      #  #  #  #  #  #  #  #  #  #  #  // 1 
 //  -----------------------------------

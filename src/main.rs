@@ -31,6 +31,8 @@ use winit::{
 };
 
 const FPS_CAP: u32 = 60;
+const CANVAS_WIDTH: u32 = 240;
+const CANVAS_HEIGHT: u32 = 135;
 
 fn main() {
     if std::env::var("RUST_LOG").is_err() {
@@ -45,7 +47,11 @@ fn main() {
     let controls = ControllerSettings::init();
     let world = World::from_path("maps/world.txt").unwrap();
 
-    let mut canvas = block_on(Canvas::init(winit_window.clone(), 240 * 1, 135 * 1));
+    let mut canvas = block_on(Canvas::init(
+        winit_window.clone(),
+        CANVAS_WIDTH,
+        CANVAS_HEIGHT,
+    ));
     // TODO change/fix this
     let font_data = fs::read("res/Minecraft.ttf").unwrap();
     let font = FontVec::try_from_vec(font_data).unwrap();

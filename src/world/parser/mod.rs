@@ -1,5 +1,4 @@
 // TODO maybe add tests for the parser
-pub mod error;
 mod segment;
 
 use std::path::PathBuf;
@@ -10,11 +9,11 @@ use nom::branch::alt;
 use nom::bytes::complete::{tag, take, take_until, take_while};
 use nom::character::complete::{alphanumeric1, char};
 use nom::combinator::{cut, fail, value};
-use nom::error::{context, ContextError, ParseError as NomParseError, VerboseError};
+use nom::error::{context, convert_error, ContextError, ParseError as NomParseError, VerboseError};
 use nom::multi::separated_list0;
 use nom::number::complete::double;
 use nom::sequence::{preceded, terminated, Tuple};
-use nom::IResult;
+use nom::{Finish, IResult, Parser};
 use rand::rngs::ThreadRng;
 
 use super::textures::TextureID;
@@ -61,22 +60,8 @@ impl<'a> WorldParser2<'a> {
     }
 
     pub fn parse(mut self) -> IResult<&'a str, World, VerboseError<&'a str>> {
-        // TODO Remove comments and empty lines
-        //let lines = data
-        //    .lines()
-        //    .enumerate()
-        //    .map(|(i, line)| (1 + i as u64, line.split("//").next().unwrap().trim()))
-        //    .filter(|(_, line)| !line.is_empty());
-
-        // TODO doesnt need to be reference
-        //let mut input = self.input;
-        let (_, expressions) =
-            separated_list0(tag(";"), take_while(|c| c != ';'))(self.input)?;
+        let (_, expressions) = separate_expressions(self.input)?;
         for expr in expressions {
-            let expr = expr.trim();
-            if expr.is_empty() {
-                break;
-            }
             let (i, key) = line_key(expr)?;
             match key {
                 "#" => {
@@ -129,24 +114,24 @@ fn parse_texture(
     let mut transparency = false;
 
     let (_, expressions) =
-        separated_list0(tag(","), take_while(|c| c != ','))(expressions_str)?;
+    separate_expression_fields(expressions_str)?;
     for expr in expressions {
         let (i, name) = field_name(expr)?;
-        match name.trim() {
+        match name {
             "src" => {
-                let (rest, src) = string(i)?;
+                let (rest, src) = preceded(space, string)(i)?;
                 empty_or_fail(rest, "Invalid expression")?;
                 let full_path = parent_path.join(src);
                 match ImageReader::open(full_path) {
                     Ok(tex) => match tex.decode() {
                         Ok(d) => data = Some(d),
-                        Err(e) => return context("Texture decoding error", fail)(i),
+                        Err(_) => return context("Texture decoding error", fail)(i),
                     },
-                    Err(e) => return context("Texture not found", fail)(i),
+                    Err(_) => return context("Texture not found", fail)(i),
                 };
             }
             "transparency" => {
-                let (rest, value) = boolean(i)?;
+                let (rest, value) = preceded(space, boolean)(i)?;
                 empty_or_fail(rest, "Invalid expression")?;
                 transparency = value;
             }
@@ -274,7 +259,7 @@ fn parse_segment<'a>(
     let mut skybox_bottom = None;
 
     let (_, expressions) =
-        separated_list0(tag(","), take_while(|c| c != ','))(expressions_str)?;
+    separate_expression_fields(expressions_str)?;
     for expr in expressions {
         let (i, name) = field_name(expr)?;
         let i = i.trim();
@@ -283,12 +268,14 @@ fn parse_segment<'a>(
                 let full_path = parent_dir.join(i);
                 let data = match std::fs::read_to_string(full_path.clone()) {
                     Ok(d) => d,
-                    Err(e) => return context("Segment file not found", fail)(i),
+                    Err(_) => return context("Segment file not found", fail)(i),
                 };
-                let parsed = match SegmentParser::new(&data, settings, textures).parse() {
-                    Ok(p) => p,
-                    Err(e) => return context("Failed to parse segment", fail)(i),
-                };
+                let tidy_data = cleanup_input(data);
+                let (_, parsed) =
+                    match SegmentParser::new(&tidy_data, settings, textures).parse().finish() {
+                        Ok(p) => p,
+                        Err(e) => panic!("segment parse error for segment {}: {}", full_path.display(), convert_error(tidy_data.as_str(), e)),
+                    };
                 segment_data = Some(parsed);
             }
             "repeatable" => {
@@ -374,6 +361,22 @@ fn parse_segment<'a>(
     ))
 }
 
+fn separate_expressions<'a, E: NomParseError<&'a str>>(
+    i: &'a str,
+) -> IResult<&'a str, Vec<&'a str>, E> {
+    let (i, expressions) = separated_list0(tag(";"), take_while(|c| c != ';'))(i)?;
+    let separated = expressions
+        .iter()
+        .map(|expr| expr.trim())
+        .filter(|expr| !expr.is_empty())
+        .collect();
+    Ok((i, separated))
+}
+
+fn separate_expression_fields<'a, E: NomParseError<&'a str> + ContextError<&'a str>>(i: &'a str) -> IResult<&'a str, Vec<&'a str>, E> {
+    context("expression fields", separated_list0(tag(","), take_while(|c| c != ',')))(i)
+}
+
 fn space<'a, E: NomParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {
     let chars = " \t\r\n";
     take_while(|c| chars.contains(c))(i)
@@ -415,7 +418,7 @@ fn field_name<'a, E: NomParseError<&'a str> + ContextError<&'a str>>(
 ) -> IResult<&'a str, &'a str, E> {
     context(
         "field name",
-        preceded(space, terminated(take_until(":"), char(':'))),
+        preceded(space, terminated(take_until(":"), space.and(char(':')))),
     )(i)
 }
 
@@ -440,6 +443,18 @@ fn empty_or_fail<'a, E: NomParseError<&'a str> + ContextError<&'a str>>(
     } else {
         Ok(("", ""))
     }
+}
+
+/// Removes comments and empty lines from input.
+pub fn cleanup_input(input: String) -> String {
+    input
+        .lines()
+        .map(|line| {
+            let mut line = line.split("//").next().unwrap().trim().to_owned();
+            line.push('\n');
+            line
+        })
+        .collect()
 }
 
 #[derive(Debug, strum::EnumIter, PartialEq, Eq, Hash)]

@@ -14,7 +14,7 @@ pub struct State {
     world: World,
     player: Player,
 
-    accumulator: f32
+    accumulator: f32,
 }
 
 impl State {
@@ -32,7 +32,7 @@ impl State {
             world,
             player: Player::new(camera, RoomID(0)),
 
-            accumulator: 0.0
+            accumulator: 0.0,
         }
     }
 

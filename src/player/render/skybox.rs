@@ -173,7 +173,7 @@ impl<'a> SkyboxSegment<'a> {
             .take(draw_to - draw_from)
             .for_each(|(y, rgba)| {
                 let row_dist =
-                cam.f_half_height / (y as f32 - cam.f_half_height - cam.y_shearing);
+                    cam.f_half_height / (y as f32 - cam.f_half_height - cam.y_shearing);
                 let pos = Vec3::new(0.5, 0.5, 0.5) + row_dist * pos_factor;
                 let tex_x =
                     ((tex_width as f32 * (1.0 - pos.x)) as usize).min(tex_width - 1);

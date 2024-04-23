@@ -14,6 +14,7 @@ use crate::world::portal::{DummyPortal, Portal, PortalID};
 use parser::WorldParser2;
 use textures::{TextureData, TextureID, TextureManager};
 
+use self::parser::cleanup_input;
 use self::textures::TextureDataRef;
 
 const VOXEL_CHANCE: f64 = 0.1;
@@ -39,7 +40,7 @@ impl World {
         // TODO this 'unwrap()'
         let path: PathBuf = path.into().canonicalize()?;
         let parent_path = path.parent().unwrap().to_path_buf();
-        let input = std::fs::read_to_string(path)?;
+        let input = cleanup_input(std::fs::read_to_string(path)?);
         match WorldParser2::new(&input, parent_path)?.parse().finish() {
             Ok((_, world)) => Ok(world),
             Err(e) => {

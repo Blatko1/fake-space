@@ -3,7 +3,6 @@ use std::f32::consts::{PI, TAU};
 
 use super::render::{ray::Ray, PointXZ, Side};
 
-const FOV: f32 = PI * 0.5;
 const ONE_DEGREE_RAD: f32 = PI / 180.0;
 const DEFAULT_PLANE_V: Vec3 = Vec3::new(0.0, 0.5, 0.0);
 const Y_SHEARING_SENSITIVITY: f32 = 0.8;
@@ -43,12 +42,10 @@ pub struct Camera {
 
     // Specific use variables with goal to improve performance.
     // TODO rename to view_width and view_height
-    four_width: usize,
     pub(super) f_height: f32,
     pub(super) width_recip: f32,
     pub(super) height_recip: f32,
     pub(super) f_half_height: f32,
-    pub(super) f_half_width: f32,
 }
 
 impl Camera {
@@ -79,12 +76,10 @@ impl Camera {
             view_aspect,
             y_shearing: 0.0,
 
-            four_width: 4 * view_width as usize,
             f_height,
             width_recip: f_width.recip(),
             height_recip: f_height.recip(),
             f_half_height: view_height as f32 * 0.5,
-            f_half_width: view_width as f32 * 0.5,
         }
     }
 
@@ -109,8 +104,6 @@ impl Camera {
     }
 
     pub fn cast_ray(&self, column_index: usize) -> Ray {
-        let origin = self.origin;
-
         // X-coordinate on the horizontal camera plane (range [-1.0, 1.0])
         let plane_x = 2.0 * column_index as f32 * self.width_recip - 1.0;
         // Ray direction for current pixel column
@@ -121,24 +114,24 @@ impl Camera {
         // Distance to nearest x side
         let side_dist_x = delta_dist_x
             * if dir.x < 0.0 {
-                origin.x.fract()
+                self.origin.x.fract()
             } else {
-                1.0 - origin.x.fract()
+                1.0 - self.origin.x.fract()
             };
         // Distance to nearest z side
         let side_dist_z = delta_dist_z
             * if dir.z < 0.0 {
-                origin.z.fract()
+                self.origin.z.fract()
             } else {
-                1.0 - origin.z.fract()
+                1.0 - self.origin.z.fract()
             };
 
         let wall_dist = 0.0;
         let (side, wall_offset) = if side_dist_x < side_dist_z {
-            let wall_offset = origin.z + wall_dist * dir.z;
+            let wall_offset = self.origin.z + wall_dist * dir.z;
             (Side::Vertical, wall_offset - wall_offset.floor())
         } else {
-            let wall_offset = origin.x + wall_dist * dir.x;
+            let wall_offset = self.origin.x + wall_dist * dir.x;
             (Side::Horizontal, wall_offset - wall_offset.floor())
         };
 
@@ -151,15 +144,14 @@ impl Camera {
             step_z: dir.z.signum() as i64,
             plane_x,
 
-            // Camera data from which the ray was cast
-            origin,
+            origin: self.origin,
             camera_dir: self.forward_dir,
             horizontal_plane: self.horizontal_plane,
 
             // Variables that change per each DDA step
             side_dist_x,
             side_dist_z,
-            next_tile: PointXZ::new(origin.x as i64, origin.z as i64),
+            next_tile: PointXZ::new(self.origin.x as i64, self.origin.z as i64),
             wall_dist,
             previous_wall_dist: wall_dist,
             hit_wall_side: side,
