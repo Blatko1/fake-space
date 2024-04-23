@@ -43,6 +43,8 @@ impl<'a> SegmentParser<'a> {
             texture_map,
         }
     }
+    
+    #[allow(clippy::type_complexity)]
     pub(super) fn parse(
         mut self,
     ) -> IResult<&'a str, ((u64, u64), Vec<Tile>), VerboseError<&'a str>> {
@@ -58,7 +60,7 @@ impl<'a> SegmentParser<'a> {
             match key {
                 "$" => {
                     let (_, (id, preset)) =
-                        parse_preset(i, &self.texture_map, &self.preset_map)?;
+                        parse_preset(i, self.texture_map, &self.preset_map)?;
                     self.preset_map.insert(id, preset);
                 }
                 _ => {
@@ -135,7 +137,7 @@ impl<'a> SegmentParser<'a> {
                 }
             };
         }
-        return context("Segment parser error", fail)(input);
+        context("Segment parser error", fail)(input)
     }
 }
 

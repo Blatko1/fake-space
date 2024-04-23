@@ -30,6 +30,7 @@ pub struct CylinderBody {
 }
 
 impl CylinderBody {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         radius: f32,
         height: f32,

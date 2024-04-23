@@ -235,6 +235,7 @@ fn parse_setting<'a>(
     }
 }
 
+#[allow(clippy::type_complexity)]
 fn parse_segment<'a>(
     input: &'a str,
     parent_dir: PathBuf,
