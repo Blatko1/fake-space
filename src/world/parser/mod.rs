@@ -9,12 +9,16 @@ use nom::branch::alt;
 use nom::bytes::complete::{tag, take, take_until, take_while};
 use nom::character::complete::{alphanumeric1, char};
 use nom::combinator::{cut, fail, value};
-use nom::error::{context, convert_error, ContextError, ParseError as NomParseError, VerboseError};
+use nom::error::{
+    context, convert_error, ContextError, ParseError as NomParseError, VerboseError,
+};
 use nom::multi::separated_list0;
 use nom::number::complete::double;
 use nom::sequence::{preceded, terminated, Tuple};
 use nom::{Finish, IResult, Parser};
 use rand::rngs::ThreadRng;
+
+use crate::model::{ModelData, ModelID};
 
 use super::textures::TextureID;
 use super::{SkyboxTextureIDs, TextureData, Tile};
@@ -29,7 +33,7 @@ struct ParsedTexture {
     texture: TextureData,
 }
 
-pub struct WorldParser2<'a> {
+pub struct WorldParser<'a> {
     input: &'a str,
     parent_path: PathBuf,
     rng: ThreadRng,
@@ -37,11 +41,14 @@ pub struct WorldParser2<'a> {
     settings: Settings,
     textures: Vec<TextureData>,
     texture_map: HashMap<String, TextureID>,
-    texture_counter: usize,
+    texture_count: usize,
+    models: Vec<ModelData>,
+    model_map: HashMap<String, ModelID>,
+    model_count: usize,
     segments: Vec<Segment>,
 }
 
-impl<'a> WorldParser2<'a> {
+impl<'a> WorldParser<'a> {
     pub fn new<P: Into<PathBuf>>(
         input: &'a str,
         parent_path: P,
@@ -54,7 +61,10 @@ impl<'a> WorldParser2<'a> {
             settings: Settings::default(),
             textures: Vec::new(),
             texture_map: HashMap::new(),
-            texture_counter: 2,
+            texture_count: 2,
+            models: Vec::new(),
+            model_map: HashMap::new(),
+            model_count: 0,
             segments: Vec::new(),
         })
     }
@@ -66,10 +76,22 @@ impl<'a> WorldParser2<'a> {
             match key {
                 "#" => {
                     let (_, texture) = parse_texture(i, self.parent_path.clone())?;
+                    if self.texture_map.contains_key(&texture.name) {
+                        return context("Texture with same name already exists", fail)(i)
+                    }
                     self.textures.push(texture.texture);
                     self.texture_map
-                        .insert(texture.name, TextureID(self.texture_counter));
-                    self.texture_counter += 1;
+                        .insert(texture.name, TextureID(self.texture_count));
+                    self.texture_count += 1;
+                }
+                "~" => {
+                    let (_, (model_name, model)) = parse_vox_file(i, self.parent_path.clone())?;
+                    if self.model_map.contains_key(&model_name) {
+                        return context("Model with same name already exists", fail)(i)
+                    }
+                    self.models.push(model);
+                    self.model_map.insert(model_name, ModelID(self.model_count));
+                    self.model_count +=1;
                 }
                 "*" => {
                     let (_, (setting_type, value)) = parse_setting(i, &self.texture_map)?;
@@ -92,14 +114,14 @@ impl<'a> WorldParser2<'a> {
                         repeatable,
                         ambient_light,
                         &mut self.rng,
-                        &[],
+                        self.model_map.values(),
                     );
                     self.segments.push(segment);
                 }
                 _ => return context("Unknown line key", fail)(key),
             };
         }
-        Ok(("", World::new(self.segments, self.textures)))
+        Ok(("", World::new(self.segments, self.textures, self.models)))
     }
 }
 
@@ -113,11 +135,10 @@ fn parse_texture(
     let mut data = None;
     let mut transparency = false;
 
-    let (_, expressions) =
-    separate_expression_fields(expressions_str)?;
+    let (_, expressions) = separate_expression_fields(expressions_str)?;
     for expr in expressions {
-        let (i, name) = field_name(expr)?;
-        match name {
+        let (i, field_name) = field_name(expr)?;
+        match field_name {
             "src" => {
                 let (rest, src) = preceded(space, string)(i)?;
                 empty_or_fail(rest, "Invalid expression")?;
@@ -135,7 +156,7 @@ fn parse_texture(
                 empty_or_fail(rest, "Invalid expression")?;
                 transparency = value;
             }
-            _ => return context("Unknown texture field", fail)(name),
+            _ => return context("Unknown texture field", fail)(field_name),
         };
     }
 
@@ -156,6 +177,52 @@ fn parse_texture(
             texture,
         },
     ))
+}
+
+fn parse_vox_file(
+    input: &str,
+    parent_path: PathBuf,
+) -> IResult<&str, (String, ModelData), VerboseError<&str>> {
+    let (i, (_, name, _, _, expressions_str)) =
+        (space, vox_model_name, space, char('='), take_all).parse(input)?;
+
+    let mut data = None;
+
+    let (_, expressions) = separate_expression_fields(expressions_str)?;
+    for expr in expressions {
+        let (i, name) = field_name(expr)?;
+        match name {
+            "src" => {
+                let (rest, src) = preceded(space, string)(i)?;
+                empty_or_fail(rest, "Invalid expression")?;
+                let full_path = parent_path.join(src);
+                let Some(full_path_str) = full_path.to_str() else {
+                    return context("Invalid path unicode", fail)(src);
+                };
+                match dot_vox::load(full_path_str) {
+                    Ok(vox_data) => data = Some(vox_data),
+                    Err(_) => {
+                        return context("Error while reading '.vox' file", fail)(src)
+                    }
+                }
+            }
+            _ => return context("Unknown texture field", fail)(name),
+        };
+    }
+
+    let Some(data) = data else {
+        return context("vox file path not specified", fail)(i);
+    };
+
+    if data.models.len() != 1 {
+        return context("vox file should contain exactly one model", fail)(i);
+    }
+    let palette = data.palette;
+    let model = data.models.into_iter().nth(0).unwrap();
+    if model.size.x != model.size.y || model.size.y != model.size.z || model.size.x != model.size.z {
+        return context("vox model doesn't have equal dimensions", fail)(i);
+    }
+    Ok((input, (name.to_owned(), ModelData::from_vox_model(model, palette))))
 }
 
 fn parse_setting<'a>(
@@ -259,8 +326,7 @@ fn parse_segment<'a>(
     let mut skybox_top = None;
     let mut skybox_bottom = None;
 
-    let (_, expressions) =
-    separate_expression_fields(expressions_str)?;
+    let (_, expressions) = separate_expression_fields(expressions_str)?;
     for expr in expressions {
         let (i, name) = field_name(expr)?;
         let i = i.trim();
@@ -272,11 +338,17 @@ fn parse_segment<'a>(
                     Err(_) => return context("Segment file not found", fail)(i),
                 };
                 let tidy_data = cleanup_input(data);
-                let (_, parsed) =
-                    match SegmentParser::new(&tidy_data, settings, textures).parse().finish() {
-                        Ok(p) => p,
-                        Err(e) => panic!("segment parse error for segment {}: {}", full_path.display(), convert_error(tidy_data.as_str(), e)),
-                    };
+                let (_, parsed) = match SegmentParser::new(&tidy_data, settings, textures)
+                    .parse()
+                    .finish()
+                {
+                    Ok(p) => p,
+                    Err(e) => panic!(
+                        "segment parse error for segment {}: {}",
+                        full_path.display(),
+                        convert_error(tidy_data.as_str(), e)
+                    ),
+                };
                 segment_data = Some(parsed);
             }
             "repeatable" => {
@@ -374,8 +446,13 @@ fn separate_expressions<'a, E: NomParseError<&'a str>>(
     Ok((i, separated))
 }
 
-fn separate_expression_fields<'a, E: NomParseError<&'a str> + ContextError<&'a str>>(i: &'a str) -> IResult<&'a str, Vec<&'a str>, E> {
-    context("expression fields", separated_list0(tag(","), take_while(|c| c != ',')))(i)
+fn separate_expression_fields<'a, E: NomParseError<&'a str> + ContextError<&'a str>>(
+    i: &'a str,
+) -> IResult<&'a str, Vec<&'a str>, E> {
+    context(
+        "expression fields",
+        separated_list0(tag(","), take_while(|c| c != ',')),
+    )(i)
 }
 
 fn space<'a, E: NomParseError<&'a str>>(i: &'a str) -> IResult<&'a str, &'a str, E> {
@@ -400,6 +477,12 @@ fn texture_name<'a, E: NomParseError<&'a str> + ContextError<&'a str>>(
     i: &'a str,
 ) -> IResult<&'a str, &'a str, E> {
     context("texture name", preceded(space, alphanumeric1))(i)
+}
+
+fn vox_model_name<'a, E: NomParseError<&'a str> + ContextError<&'a str>>(
+    i: &'a str,
+) -> IResult<&'a str, &'a str, E> {
+    context("vox model name", preceded(space, alphanumeric1))(i)
 }
 
 fn setting_name<'a, E: NomParseError<&'a str> + ContextError<&'a str>>(

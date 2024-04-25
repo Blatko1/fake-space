@@ -32,6 +32,8 @@
 #Sky2Top = src:"../res/sky2_top.png", transparency:false;
 #Sky2Bottom = src:"../res/sky2_bottom.png", transparency:false;
 
+~Model1 = src:"../res/chr_knight.vox";
+
 // Determine the constant settings
 *bottomL = -90.0;
 *groundL = -10.0;

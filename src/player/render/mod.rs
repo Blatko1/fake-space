@@ -1,4 +1,3 @@
-mod colors;
 mod object;
 mod platforms;
 pub(super) mod ray;
@@ -141,7 +140,7 @@ impl<'a> ColumnDrawer<'a> {
 
             // If a voxel object is hit, store it for later rendering
             if let Some(model_id) = next_tile.voxel_model {
-                let model_data = self.world.get_voxel_model(model_id);
+                let model_data = self.world.get_model(model_id);
                 let dimensions = model_data.dimension as f32;
                 let pos = Vec3::new(
                     next_tile.position.x as f32 * dimensions,

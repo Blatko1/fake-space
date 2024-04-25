@@ -1,10 +1,11 @@
 use super::{
-    colors::COLOR_LUT, ray::Ray, Side, FLASHLIGHT_DISTANCE, FLASHLIGHT_INTENSITY,
+    ray::Ray, Side, FLASHLIGHT_DISTANCE, FLASHLIGHT_INTENSITY,
     NORMAL_X_NEGATIVE, NORMAL_X_POSITIVE, NORMAL_Y_NEGATIVE, NORMAL_Y_POSITIVE,
     NORMAL_Z_NEGATIVE, NORMAL_Z_POSITIVE,
 };
+use crate::model::ModelDataRef;
 use crate::player::camera::Camera;
-use crate::voxel::VoxelModelDataRef;
+use dot_vox::Color;
 use glam::Vec3;
 
 pub fn draw_objects(objects: Vec<ObjectDrawData>, camera: &Camera, column: &mut [u8]) {
@@ -22,7 +23,7 @@ pub fn draw_objects(objects: Vec<ObjectDrawData>, camera: &Camera, column: &mut 
 
 pub struct ObjectDrawData<'a> {
     pub pos: Vec3,
-    pub model_data: VoxelModelDataRef<'a>,
+    pub model_data: ModelDataRef<'a>,
     pub ray: Ray,
     pub ambient_light_intensity: f32,
     pub bottom_draw_bound: usize,
@@ -162,16 +163,14 @@ impl<'a> ObjectDrawData<'a> {
             }
             loop {
                 let voxel = self.model_data.get_voxel(
-                    grid_x as usize,
-                    grid_y as usize,
-                    grid_z as usize,
+                    grid_x as u32,
+                    grid_y as u32,
+                    grid_z as u32,
                 );
                 match voxel {
-                    Some(0) => (),
-                    Some(&c) => {
+                    Some(Color { r, g, b, a: 255 }) => {
                         // Spotlight doesn't work since distance represents
                         // distance to whole voxel, not point on voxel
-                        let color = &COLOR_LUT[c as usize];
                         let x = grid_x as f32 + obj_pos.x - ray_origin.x;
                         let y = (grid_y as f32 + obj_pos.y - ray_origin.y) * 2.0;
                         let z = grid_z as f32 + obj_pos.z - ray_origin.z;
@@ -198,13 +197,13 @@ impl<'a> ObjectDrawData<'a> {
                                     - super::FLASHLIGHT_INNER_RADIUS))
                                 .clamp(0.0, 1.0);
                         let flashlight = t * t * (3.0 - t * 2.0) * flashlight_intensity;
-                        pixel[0..3].iter_mut().zip(color[0..3].iter()).for_each(
-                            |(dest, &src)| {
-                                *dest = (src as f32
-                                    * (flashlight + self.ambient_light_intensity))
-                                    as u8;
-                            },
-                        );
+                        let light = flashlight + self.ambient_light_intensity;
+                        // Red channel
+                        pixel[0] = (r as f32 * light) as u8;
+                        // Green channel
+                        pixel[1] = (g as f32 * light) as u8;
+                        // Blue channel
+                        pixel[2] = (b as f32 * light) as u8;
                         //pixel[3] = 255;
                         break;
                     }

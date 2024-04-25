@@ -6,12 +6,13 @@ use nom::error::convert_error;
 use nom::Finish;
 use rand::Rng;
 use rand::{rngs::ThreadRng, seq::SliceRandom};
+use rand::prelude::IteratorRandom;
 use std::path::PathBuf;
 
 use crate::player::render::PointXZ;
-use crate::voxel::{VoxelModelDataRef, VoxelModelID, VoxelModelManager};
+use crate::model::{ModelData, ModelDataRef, ModelID, ModelManager};
 use crate::world::portal::{DummyPortal, Portal, PortalID};
-use parser::WorldParser2;
+use parser::WorldParser;
 use textures::{TextureData, TextureID, TextureManager};
 
 use self::parser::cleanup_input;
@@ -28,7 +29,7 @@ pub struct SegmentID(pub usize);
 pub struct World {
     segments: Vec<Segment>,
     texture_manager: TextureManager,
-    voxel_model_manager: VoxelModelManager,
+    model_manager: ModelManager,
 
     rng: ThreadRng,
     // Each room has index which is the position in this Vec
@@ -41,7 +42,7 @@ impl World {
         let path: PathBuf = path.into().canonicalize()?;
         let parent_path = path.parent().unwrap().to_path_buf();
         let input = cleanup_input(std::fs::read_to_string(path)?);
-        match WorldParser2::new(&input, parent_path)?.parse().finish() {
+        match WorldParser::new(&input, parent_path)?.parse().finish() {
             Ok((_, world)) => Ok(world),
             Err(e) => {
                 println!("verbose errors: \n{}", convert_error(input.as_str(), e));
@@ -51,7 +52,7 @@ impl World {
     }
 
     // TODO starting segment is always '0' and main room is '1'
-    pub fn new(segments: Vec<Segment>, textures: Vec<TextureData>) -> Self {
+    pub fn new(segments: Vec<Segment>, textures: Vec<TextureData>, models: Vec<ModelData>) -> Self {
         let mut rooms = Vec::new();
         let mut room_counter = 0;
         let mut rng = rand::thread_rng();
@@ -98,7 +99,7 @@ impl World {
         Self {
             segments,
             texture_manager: TextureManager::new(textures),
-            voxel_model_manager: VoxelModelManager::init(),
+            model_manager: ModelManager::new(models),
             rng,
             rooms,
         }
@@ -166,6 +167,10 @@ impl World {
         self.texture_manager.get_texture_data(id)
     }
 
+    pub fn get_model(&self, id: ModelID) -> ModelDataRef {
+        self.model_manager.get_model_data(id)
+    }
+
     pub fn get_skybox_textures(&self, skybox: &SkyboxTextureIDs) -> SkyboxTexturesRef {
         SkyboxTexturesRef {
             north: self.texture_manager.get_texture_data(skybox.north),
@@ -175,10 +180,6 @@ impl World {
             top: self.texture_manager.get_texture_data(skybox.top),
             bottom: self.texture_manager.get_texture_data(skybox.bottom),
         }
-    }
-
-    pub fn get_voxel_model(&self, id: VoxelModelID) -> VoxelModelDataRef {
-        self.voxel_model_manager.get_model(id)
     }
 
     pub fn collect_dbg_data(&self) -> WorldDebugData {
@@ -287,7 +288,7 @@ impl Segment {
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub fn generate_rand(
+    pub fn generate_rand<'a>(
         id: SegmentID,
         name: String,
         dimensions: (u64, u64),
@@ -296,7 +297,7 @@ impl Segment {
         repeatable: bool,
         ambient_light_intensity: f32,
         rng: &mut ThreadRng,
-        voxels: &[VoxelModelID],
+        voxels: impl Iterator<Item=&'a ModelID> + Clone,
     ) -> Self {
         let mut segment = Self::generate(
             id,
@@ -308,14 +309,14 @@ impl Segment {
             ambient_light_intensity,
         );
 
-        if !voxels.is_empty() {
+        if voxels.clone().count() != 0 {
             segment
                 .tiles
                 .iter_mut()
                 .filter(|tile| tile.allow_voxels)
                 .for_each(|tile| {
                     if rng.gen_bool(VOXEL_CHANCE) {
-                        let rand_voxel_model = *voxels.choose(rng).unwrap();
+                        let rand_voxel_model = *voxels.clone().choose(rng).unwrap();
                         tile.voxel_model.replace(rand_voxel_model);
                     }
                 });
@@ -371,7 +372,7 @@ pub struct Tile {
     /// If the current tile should be a portal to different segment (map).
     pub portal: Option<DummyPortal>,
     pub allow_voxels: bool,
-    pub voxel_model: Option<VoxelModelID>,
+    pub voxel_model: Option<ModelID>,
 }
 
 #[derive(Copy, Clone, Debug)]

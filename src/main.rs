@@ -7,7 +7,7 @@ mod control;
 mod dbg;
 mod player;
 mod state;
-mod voxel;
+mod model;
 mod world;
 
 use std::fs;
