@@ -5,6 +5,7 @@ $ground = groundL:0, bottomL:-1, groundT:Carpet, bottomT: Carpet;
 $ceiling = ceilingL:6.5, topL:20, ceilingT:DropCeiling, topT:DropCeiling;
 
 $. = $ground, $ceiling;
+$v = $., allowVoxels: true;
 $w = groundL:7, ceilingL:8, bottomT:Wallpaper;
 
 $s1 = $., groundL:0.6, bottomT:Carpet;
@@ -25,21 +26,21 @@ $fall = bottomL:-100, groundL:-99;
 //  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20
 //--------------------------------------------------------------
     w  w  w  w  w  w  w  w  w  w  w  w  w  w  w  w  w  w  w  w  // 17
-    w  .  .  W  w  .  .  w  w  w  w  w  .  .  w  w  w  w  w  w  // 17
+    w  .  .  W  w  .  .  w  w  w  w  w  v  .  w  w  w  w  w  w  // 17
     w  .  w  w  .  .  .  .  w  S  w  w  .  .  .  .  .  w  .  w  // 17
-    w  .  .  .  .  .  .  .  .  .  w  w  w  .  .  .  .  .  .  w  // 17
+    w  .  .  .  .  .  .  .  .  .  w  w  w  v  .  .  .  .  .  w  // 17
     w  .  .  .  .  w  N  w  .  .  w  w  w  .  .  w  .  .  .  w  // 16
     w  w  .  .  w  w  w  w  .  .  .  .  .  .  .  .  .  .  w  w  // 15
     w  w  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  w  w  // 14
     w  w  .  .  .  .  .  .  .  .  w  .  w  w  w  .  .  .  .  w  // 13
-    w  w  w  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  w  // 12
-    w  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  w  // 11
-    w  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  w  // 10
-    w  .  .  .  w  w  w  w  .  .  .  .  .  .  .  .  .  .  .  w  // 9
+    w  w  w  .  .  .  .  .  .  .  .  .  .  .  .  .  .  v  .  w  // 12
+    w  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  v  .  w  // 11
+    w  .  v  v  .  .  .  .  .  .  .  .  .  .  .  .  .  v  .  w  // 10
+    w  .  v  .  w  w  w  w  .  .  .  .  .  .  .  .  .  .  .  w  // 9
     w  .  .  w  sE s5 s4 s3 s2 s1 .  .  .  .  .  .  w  w  w  w  // 8
     w  .  .  w  w  w  w  w  w  w  .  .  .  .  .  .  .  .  W  w  // 7
     w  .  .  .  w  w  w  w  S  w  .  .  .  .  .  .  w  w  w  w  // 6
-    w  .  .  .  .  .  .  .  .  w  .  .  .  .  .  .  .  .  .  w  // 5
+    w  .  .  v  v  .  .  .  .  w  .  .  .  .  .  .  .  .  .  w  // 5
     w  s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 s1 w  // 4
     w  s1 s1 s2 s2 s2 s2 s2 s2 s2 s2 s2 s2 s2 s2 s2 s2 s1 s1 w  // 3
     w  s1 s2 s3 s3 s3 s3 s3 s3 s3 s3 s3 s3 s3 s3 s3 s3 s2 s1 w  // 2

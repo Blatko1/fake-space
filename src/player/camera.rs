@@ -1,8 +1,6 @@
 use glam::{Vec2, Vec3};
 use std::f32::consts::{PI, TAU};
 
-use super::render::{ray::Ray, PointXZ, Side};
-
 const ONE_DEGREE_RAD: f32 = PI / 180.0;
 const DEFAULT_PLANE_V: Vec3 = Vec3::new(0.0, 0.5, 0.0);
 const Y_SHEARING_SENSITIVITY: f32 = 0.8;
@@ -101,62 +99,6 @@ impl Camera {
 
     pub fn add_yaw_angle(&mut self, rad: f32) {
         self.set_yaw(self.yaw_angle + rad);
-    }
-
-    pub fn cast_ray(&self, column_index: usize) -> Ray {
-        // X-coordinate on the horizontal camera plane (range [-1.0, 1.0])
-        let plane_x = 2.0 * column_index as f32 * self.width_recip - 1.0;
-        // Ray direction for current pixel column
-        let dir = self.forward_dir + self.horizontal_plane * plane_x;
-        // Length of ray from one x/z side to next x/z side on the tile_map
-        let delta_dist_z = 1.0 / dir.z.abs();
-        let delta_dist_x = 1.0 / dir.x.abs();
-        // Distance to nearest x side
-        let side_dist_x = delta_dist_x
-            * if dir.x < 0.0 {
-                self.origin.x.fract()
-            } else {
-                1.0 - self.origin.x.fract()
-            };
-        // Distance to nearest z side
-        let side_dist_z = delta_dist_z
-            * if dir.z < 0.0 {
-                self.origin.z.fract()
-            } else {
-                1.0 - self.origin.z.fract()
-            };
-
-        let wall_dist = 0.0;
-        let (side, wall_offset) = if side_dist_x < side_dist_z {
-            let wall_offset = self.origin.z + wall_dist * dir.z;
-            (Side::Vertical, wall_offset - wall_offset.floor())
-        } else {
-            let wall_offset = self.origin.x + wall_dist * dir.x;
-            (Side::Horizontal, wall_offset - wall_offset.floor())
-        };
-
-        Ray {
-            column_index,
-            dir,
-            delta_dist_x,
-            delta_dist_z,
-            step_x: dir.x.signum() as i64,
-            step_z: dir.z.signum() as i64,
-            plane_x,
-
-            origin: self.origin,
-            camera_dir: self.forward_dir,
-            horizontal_plane: self.horizontal_plane,
-
-            // Variables that change per each DDA step
-            side_dist_x,
-            side_dist_z,
-            next_tile: PointXZ::new(self.origin.x as i64, self.origin.z as i64),
-            wall_dist,
-            previous_wall_dist: wall_dist,
-            hit_wall_side: side,
-            wall_offset,
-        }
     }
 }
 

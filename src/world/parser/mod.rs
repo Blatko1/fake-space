@@ -16,7 +16,6 @@ use nom::multi::separated_list0;
 use nom::number::complete::double;
 use nom::sequence::{preceded, terminated, Tuple};
 use nom::{Finish, IResult, Parser};
-use rand::rngs::ThreadRng;
 
 use crate::model::{ModelData, ModelID};
 
@@ -36,7 +35,6 @@ struct ParsedTexture {
 pub struct WorldParser<'a> {
     input: &'a str,
     parent_path: PathBuf,
-    rng: ThreadRng,
 
     settings: Settings,
     textures: Vec<TextureData>,
@@ -56,7 +54,6 @@ impl<'a> WorldParser<'a> {
         Ok(Self {
             input,
             parent_path: parent_path.into(),
-            rng: rand::thread_rng(),
 
             settings: Settings::default(),
             textures: Vec::new(),
@@ -77,7 +74,7 @@ impl<'a> WorldParser<'a> {
                 "#" => {
                     let (_, texture) = parse_texture(i, self.parent_path.clone())?;
                     if self.texture_map.contains_key(&texture.name) {
-                        return context("Texture with same name already exists", fail)(i)
+                        return context("Texture with same name already exists", fail)(i);
                     }
                     self.textures.push(texture.texture);
                     self.texture_map
@@ -85,13 +82,14 @@ impl<'a> WorldParser<'a> {
                     self.texture_count += 1;
                 }
                 "~" => {
-                    let (_, (model_name, model)) = parse_vox_file(i, self.parent_path.clone())?;
+                    let (_, (model_name, model)) =
+                        parse_vox_file(i, self.parent_path.clone())?;
                     if self.model_map.contains_key(&model_name) {
-                        return context("Model with same name already exists", fail)(i)
+                        return context("Model with same name already exists", fail)(i);
                     }
                     self.models.push(model);
                     self.model_map.insert(model_name, ModelID(self.model_count));
-                    self.model_count +=1;
+                    self.model_count += 1;
                 }
                 "*" => {
                     let (_, (setting_type, value)) = parse_setting(i, &self.texture_map)?;
@@ -105,7 +103,7 @@ impl<'a> WorldParser<'a> {
                             &self.settings,
                             &self.texture_map,
                         )?;
-                    let segment = Segment::generate_rand(
+                    let segment = Segment::new(
                         SegmentID(self.segments.len()),
                         name.to_owned(),
                         dimensions,
@@ -113,8 +111,6 @@ impl<'a> WorldParser<'a> {
                         skybox,
                         repeatable,
                         ambient_light,
-                        &mut self.rng,
-                        self.model_map.values(),
                     );
                     self.segments.push(segment);
                 }
@@ -218,11 +214,17 @@ fn parse_vox_file(
         return context("vox file should contain exactly one model", fail)(i);
     }
     let palette = data.palette;
-    let model = data.models.into_iter().nth(0).unwrap();
-    if model.size.x != model.size.y || model.size.y != model.size.z || model.size.x != model.size.z {
+    let model = data.models.into_iter().next().unwrap();
+    if model.size.x != model.size.y
+        || model.size.y != model.size.z
+        || model.size.x != model.size.z
+    {
         return context("vox model doesn't have equal dimensions", fail)(i);
     }
-    Ok((input, (name.to_owned(), ModelData::from_vox_model(model, palette))))
+    Ok((
+        input,
+        (name.to_owned(), ModelData::from_vox_model(model, palette)),
+    ))
 }
 
 fn parse_setting<'a>(

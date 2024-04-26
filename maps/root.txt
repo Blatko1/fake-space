@@ -12,6 +12,7 @@ $ceiling = ceilingL:7, topL:100, ceilingT:Bricks, topT:Bricks;
 $wall = groundL:9, ceilingL:10, bottomT:Stone;
 
 $. = $ground, $ceiling;
+$v = $., allowVoxels: true;
 $# = $., $wall;
 $o = $ceiling, bottomL:-100, groundL:-99;
 
@@ -28,11 +29,11 @@ $W = $., portalDir:W, ceilingL:3;
       #  #  o  o  .  .  .  o  o  #  #  // 14
       #  E  .  .  .  .  .  .  .  W  #  // 13
       #  #  o  o  .  .  .  o  o  #  #  // 12
-      #  #  o  o  .  .  .  o  o  #  #  // 11
+      #  #  o  o  v  .  .  o  o  #  #  // 11
       #  #  o  o  .  .  .  o  o  #  #  // 10
       #  E  .  .  .  .  .  .  .  W  #  // 9 
       #  #  o  o  .  .  .  o  o  #  #  // 8 
-      #  #  o  o  .  .  .  o  o  #  #  // 7 
+      #  #  o  o  .  .  v  o  o  #  #  // 7 
       #  #  o  o  .  .  .  o  o  #  #  // 6 
       #  E  .  .  .  .  .  .  .  W  #  // 5 
       #  #  o  o  .  .  .  o  o  #  #  // 4 

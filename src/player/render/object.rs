@@ -1,7 +1,7 @@
 use super::{
-    ray::Ray, Side, FLASHLIGHT_DISTANCE, FLASHLIGHT_INTENSITY,
-    NORMAL_X_NEGATIVE, NORMAL_X_POSITIVE, NORMAL_Y_NEGATIVE, NORMAL_Y_POSITIVE,
-    NORMAL_Z_NEGATIVE, NORMAL_Z_POSITIVE,
+    ray::Ray, Side, FLASHLIGHT_DISTANCE, FLASHLIGHT_INTENSITY, NORMAL_X_NEGATIVE,
+    NORMAL_X_POSITIVE, NORMAL_Y_NEGATIVE, NORMAL_Y_POSITIVE, NORMAL_Z_NEGATIVE,
+    NORMAL_Z_POSITIVE,
 };
 use crate::model::ModelDataRef;
 use crate::player::camera::Camera;
@@ -167,47 +167,44 @@ impl<'a> ObjectDrawData<'a> {
                     grid_y as u32,
                     grid_z as u32,
                 );
-                match voxel {
-                    Some(Color { r, g, b, a: 255 }) => {
-                        // Spotlight doesn't work since distance represents
-                        // distance to whole voxel, not point on voxel
-                        let x = grid_x as f32 + obj_pos.x - ray_origin.x;
-                        let y = (grid_y as f32 + obj_pos.y - ray_origin.y) * 2.0;
-                        let z = grid_z as f32 + obj_pos.z - ray_origin.z;
-                        let distance =
-                            ((x * x + y * y + z * z) / (dimension * dimension)).sqrt();
+                if let Some(Color { r, g, b, a: 255 }) = voxel {
+                    // Spotlight doesn't work since distance represents
+                    // distance to whole voxel, not point on voxel
+                    let x = grid_x as f32 + obj_pos.x - ray_origin.x;
+                    let y = (grid_y as f32 + obj_pos.y - ray_origin.y) * 2.0;
+                    let z = grid_z as f32 + obj_pos.z - ray_origin.z;
+                    let distance =
+                        ((x * x + y * y + z * z) / (dimension * dimension)).sqrt();
 
-                        let normal = side.normal();
-                        let diffuse = (-ray_dir.dot(normal)).max(0.0);
-                        // Multiply by the canvas aspect ratio so the light has a shape of a circle.
-                        let flashlight_x = ray.plane_x * camera.view_aspect;
-                        // Smooth out the flashlight intensity using the distance
-                        let flashlight_intensity = (1.0
-                            - (distance / FLASHLIGHT_DISTANCE).clamp(0.0, 1.0))
-                            * FLASHLIGHT_INTENSITY
-                            * diffuse;
+                    let normal = side.normal();
+                    let diffuse = (-ray_dir.dot(normal)).max(0.0);
+                    // Multiply by the canvas aspect ratio so the light has a shape of a circle.
+                    let flashlight_x = ray.plane_x * camera.view_aspect;
+                    // Smooth out the flashlight intensity using the distance
+                    let flashlight_intensity = (1.0
+                        - (distance / FLASHLIGHT_DISTANCE).clamp(0.0, 1.0))
+                        * FLASHLIGHT_INTENSITY
+                        * diffuse;
 
-                        let flashlight_y = 2.0 * screen_y * camera.height_recip - 1.0;
-                        let flashlight_radius = (flashlight_x * flashlight_x
-                            + flashlight_y * flashlight_y)
-                            .sqrt();
-                        let t = 1.0
-                            - ((flashlight_radius - super::FLASHLIGHT_INNER_RADIUS)
-                                / (super::FLASHLIGHT_OUTER_RADIUS
-                                    - super::FLASHLIGHT_INNER_RADIUS))
-                                .clamp(0.0, 1.0);
-                        let flashlight = t * t * (3.0 - t * 2.0) * flashlight_intensity;
-                        let light = flashlight + self.ambient_light_intensity;
-                        // Red channel
-                        pixel[0] = (r as f32 * light) as u8;
-                        // Green channel
-                        pixel[1] = (g as f32 * light) as u8;
-                        // Blue channel
-                        pixel[2] = (b as f32 * light) as u8;
-                        //pixel[3] = 255;
-                        break;
-                    }
-                    _ => (),
+                    let flashlight_y = 2.0 * screen_y * camera.height_recip - 1.0;
+                    let flashlight_radius = (flashlight_x * flashlight_x
+                        + flashlight_y * flashlight_y)
+                        .sqrt();
+                    let t = 1.0
+                        - ((flashlight_radius - super::FLASHLIGHT_INNER_RADIUS)
+                            / (super::FLASHLIGHT_OUTER_RADIUS
+                                - super::FLASHLIGHT_INNER_RADIUS))
+                            .clamp(0.0, 1.0);
+                    let flashlight = t * t * (3.0 - t * 2.0) * flashlight_intensity;
+                    let light = flashlight + self.ambient_light_intensity;
+                    // Red channel
+                    pixel[0] = (r as f32 * light) as u8;
+                    // Green channel
+                    pixel[1] = (g as f32 * light) as u8;
+                    // Blue channel
+                    pixel[2] = (b as f32 * light) as u8;
+                    //pixel[3] = 255;
+                    break;
                 }
                 if side_dist_x < side_dist_y {
                     if side_dist_x < side_dist_z {

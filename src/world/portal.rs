@@ -24,6 +24,7 @@ pub struct Portal {
 }
 
 impl Portal {
+    /// Returns new position and a difference in angle
     pub fn teleport_to(&self, mut origin: Vec3, dest: Portal) -> (Vec3, f32) {
         let mut yaw_angle_difference = 0.0;
         let offset_x = self.center.x - origin.x;

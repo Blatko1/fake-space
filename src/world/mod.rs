@@ -6,11 +6,10 @@ use nom::error::convert_error;
 use nom::Finish;
 use rand::Rng;
 use rand::{rngs::ThreadRng, seq::SliceRandom};
-use rand::prelude::IteratorRandom;
 use std::path::PathBuf;
 
-use crate::player::render::PointXZ;
 use crate::model::{ModelData, ModelDataRef, ModelID, ModelManager};
+use crate::player::render::PointXZ;
 use crate::world::portal::{DummyPortal, Portal, PortalID};
 use parser::WorldParser;
 use textures::{TextureData, TextureID, TextureManager};
@@ -52,21 +51,24 @@ impl World {
     }
 
     // TODO starting segment is always '0' and main room is '1'
-    pub fn new(segments: Vec<Segment>, textures: Vec<TextureData>, models: Vec<ModelData>) -> Self {
+    pub fn new(
+        segments: Vec<Segment>,
+        textures: Vec<TextureData>,
+        models: Vec<ModelData>,
+    ) -> Self {
+        let model_manager = ModelManager::new(models);
         let mut rooms = Vec::new();
         let mut room_counter = 0;
         let mut rng = rand::thread_rng();
 
         // Select the first segment which repeats only once
         let segment = &segments[0];
-        let mut starting_room = Room {
-            id: RoomID(room_counter),
-            segment_id: segment.id,
-            portals: segment.unlinked_portals.clone(),
-            is_fully_generated: true,
-            skybox: segment.skybox,
-            ambient_light_intensity: segment.ambient_light_intensity,
-        };
+        let mut starting_room = Room::new_with_rng_objects(
+            RoomID(room_counter),
+            segment,
+            &mut rng,
+            model_manager.model_list(),
+        );
         room_counter += 1;
 
         let root_segment = &segments[1];
@@ -74,14 +76,12 @@ impl World {
             .portals
             .iter_mut()
             .map(|portal| {
-                let mut new_room = Room {
-                    id: RoomID(room_counter),
-                    segment_id: root_segment.id,
-                    portals: root_segment.unlinked_portals.clone(),
-                    is_fully_generated: false,
-                    skybox: root_segment.skybox,
-                    ambient_light_intensity: root_segment.ambient_light_intensity,
-                };
+                let mut new_room = Room::new_with_rng_objects(
+                    RoomID(room_counter),
+                    root_segment,
+                    &mut rng,
+                    model_manager.model_list(),
+                );
                 let room_rand_portal = new_room.portals.choose_mut(&mut rng).unwrap();
                 // Connect the two portals:
                 // Connect the starting room with new random room
@@ -99,7 +99,7 @@ impl World {
         Self {
             segments,
             texture_manager: TextureManager::new(textures),
-            model_manager: ModelManager::new(models),
+            model_manager,
             rng,
             rooms,
         }
@@ -130,14 +130,12 @@ impl World {
                 .map(|portal| {
                     // Skip the first (two) rooms since they appear only once
                     let rand_segment = self.segments[1..].choose(&mut self.rng).unwrap();
-                    let mut new_room = Room {
-                        id: RoomID(next_id),
-                        segment_id: rand_segment.id,
-                        portals: rand_segment.unlinked_portals.clone(),
-                        is_fully_generated: false,
-                        skybox: rand_segment.skybox,
-                        ambient_light_intensity: rand_segment.ambient_light_intensity,
-                    };
+                    let mut new_room = Room::new_with_rng_objects(
+                        RoomID(next_id),
+                        rand_segment,
+                        &mut self.rng,
+                        self.model_manager.model_list(),
+                    );
                     let room_rand_portal =
                         new_room.portals.choose_mut(&mut self.rng).unwrap();
 
@@ -199,6 +197,10 @@ impl<'a> RoomRef<'a> {
     pub fn get_portal(&self, local_id: PortalID) -> Portal {
         self.data.portals[local_id.0]
     }
+
+    pub fn get_object(&self, local_id: ObjectID) -> Option<ModelID> {
+        self.data.objects[local_id.0]
+    }
 }
 
 // TODO remove 'pub'
@@ -208,12 +210,44 @@ pub struct Room {
     segment_id: SegmentID,
     // Each portal has its own index which is the position in this Vec
     portals: Vec<Portal>,
+    objects: Vec<Option<ModelID>>,
     is_fully_generated: bool,
     skybox: SkyboxTextureIDs,
     ambient_light_intensity: f32,
 }
 
 impl Room {
+    pub fn new(id: RoomID, segment: &Segment) -> Self {
+        Self {
+            id,
+            segment_id: segment.id,
+            portals: segment.unlinked_portals.clone(),
+            objects: segment.object_placeholders.clone(),
+            is_fully_generated: false,
+            skybox: segment.skybox,
+            ambient_light_intensity: segment.ambient_light_intensity,
+        }
+    }
+
+    pub fn new_with_rng_objects(
+        id: RoomID,
+        segment: &Segment,
+        rng: &mut ThreadRng,
+        model_list: &[ModelID],
+    ) -> Self {
+        let mut room = Self::new(id, segment);
+        if !model_list.is_empty() {
+            room.objects.iter_mut().for_each(|p| {
+                if rng.gen_bool(VOXEL_CHANCE) {
+                    let rand_voxel_model = model_list.choose(rng).unwrap();
+                    p.replace(*rand_voxel_model);
+                }
+            });
+        }
+        room
+    }
+
+    // TODO show in dbg
     pub fn get_portals(&self) -> &[Portal] {
         &self.portals
     }
@@ -226,6 +260,7 @@ impl Room {
         &self.skybox
     }
 
+    // TODO show in dbg
     pub fn id(&self) -> RoomID {
         self.id
     }
@@ -241,13 +276,14 @@ pub struct Segment {
     dimensions: (u64, u64),
     tiles: Vec<Tile>,
     unlinked_portals: Vec<Portal>,
+    object_placeholders: Vec<Option<ModelID>>,
     skybox: SkyboxTextureIDs,
     repeatable: bool,
     ambient_light_intensity: f32,
 }
 
 impl Segment {
-    pub fn generate(
+    pub fn new(
         id: SegmentID,
         name: String,
         dimensions: (u64, u64),
@@ -275,54 +311,20 @@ impl Segment {
                 }
             })
             .collect();
+
+        let object_placeholders =
+            tiles.iter().filter(|tile| tile.object.is_some()).count();
         Self {
             id,
             name,
             dimensions,
             unlinked_portals,
             tiles,
+            object_placeholders: vec![None; object_placeholders],
             skybox,
             repeatable,
             ambient_light_intensity,
         }
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    pub fn generate_rand<'a>(
-        id: SegmentID,
-        name: String,
-        dimensions: (u64, u64),
-        tiles: Vec<Tile>,
-        skybox: SkyboxTextureIDs,
-        repeatable: bool,
-        ambient_light_intensity: f32,
-        rng: &mut ThreadRng,
-        voxels: impl Iterator<Item=&'a ModelID> + Clone,
-    ) -> Self {
-        let mut segment = Self::generate(
-            id,
-            name,
-            dimensions,
-            tiles,
-            skybox,
-            repeatable,
-            ambient_light_intensity,
-        );
-
-        if voxels.clone().count() != 0 {
-            segment
-                .tiles
-                .iter_mut()
-                .filter(|tile| tile.allow_voxels)
-                .for_each(|tile| {
-                    if rng.gen_bool(VOXEL_CHANCE) {
-                        let rand_voxel_model = *voxels.clone().choose(rng).unwrap();
-                        tile.voxel_model.replace(rand_voxel_model);
-                    }
-                });
-        }
-
-        segment
     }
 
     /// Returns the value at the provided map coordinates.
@@ -371,9 +373,12 @@ pub struct Tile {
     pub top_level: f32,
     /// If the current tile should be a portal to different segment (map).
     pub portal: Option<DummyPortal>,
-    pub allow_voxels: bool,
-    pub voxel_model: Option<ModelID>,
+
+    pub object: Option<ObjectID>,
 }
+
+#[derive(Debug, Clone, Copy)]
+pub struct ObjectID(pub usize);
 
 #[derive(Copy, Clone, Debug)]
 pub struct SkyboxTextureIDs {

@@ -5,9 +5,9 @@
 pub mod backend;
 mod control;
 mod dbg;
+mod model;
 mod player;
 mod state;
-mod model;
 mod world;
 
 use std::fs;

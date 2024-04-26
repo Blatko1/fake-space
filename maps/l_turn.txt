@@ -11,6 +11,7 @@ $ground = groundL:0, bottomL:-1, groundT:Carpet;
 $ceiling = ceilingL:5, topL:20, ceilingT:DropCeiling, topT:DropCeiling;
 $wall = groundL:7, ceilingL:8, bottomT:Wallpaper;
 $. = $ground, $ceiling;
+$v = $., allowVoxels: true;
 $# = $., $wall;
 
 $portalTile = ceilingL:3, topL:11;
@@ -27,7 +28,7 @@ $W = $., portalDir:W, $portalTile;
       #  #  .  .  .  .  .  .  .  #  #  // 9
       #  #  .  .  .  .  .  .  .  W  #  // 8
       #  #  .  .  .  .  .  .  .  #  #  // 7
-      #  #  .  .  .  #  #  #  #  #  #  // 6
+      #  #  v  .  v  #  #  #  #  #  #  // 6
       #  #  .  .  .  #  #  #  #  #  #  // 5
       #  #  .  .  .  #  #  #  #  #  #  // 4
       #  #  .  .  .  #  #  #  #  #  #  // 3

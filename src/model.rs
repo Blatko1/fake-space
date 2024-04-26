@@ -8,16 +8,22 @@ const BLANK: Color = Color {
 };
 
 pub struct ModelManager {
+    id_list: Vec<ModelID>,
     models: Vec<ModelData>,
 }
 
 impl ModelManager {
     pub fn new(models: Vec<ModelData>) -> Self {
-        Self { models }
+        let id_list = models.iter().enumerate().map(|(i, _)| ModelID(i)).collect();
+        Self { id_list, models }
     }
 
     pub(super) fn get_model_data(&self, id: ModelID) -> ModelDataRef {
         self.models[id.0].as_ref()
+    }
+
+    pub fn model_list(&self) -> &[ModelID] {
+        &self.id_list
     }
 }
 
@@ -35,7 +41,7 @@ impl ModelData {
                 && model.size.x == model.size.z,
             "Dimensions of a voxel not equal!!!"
         );
-        let dimension = model.size.x as u32;
+        let dimension = model.size.x;
         let mut voxels = vec![BLANK; (dimension * dimension * dimension) as usize];
         model.voxels.iter().for_each(|v| {
             // Replace y and z since vox models have z axis pointing up
@@ -45,7 +51,7 @@ impl ModelData {
 
         Self {
             dimension: model.size.x,
-            voxels: voxels,
+            voxels,
         }
     }
 

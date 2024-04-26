@@ -139,25 +139,27 @@ impl<'a> ColumnDrawer<'a> {
             self.top_draw_bound = drawn_from;
 
             // If a voxel object is hit, store it for later rendering
-            if let Some(model_id) = next_tile.voxel_model {
-                let model_data = self.world.get_model(model_id);
-                let dimensions = model_data.dimension as f32;
-                let pos = Vec3::new(
-                    next_tile.position.x as f32 * dimensions,
-                    next_tile.ground_level * dimensions * 0.5,
-                    next_tile.position.z as f32 * dimensions,
-                );
-                encountered_objects.push(ObjectDrawData {
-                    pos,
-                    model_data,
-                    ray: self.ray,
-                    ambient_light_intensity: self
-                        .current_room
-                        .data
-                        .ambient_light_intensity(),
-                    bottom_draw_bound: self.bottom_draw_bound,
-                    top_draw_bound: self.top_draw_bound,
-                });
+            if let Some(object_id) = next_tile.object {
+                if let Some(model_id) = self.current_room.get_object(object_id) {
+                    let model_data = self.world.get_model(model_id);
+                    let dimensions = model_data.dimension as f32;
+                    let pos = Vec3::new(
+                        next_tile.position.x as f32 * dimensions,
+                        next_tile.ground_level * dimensions * 0.5,
+                        next_tile.position.z as f32 * dimensions,
+                    );
+                    encountered_objects.push(ObjectDrawData {
+                        pos,
+                        model_data,
+                        ray: self.ray,
+                        ambient_light_intensity: self
+                            .current_room
+                            .data
+                            .ambient_light_intensity(),
+                        bottom_draw_bound: self.bottom_draw_bound,
+                        top_draw_bound: self.top_draw_bound,
+                    });
+                }
             }
 
             // Switch to the different room if portal is hit
@@ -189,7 +191,7 @@ where
     let player_room = world.get_room_data(player.current_room_id());
     let skybox_textures = world.get_skybox_textures(player_room.data.skybox());
     column_iter.enumerate().for_each(|(column_index, column)| {
-        let ray = camera.cast_ray(column_index);
+        let ray = Ray::camera_cast(camera, column_index);
 
         let skybox = SkyboxSegment::new(camera, ray, skybox_textures);
         skybox.draw_skybox(column);

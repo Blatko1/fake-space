@@ -10,7 +10,7 @@ use nom::{IResult, Parser};
 
 use crate::world::portal::{DummyPortal, PortalDirection, PortalID};
 use crate::world::textures::TextureID;
-use crate::world::Tile;
+use crate::world::{ObjectID, Tile};
 
 use super::Settings;
 use super::{
@@ -43,7 +43,7 @@ impl<'a> SegmentParser<'a> {
             texture_map,
         }
     }
-    
+
     #[allow(clippy::type_complexity)]
     pub(super) fn parse(
         mut self,
@@ -72,6 +72,7 @@ impl<'a> SegmentParser<'a> {
 
                     let mut processed_tiles = Vec::with_capacity(tiles.len());
                     let mut portal_id = 0;
+                    let mut object_id = 0;
                     for (i, tile) in tiles.into_iter().enumerate() {
                         // Replace None values with Default values, then compare levels
                         // to find errors (lvl1 <= lvl2 < lvl3 <= lvl4)
@@ -106,7 +107,13 @@ impl<'a> SegmentParser<'a> {
                             }
                             None => None,
                         };
-                        let allow_voxels = tile.allow_voxels.unwrap_or(false);
+                        let object = if Some(true) == tile.allow_voxels {
+                            let object = ObjectID(object_id);
+                            object_id += 1;
+                            Some(object)
+                        } else {
+                            None
+                        };
                         let position = PointXZ::new(
                             i as u64 % self.dimensions.0,
                             i as u64 / self.dimensions.0,
@@ -122,9 +129,7 @@ impl<'a> SegmentParser<'a> {
                             ceiling_level,
                             top_level,
                             portal,
-                            allow_voxels,
-                            // The voxel models will be randomly generated after all tiles were loaded
-                            voxel_model: None,
+                            object,
                         };
 
                         processed_tiles.push(t);
