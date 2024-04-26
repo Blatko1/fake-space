@@ -5,9 +5,7 @@
 pub mod backend;
 mod control;
 mod dbg;
-mod model;
 mod player;
-mod state;
 mod world;
 
 use std::fs;
@@ -17,10 +15,13 @@ use std::time::{Duration, Instant};
 use crate::dbg::Dbg;
 use crate::world::World;
 use backend::Canvas;
-use control::ControllerSettings;
+use control::{ControllerSettings, GameInput};
+use dbg::DebugData;
 use glam::Vec2;
+use hashbrown::HashSet;
+use player::camera::Camera;
+use player::Player;
 use pollster::block_on;
-use state::State;
 use wgpu_text::glyph_brush::ab_glyph::FontVec;
 use winit::event::{DeviceEvent, KeyEvent};
 use winit::keyboard::{Key, NamedKey, PhysicalKey};
@@ -29,10 +30,84 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder as WinitWindowBuilder,
 };
+use world::RoomID;
 
 const FPS_CAP: u32 = 60;
 const CANVAS_WIDTH: u32 = 240;
 const CANVAS_HEIGHT: u32 = 135;
+const PHYSICS_TIMESTEP: f32 = 0.01;
+
+pub struct State {
+    world: World,
+    player: Player,
+
+    accumulator: f32,
+}
+
+impl State {
+    pub fn new(canvas: &Canvas, world: World) -> Self {
+        let camera = Camera::new(
+            10.5,
+            1.0,
+            14.5,
+            90f32.to_radians(),
+            canvas.width(),
+            canvas.height(),
+        );
+
+        Self {
+            world,
+            player: Player::new(camera, RoomID(0)),
+
+            accumulator: 0.0,
+        }
+    }
+
+    pub fn update(&mut self, delta: f32) {
+        self.accumulator += delta;
+        while self.accumulator >= PHYSICS_TIMESTEP {
+            self.player.update(&self.world, PHYSICS_TIMESTEP);
+            self.accumulator -= PHYSICS_TIMESTEP;
+        }
+        self.world.update(self.player.current_room_id());
+    }
+
+    pub fn draw<'a, C>(&self, canvas_column_iter: C)
+    where
+        C: Iterator<Item = &'a mut [u8]>,
+    {
+        self.player.cast_and_draw(&self.world, canvas_column_iter);
+    }
+
+    #[inline]
+    pub fn process_game_input(
+        &mut self,
+        game_input: &HashSet<GameInput>,
+        is_pressed: bool,
+    ) {
+        for input in game_input.iter() {
+            self.player.process_input(*input, is_pressed)
+        }
+    }
+
+    #[inline]
+    pub fn on_mouse_move(&mut self, delta: Vec2) {
+        self.player.on_mouse_move(delta);
+    }
+
+    pub fn collect_dbg_data(&self, avg_fps_time: f64, current_fps: i32) -> DebugData {
+        let player_dbg_data = self.player.collect_dbg_data();
+        let world_dbg_data = self.world.collect_dbg_data();
+
+        DebugData {
+            current_fps,
+            avg_fps_time,
+
+            player_data: player_dbg_data,
+            world_data: world_dbg_data,
+        }
+    }
+}
 
 fn main() {
     if std::env::var("RUST_LOG").is_err() {

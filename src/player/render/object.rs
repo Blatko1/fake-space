@@ -3,7 +3,7 @@ use super::{
     NORMAL_X_POSITIVE, NORMAL_Y_NEGATIVE, NORMAL_Y_POSITIVE, NORMAL_Z_NEGATIVE,
     NORMAL_Z_POSITIVE,
 };
-use crate::model::ModelDataRef;
+use crate::world::model::ModelDataRef;
 use crate::player::camera::Camera;
 use dot_vox::Color;
 use glam::Vec3;

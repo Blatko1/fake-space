@@ -1,6 +1,7 @@
 mod parser;
 pub mod portal;
 pub mod textures;
+pub mod model;
 
 use nom::error::convert_error;
 use nom::Finish;
@@ -8,12 +9,12 @@ use rand::Rng;
 use rand::{rngs::ThreadRng, seq::SliceRandom};
 use std::path::PathBuf;
 
-use crate::model::{ModelData, ModelDataRef, ModelID, ModelManager};
 use crate::player::render::PointXZ;
 use crate::world::portal::{DummyPortal, Portal, PortalID};
 use parser::WorldParser;
 use textures::{TextureData, TextureID, TextureManager};
 
+use self::model::{ModelData, ModelDataRef, ModelID, ModelManager};
 use self::parser::cleanup_input;
 use self::textures::TextureDataRef;
 

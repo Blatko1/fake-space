@@ -17,8 +17,7 @@ use nom::number::complete::double;
 use nom::sequence::{preceded, terminated, Tuple};
 use nom::{Finish, IResult, Parser};
 
-use crate::model::{ModelData, ModelID};
-
+use super::model::{ModelData, ModelID};
 use super::textures::TextureID;
 use super::{SkyboxTextureIDs, TextureData, Tile};
 
