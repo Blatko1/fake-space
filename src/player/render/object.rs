@@ -3,15 +3,14 @@ use super::{
     NORMAL_X_POSITIVE, NORMAL_Y_NEGATIVE, NORMAL_Y_POSITIVE, NORMAL_Z_NEGATIVE,
     NORMAL_Z_POSITIVE,
 };
-use crate::world::model::ModelDataRef;
 use crate::player::camera::Camera;
+use crate::world::model::ModelDataRef;
 use dot_vox::Color;
 use glam::Vec3;
+use rayon::{iter::{IndexedParallelIterator, ParallelIterator}, slice::ParallelSliceMut};
 
 pub fn draw_objects(objects: Vec<ObjectDrawData>, camera: &Camera, column: &mut [u8]) {
-    column
-        .chunks_exact_mut(4)
-        .enumerate()
+    column.par_chunks_exact_mut(4).enumerate()
         .for_each(|(screen_y, pixel)| {
             // Filter objects which are not visible
             let visible_objects = objects.iter().rev().filter(|object| {
