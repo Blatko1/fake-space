@@ -33,6 +33,8 @@
 #Sky2Bottom = src:"../res/sky2_bottom.png", transparency:false;
 
 ~Model1 = src:"../res/chr_knight.vox";
+~Monu = src:"../res/monu.vox";
+~Castle = src:"../res/castle.vox";
 
 // Determine the constant settings
 *bottomL = -90.0;

@@ -33,8 +33,8 @@ use winit::{
 use world::RoomID;
 
 const FPS_CAP: u32 = 60;
-const CANVAS_WIDTH: u32 = 240;
-const CANVAS_HEIGHT: u32 = 135;
+const CANVAS_WIDTH: u32 = 240 * 2;
+const CANVAS_HEIGHT: u32 = 135 * 2;
 const PHYSICS_TIMESTEP: f32 = 0.01;
 
 pub struct State {

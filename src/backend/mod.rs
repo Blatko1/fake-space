@@ -2,6 +2,7 @@ pub mod gfx;
 
 use crate::dbg::Dbg;
 use gfx::Gfx;
+use rayon::iter::IntoParallelRefMutIterator;
 use std::ptr;
 use std::sync::Arc;
 use wgpu::util::DeviceExt;

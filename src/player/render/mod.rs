@@ -8,6 +8,7 @@ use super::Player;
 use crate::player::camera::Camera;
 use crate::world::{RoomRef, World};
 use glam::Vec3;
+use rayon::iter::ParallelBridge;
 
 use self::object::ObjectDrawData;
 use self::platforms::PlatformDrawData;
