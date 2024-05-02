@@ -1,4 +1,4 @@
-use crate::backend::gfx::Gfx;
+use crate::backend::ctx::Ctx;
 use crate::backend::Canvas;
 use crate::player::PlayerDebugData;
 use crate::world::WorldDebugData;
@@ -10,7 +10,7 @@ use wgpu_text::glyph_brush::{
 use wgpu_text::{BrushBuilder, BrushError, TextBrush};
 
 pub struct DebugData {
-    pub current_fps: i32,
+    pub current_fps: u32,
     pub avg_fps_time: f64,
 
     pub player_data: PlayerDebugData,
@@ -24,10 +24,10 @@ pub struct Dbg {
 }
 
 impl Dbg {
-    pub fn new(gfx: &Gfx, font: FontVec) -> Self {
-        let config = gfx.config();
+    pub fn new(ctx: &Ctx, font: FontVec) -> Self {
+        let config = ctx.config();
         let brush = BrushBuilder::using_font(font).build(
-            gfx.device(),
+            ctx.device(),
             config.width,
             config.height,
             config.format,
@@ -90,16 +90,16 @@ impl Dbg {
 
     pub fn resize(&mut self, canvas: &Canvas) {
         let region = canvas.region();
-        let gfx = canvas.gfx();
-        let config = gfx.config();
+        let ctx = canvas.ctx();
+        let config = ctx.config();
         self.screen_position = (region.x as f32 + 5.0, region.y as f32 + 5.0);
         self.brush
-            .resize_view(config.width as f32, config.height as f32, gfx.queue());
+            .resize_view(config.width as f32, config.height as f32, ctx.queue());
     }
 
-    pub fn queue_data(&mut self, gfx: &Gfx) -> Result<(), BrushError> {
+    pub fn queue_data(&mut self, ctx: &Ctx) -> Result<(), BrushError> {
         self.brush
-            .queue(gfx.device(), gfx.queue(), vec![&self.content])
+            .queue(ctx.device(), ctx.queue(), vec![&self.content])
     }
 
     pub fn render<'pass>(&'pass self, rpass: &mut RenderPass<'pass>) {

@@ -4,15 +4,15 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-wgpu = "0.19.3"
-winit = "0.29.15"
-wgpu_text = "0.8.7"
+wgpu = "0.20.0"
+winit = "0.30.0"
+wgpu_text = "0.8.8"
 
 pollster = "0.3.0"
 bytemuck = { version = "1.15.0", features = [ "derive" ] }
 glam = "0.27.0"
 image = "0.25.1"
-hashbrown = "0.14.3"
+hashbrown = "0.14.5"
 rand = "0.8.5"
 strum = { version = "0.26.2", features = ["derive"] }
 nom = "7.1.3"

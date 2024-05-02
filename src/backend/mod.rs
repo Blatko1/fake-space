@@ -1,12 +1,11 @@
-pub mod gfx;
+pub mod ctx;
 
 use crate::dbg::Dbg;
-use gfx::Gfx;
-use rayon::iter::IntoParallelRefMutIterator;
 use std::ptr;
-use std::sync::Arc;
 use wgpu::util::DeviceExt;
 use winit::dpi::PhysicalSize;
+
+use self::ctx::Ctx;
 
 const TRIANGLE_VERTICES: [[f32; 2]; 3] = [
     [-1.0, -1.0], // bottom-left
@@ -21,7 +20,7 @@ pub struct Canvas {
     width: u32,
     height: u32,
 
-    gfx: Gfx,
+    ctx: Ctx,
     pipeline: wgpu::RenderPipeline,
     bind_group: wgpu::BindGroup,
 
@@ -35,14 +34,13 @@ pub struct Canvas {
 impl Canvas {
     const CANVAS_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
 
-    pub async fn init(
-        winit_window: Arc<winit::window::Window>,
+    pub fn new(
+        ctx: Ctx,
         canvas_width: u32,
         canvas_height: u32,
     ) -> Self {
-        let gfx = Gfx::init(winit_window).await.unwrap();
-        let device = gfx.device();
-        let render_format = gfx.config().format;
+        let device = ctx.device();
+        let render_format = ctx.config().format;
 
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("Canvas Texture Sampler"),
@@ -163,6 +161,7 @@ impl Canvas {
                     step_mode: wgpu::VertexStepMode::Vertex,
                     attributes: &wgpu::vertex_attr_array![0 => Float32x2],
                 }],
+                compilation_options: Default::default(),
             },
             primitive: wgpu::PrimitiveState::default(),
             multisample: wgpu::MultisampleState::default(),
@@ -174,6 +173,7 @@ impl Canvas {
                     blend: Some(wgpu::BlendState::ALPHA_BLENDING),
                     write_mask: wgpu::ColorWrites::ALL,
                 })],
+                compilation_options: Default::default(),                
             }),
             depth_stencil: None,
             multiview: None,
@@ -188,7 +188,7 @@ impl Canvas {
             width: canvas_width,
             height: canvas_height,
 
-            gfx,
+            ctx,
             pipeline,
             bind_group,
 
@@ -236,7 +236,7 @@ impl Canvas {
                     })
             });
 
-        self.gfx.queue().write_texture(
+        self.ctx.queue().write_texture(
             wgpu::ImageCopyTexture {
                 texture: &self.texture,
                 mip_level: 0,
@@ -253,13 +253,13 @@ impl Canvas {
         );
 
         let mut encoder =
-            self.gfx
+            self.ctx
                 .device()
                 .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                     label: Some("Command Encoder"),
                 });
 
-        let frame = self.gfx.get_current_texture()?;
+        let frame = self.ctx.get_current_texture()?;
         let view = frame
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
@@ -297,15 +297,20 @@ impl Canvas {
             dbg.render(&mut rpass);
         }
 
-        self.gfx.queue().submit(Some(encoder.finish()));
+        self.ctx.queue().submit(Some(encoder.finish()));
+
+        self.ctx.window().pre_present_notify();
+
         frame.present();
+
+        self.ctx.window().request_redraw();
 
         Ok(())
     }
 
     pub fn resize(&mut self, new_size: PhysicalSize<u32>) {
-        self.gfx.resize(new_size);
-        let config = self.gfx.config();
+        self.ctx.resize(new_size);
+        let config = self.ctx.config();
 
         let window_width = config.width as f32;
         let window_height = config.height as f32;
@@ -328,7 +333,7 @@ impl Canvas {
             [t_x, t_y, 0.0, 1.0],
         ];
 
-        self.gfx.queue().write_buffer(
+        self.ctx.queue().write_buffer(
             &self.matrix_buffer,
             0,
             bytemuck::cast_slice(&matrix),
@@ -342,8 +347,12 @@ impl Canvas {
         };
     }
 
+    pub fn request_redraw(&self) {
+        self.ctx.window().request_redraw()
+    }
+
     pub fn on_surface_lost(&self) {
-        self.gfx.recreate_sc()
+        self.ctx.recreate_sc()
     }
 
     pub fn width(&self) -> u32 {
@@ -354,8 +363,8 @@ impl Canvas {
         self.height
     }
 
-    pub fn gfx(&self) -> &Gfx {
-        &self.gfx
+    pub fn ctx(&self) -> &Ctx {
+        &self.ctx
     }
 
     pub fn region(&self) -> ScissorRegion {
