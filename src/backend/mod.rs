@@ -303,8 +303,6 @@ impl Canvas {
 
         frame.present();
 
-        self.ctx.window().request_redraw();
-
         Ok(())
     }
 

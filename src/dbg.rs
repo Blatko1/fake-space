@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use crate::backend::ctx::Ctx;
 use crate::backend::Canvas;
 use crate::player::PlayerDebugData;
@@ -10,9 +12,6 @@ use wgpu_text::glyph_brush::{
 use wgpu_text::{BrushBuilder, BrushError, TextBrush};
 
 pub struct DebugData {
-    pub current_fps: u32,
-    pub avg_fps_time: f64,
-
     pub player_data: PlayerDebugData,
     pub world_data: WorldDebugData,
 }
@@ -21,6 +20,11 @@ pub struct Dbg {
     screen_position: (f32, f32),
     brush: TextBrush<FontVec>,
     content: OwnedSection<Extra>,
+
+    // FPS counting
+    fps_print_delta: Instant,
+    frame_count: u32,
+    current_fps: u32,
 }
 
 impl Dbg {
@@ -39,11 +43,16 @@ impl Dbg {
             screen_position,
             brush,
             content,
+
+            fps_print_delta: Instant::now(),
+            frame_count: 0,
+            current_fps: 0,
         }
     }
 
     pub fn update(&mut self, data: DebugData) {
         let player = data.player_data;
+        let time_per_frame = 1000.0 / self.current_fps as f64;
         let data_str = format!(
             "FPS: {}\n\
             Average frame time: {:.2} ms\n\
@@ -56,8 +65,8 @@ impl Dbg {
             On ground: {}\n\
             Velocity: x: {:.2}, z: {:.2}\n\
             Air velocity: {:.2}",
-            data.current_fps,
-            data.avg_fps_time,
+            self.current_fps,
+            time_per_frame,
             player.eye_pos.x,
             player.eye_pos.y,
             player.eye_pos.z,
@@ -86,6 +95,15 @@ impl Dbg {
                     .line_breaker(BuiltInLineBreaker::AnyCharLineBreaker),
             )
             .to_owned();
+    }
+
+    pub fn update_frame_timings(&mut self) {
+        self.frame_count += 1;
+        if self.fps_print_delta.elapsed().as_micros() >= 1000000 {
+            self.fps_print_delta = Instant::now();
+            self.current_fps = self.frame_count;
+            self.frame_count = 0;
+        }
     }
 
     pub fn resize(&mut self, canvas: &Canvas) {
