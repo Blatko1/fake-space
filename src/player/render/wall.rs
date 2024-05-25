@@ -87,7 +87,7 @@ impl<'a> ColumnDrawer<'a> {
         let four_tex_width = tex_width * 4;
         let four_tex_x = tex_x * 4;
 
-        // TODO idk why this gives negative results
+        // TODO why does this give negative results
         let diffuse = (-ray.dir.dot(normal)).max(0.0);
         // Multiply by the canvas aspect ratio so the light has a shape of a circle.
         let flashlight_x = ray.plane_x * cam.view_aspect;
@@ -102,16 +102,15 @@ impl<'a> ColumnDrawer<'a> {
         let spotlight = t * t * (3.0 - t * 2.0) * super::SPOTLIGHT_STRENGTH;
 
         column
-            .chunks_exact_mut(4)
+            .chunks_exact_mut(3)
             .enumerate()
             .skip(draw_from)
             .take(draw_to - draw_from)
             .for_each(|(y, pixel)| {
                 let tex_y_pos = tex_y.round() as usize % tex_height;
                 let i = (tex_height - tex_y_pos - 1) * four_tex_width + four_tex_x;
-                let color = &texture[i..i + 4];
+                let color = &texture[i..i + 3];
 
-                // Draw
                 let flashlight_y = 2.0 * y as f32 * cam.height_recip - 1.0;
                 let flashlight_radius =
                     (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt();
@@ -122,11 +121,10 @@ impl<'a> ColumnDrawer<'a> {
                         .clamp(0.0, 1.0);
                 let flashlight = t * t * (3.0 - t * 2.0) * flashlight_intensity;
                 // Modify pixel
-                pixel[0..3].iter_mut().zip(color[0..3].iter()).for_each(
-                    |(dest, &src)| {
-                        *dest = (src as f32 * (flashlight + ambient + spotlight)) as u8;
-                    },
-                );
+                let t = flashlight + ambient + spotlight;
+                pixel.iter_mut().zip(color).for_each(|(dest, &src)| {
+                    *dest = (src as f32 * t) as u8;
+                });
 
                 // TODO maybe make it so `tex_y_step` is being subtracted.
                 tex_y += tex_y_step;

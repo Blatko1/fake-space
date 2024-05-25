@@ -7,10 +7,15 @@ use crate::player::camera::Camera;
 use crate::world::model::ModelDataRef;
 use dot_vox::Color;
 use glam::Vec3;
-use rayon::{iter::{IndexedParallelIterator, ParallelIterator}, slice::ParallelSliceMut};
+use rayon::{
+    iter::{IndexedParallelIterator, ParallelIterator},
+    slice::ParallelSliceMut,
+};
 
 pub fn draw_objects(objects: Vec<ObjectDrawData>, camera: &Camera, column: &mut [u8]) {
-    column.par_chunks_exact_mut(4).enumerate()
+    column
+        .par_chunks_exact_mut(3)
+        .enumerate()
         .for_each(|(screen_y, pixel)| {
             // Filter objects which are not visible
             let visible_objects = objects.iter().rev().filter(|object| {
@@ -202,7 +207,6 @@ impl<'a> ObjectDrawData<'a> {
                     pixel[1] = (g as f32 * light) as u8;
                     // Blue channel
                     pixel[2] = (b as f32 * light) as u8;
-                    //pixel[3] = 255;
                     break;
                 }
                 if side_dist_x < side_dist_y {

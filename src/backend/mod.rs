@@ -34,11 +34,7 @@ pub struct Canvas {
 impl Canvas {
     const CANVAS_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
 
-    pub fn new(
-        ctx: Ctx,
-        canvas_width: u32,
-        canvas_height: u32,
-    ) -> Self {
+    pub fn new(ctx: Ctx, canvas_width: u32, canvas_height: u32) -> Self {
         let device = ctx.device();
         let render_format = ctx.config().format;
 
@@ -173,18 +169,20 @@ impl Canvas {
                     blend: Some(wgpu::BlendState::ALPHA_BLENDING),
                     write_mask: wgpu::ColorWrites::ALL,
                 })],
-                compilation_options: Default::default(),                
+                compilation_options: Default::default(),
             }),
             depth_stencil: None,
             multiview: None,
         });
 
-        let buffer_len = (canvas_width * canvas_height * 4) as usize;
+        let buffer_len = (canvas_width * canvas_height * 3) as usize;
+        let frame_buffer_len = (canvas_width * canvas_height * 4) as usize;
 
         Self {
-            // RGBA - 4 bytes per pixel
+            // RGB - 3 bytes per pixel
             buffer: vec![255; buffer_len],
-            frame: vec![255; buffer_len],
+            // RGBA - 4 bytes per pixel
+            frame: vec![255; frame_buffer_len],
             width: canvas_width,
             height: canvas_height,
 
@@ -208,29 +206,28 @@ impl Canvas {
     }
 
     pub fn mut_column_iterator(&mut self) -> impl Iterator<Item = &mut [u8]> {
-        self.buffer.chunks_exact_mut(self.height as usize * 4)
+        self.buffer.chunks_exact_mut(self.height as usize * 3)
     }
 
     pub fn render(&mut self, dbg: &Dbg) -> Result<(), wgpu::SurfaceError> {
-        // Flip the buffer texture to correct position (90 degrees to left)
+        // Flip the buffer texture to correct position (90 degrees anticlockwise)
         self.frame
             .chunks_exact_mut(self.width as usize * 4)
             .rev()
             .enumerate()
             .for_each(|(x, row)| {
                 self.buffer
-                    .chunks_exact(4)
+                    .chunks_exact(3)
                     .skip(x)
                     .step_by(self.height as usize)
                     .zip(row.chunks_exact_mut(4))
                     .for_each(|(src, dest)| {
-                        //dest.copy_from_slice(src);
-                        // Using unsafe for performance
+                        //dest[0..3].copy_from_slice(src);
                         unsafe {
                             ptr::copy_nonoverlapping(
                                 src.as_ptr(),
                                 dest.as_mut_ptr(),
-                                dest.len(),
+                                3,
                             );
                         }
                     })

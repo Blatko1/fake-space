@@ -1,7 +1,7 @@
+pub mod model;
 mod parser;
 pub mod portal;
 pub mod textures;
-pub mod model;
 
 use nom::error::convert_error;
 use nom::Finish;

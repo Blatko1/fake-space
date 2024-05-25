@@ -11,13 +11,12 @@ pub struct Ctx {
 }
 
 impl Ctx {
-    pub async fn new(event_loop: &ActiveEventLoop) -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn new(
+        event_loop: &ActiveEventLoop,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let window = Arc::new(
             event_loop
-                .create_window(
-                    Window::default_attributes()
-                        .with_title("RayVenture"),
-                )
+                .create_window(Window::default_attributes().with_title("RayVenture"))
                 .unwrap(),
         );
 

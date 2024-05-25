@@ -64,7 +64,7 @@ impl<'a> ColumnDrawer<'a> {
         let flashlight_x = ray.plane_x * cam.view_aspect;
 
         column
-            .chunks_exact_mut(4)
+            .chunks_exact_mut(3)
             .enumerate()
             .skip(draw_from)
             .take(draw_to - draw_from)
@@ -80,7 +80,7 @@ impl<'a> ColumnDrawer<'a> {
                 let tex_y =
                     ((tex_height as f32 * pos.z.fract()) as usize).min(tex_height - 1);
                 let i = 4 * (tex_width * tex_y + tex_x); //tex_width * 4 * tex_y + tex_x * 4
-                let color = &texture[i..i + 4];
+                let color = &texture[i..i + 3];
 
                 // Calculate the diffuse lightning by finding the direction of the ray with pitch
                 ray_dir.y += ray.origin.y - platform_data.height_level;
@@ -105,14 +105,11 @@ impl<'a> ColumnDrawer<'a> {
                         .clamp(0.0, 1.0);
                 let flashlight = t * t * (3.0 - t * 2.0) * flashlight_intensity;
                 // Modify pixel
-                pixel[0..3].iter_mut().zip(color[0..3].iter()).for_each(
-                    |(dest, &src)| {
-                        *dest = (src as f32 * (flashlight + ambient + spotlight)) as u8;
-                    },
-                );
-                //pixel[3] = color[3];
+                let t = flashlight + ambient + spotlight;
+                pixel.iter_mut().zip(color).for_each(|(dest, &src)| {
+                    *dest = (src as f32 * t) as u8;
+                });
             });
-
         (draw_from, draw_to)
     }
 }

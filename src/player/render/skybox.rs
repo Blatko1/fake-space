@@ -115,7 +115,7 @@ impl<'a> SkyboxSegment<'a> {
         let pos_factor = ray_dir + tile_step_factor * ray.column_index as f32;
         let half_h_plus_shearing = cam.f_half_height + cam.y_shearing;
         column
-            .chunks_exact_mut(4)
+            .chunks_exact_mut(3)
             .enumerate()
             .skip(draw_from)
             .take(draw_to - draw_from)
@@ -125,7 +125,7 @@ impl<'a> SkyboxSegment<'a> {
                 let tex_x = ((tex_width as f32 * pos.x) as usize).min(tex_width - 1);
                 let tex_y = ((tex_height as f32 * pos.z) as usize).min(tex_height - 1);
                 let i = 4 * (tex_width * tex_y + tex_x);
-                let color = &texture[i..i + 4];
+                let color = &texture[i..i + 3];
 
                 unsafe {
                     ptr::copy_nonoverlapping(
@@ -167,7 +167,7 @@ impl<'a> SkyboxSegment<'a> {
         let pos_factor = self.camera.forward_dir - self.camera.horizontal_plane
             + tile_step_factor * ray.column_index as f32;
         column
-            .chunks_exact_mut(4)
+            .chunks_exact_mut(3)
             .enumerate()
             .skip(draw_from)
             .take(draw_to - draw_from)
@@ -179,7 +179,7 @@ impl<'a> SkyboxSegment<'a> {
                     ((tex_width as f32 * (1.0 - pos.x)) as usize).min(tex_width - 1);
                 let tex_y = ((tex_height as f32 * pos.z) as usize).min(tex_height - 1);
                 let i = 4 * (tex_width * tex_y + tex_x);
-                let color = &texture[i..i + 4];
+                let color = &texture[i..i + 3];
 
                 unsafe {
                     ptr::copy_nonoverlapping(
@@ -228,20 +228,18 @@ impl<'a> SkyboxSegment<'a> {
         let four_tex_width = tex_width * 4;
         let four_tex_x = tex_x * 4;
         column
-            .chunks_exact_mut(4)
+            .chunks_exact_mut(3)
             .skip(draw_from)
             .take(draw_to - draw_from)
             .for_each(|dest| {
-                //if dest[3] != 255 {
                 let tex_y_pos = tex_y.round() as usize % tex_height;
                 let i = (tex_height - tex_y_pos - 1) * four_tex_width + four_tex_x;
-                let src = &texture[i..i + 4];
+                let src = &texture[i..i + 3];
 
                 // Draw the pixel:
                 unsafe {
                     ptr::copy_nonoverlapping(src.as_ptr(), dest.as_mut_ptr(), dest.len())
                 }
-                //}
                 // TODO maybe make it so `tex_y_step` is being subtracted.
                 tex_y += tex_y_step;
             });

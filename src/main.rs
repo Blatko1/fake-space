@@ -71,7 +71,6 @@ impl State {
             world: World::from_path("maps/world.txt").unwrap(),
             player: Player::new(camera, RoomID(0)),
 
-            //frame_counter: FrameCounter::new(),
             delta_accumulator: 0.0,
             time_per_frame: Duration::from_secs_f64(1.0 / FPS_CAP as f64),
             now: Instant::now(),
@@ -87,8 +86,7 @@ impl State {
         }
         self.world.update(self.player.current_room_id());
 
-        let dbg_data =
-        self.collect_dbg_data();
+        let dbg_data = self.collect_dbg_data();
 
         if let Some(dbg) = self.dbg.as_mut() {
             dbg.update(dbg_data)
@@ -153,7 +151,6 @@ impl ApplicationHandler for State {
                 canvas.request_redraw();
             }
             WindowEvent::RedrawRequested => {
-
                 let canvas = self.canvas.as_mut().unwrap();
                 let dbg = self.dbg.as_mut().unwrap();
 
@@ -192,16 +189,15 @@ impl ApplicationHandler for State {
             }
             self.update(elapsed.as_secs_f32());
         } else if SLEEP_BETWEEN_FRAMES {
-            event_loop.set_control_flow(ControlFlow::WaitUntil(Instant::now().checked_add(self.time_per_frame - elapsed).unwrap()))
+            event_loop.set_control_flow(ControlFlow::WaitUntil(
+                Instant::now()
+                    .checked_add(self.time_per_frame - elapsed)
+                    .unwrap(),
+            ))
         }
     }
 
-    fn device_event(
-        &mut self,
-        _: &ActiveEventLoop,
-        _: DeviceId,
-        event: DeviceEvent,
-    ) {
+    fn device_event(&mut self, _: &ActiveEventLoop, _: DeviceId, event: DeviceEvent) {
         if let DeviceEvent::MouseMotion { delta } = event {
             let delta = Vec2::new(delta.0 as f32, delta.1 as f32);
             self.player.on_mouse_move(delta);
