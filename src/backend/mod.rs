@@ -224,11 +224,7 @@ impl Canvas {
                     .for_each(|(src, dest)| {
                         //dest[0..3].copy_from_slice(src);
                         unsafe {
-                            ptr::copy_nonoverlapping(
-                                src.as_ptr(),
-                                dest.as_mut_ptr(),
-                                3,
-                            );
+                            ptr::copy_nonoverlapping(src.as_ptr(), dest.as_mut_ptr(), 3);
                         }
                     })
             });

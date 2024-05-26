@@ -55,8 +55,8 @@
     skyboxNorth: SkyNorth, skyboxEast: SkyEast, 
     skyboxSouth: SkySouth, skyboxWest: SkyWest, 
     skyboxTop: SkyTop, skyboxBottom: SkyBottom; //, light_effect:
-!root = src:root.txt, ambientLight: 0.15;//, light_effect:
-//!straight = src:straight.txt, ambientLight: 0.3;
-!lTurn = src:l_turn.txt, repeatable: true, ambientLight: 0.17;//, light_effect:
-!lTurnExtended = src:l_turn_extended.txt, repeatable: true, ambientLight: 0.16;//, light_effect:
-!large1 = src:large1.txt, repeatable:true, ambientLight: 0.15;//, light_effect:
+!root = src:root.txt, ambientLight: 0;//, light_effect:
+//!straight = src:straight.txt, ambientLight: 0;
+!lTurn = src:l_turn.txt, repeatable: true, ambientLight: 0;//, light_effect:
+!lTurnExtended = src:l_turn_extended.txt, repeatable: true, ambientLight: 0;//, light_effect:
+!large1 = src:large1.txt, repeatable:true, ambientLight: 0;//, light_effect:

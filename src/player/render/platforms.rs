@@ -87,14 +87,15 @@ impl<'a> ColumnDrawer<'a> {
                 let diffuse = ray_dir.normalize().dot(normal);
                 // Smooth out the flashlight intensity using the distance
                 let flashlight_intensity = (1.0
-                    - (row_dist / super::FLASHLIGHT_DISTANCE).clamp(0.0, 1.0))
+                    - (row_dist / (super::FLASHLIGHT_DISTANCE)).clamp(0.0, 1.0))
                     * super::FLASHLIGHT_INTENSITY
                     * diffuse;
                 let flashlight_y = 2.0 * y as f32 * cam.height_recip - 1.0;
 
-                // Smoothstep distance to get the spotlight
-                let s = 1.0 - (row_dist / super::SPOTLIGHT_DISTANCE).clamp(0.0, 1.0);
-                let spotlight = s * s * (3.0 - s * 2.0) * super::SPOTLIGHT_STRENGTH;
+                let spotlight = ((super::SPOTLIGHT_DISTANCE - row_dist)
+                    / super::SPOTLIGHT_SMOOTHED_DISTANCE)
+                    .clamp(0.0, 1.0)
+                    * super::SPOTLIGHT_STRENGTH;
 
                 let flashlight_radius =
                     (flashlight_x * flashlight_x + flashlight_y * flashlight_y).sqrt();
@@ -105,7 +106,7 @@ impl<'a> ColumnDrawer<'a> {
                         .clamp(0.0, 1.0);
                 let flashlight = t * t * (3.0 - t * 2.0) * flashlight_intensity;
                 // Modify pixel
-                let t = flashlight + ambient + spotlight;
+                let t = ambient + (flashlight * self.use_flashlight).max(spotlight);
                 pixel.iter_mut().zip(color).for_each(|(dest, &src)| {
                     *dest = (src as f32 * t) as u8;
                 });

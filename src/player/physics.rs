@@ -76,11 +76,12 @@ impl CylinderBody {
         }
 
         let mut feet_position = Vec3::new(origin.x, origin.y - self.eye_height, origin.z);
-        let current_tile =
-            match segment.get_tile_checked(feet_position.x as i64, feet_position.z as i64) {
-                Some(t) => t,
-                None => return origin,
-            };
+        let current_tile = match segment
+            .get_tile_checked(feet_position.x as i64, feet_position.z as i64)
+        {
+            Some(t) => t,
+            None => return origin,
+        };
         let mut ground_level = current_tile.ground_level;
         let mut ceiling_level = current_tile.ceiling_level;
 
@@ -153,7 +154,9 @@ impl CylinderBody {
         if let (Some(v), Some(h)) = (intersected_vertical, intersected_horizontal) {
             let offset = (v as i64, h as i64);
             let (offset_x, offset_z) = (offset.0 * 2 - 1, offset.1 * 2 - 1);
-            if let Some(tile) = segment.get_tile_checked(pos_x + offset_x, pos_z + offset_z) {
+            if let Some(tile) =
+                segment.get_tile_checked(pos_x + offset_x, pos_z + offset_z)
+            {
                 if (tile.ground_level - TILE_COLLISION_OFFSET) > feet_position.y
                     || (tile.ceiling_level + TILE_COLLISION_OFFSET)
                         < (feet_position.y + self.height)

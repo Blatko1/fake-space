@@ -1,7 +1,6 @@
 use super::{
-    ray::Ray, Side, FLASHLIGHT_DISTANCE, FLASHLIGHT_INTENSITY, NORMAL_X_NEGATIVE,
-    NORMAL_X_POSITIVE, NORMAL_Y_NEGATIVE, NORMAL_Y_POSITIVE, NORMAL_Z_NEGATIVE,
-    NORMAL_Z_POSITIVE,
+    ray::Ray, Side, NORMAL_X_NEGATIVE, NORMAL_X_POSITIVE, NORMAL_Y_NEGATIVE,
+    NORMAL_Y_POSITIVE, NORMAL_Z_NEGATIVE, NORMAL_Z_POSITIVE,
 };
 use crate::player::camera::Camera;
 use crate::world::model::ModelDataRef;
@@ -32,6 +31,7 @@ pub struct ObjectDrawData<'a> {
     pub ambient_light_intensity: f32,
     pub bottom_draw_bound: usize,
     pub top_draw_bound: usize,
+    pub use_flashlight: f32,
 }
 
 impl<'a> ObjectDrawData<'a> {
@@ -181,14 +181,18 @@ impl<'a> ObjectDrawData<'a> {
                         ((x * x + y * y + z * z) / (dimension * dimension)).sqrt();
 
                     let normal = side.normal();
-                    let diffuse = (-ray_dir.dot(normal)).max(0.0);
+                    let diffuse = (-ray_dir).dot(normal).max(0.0);
                     // Multiply by the canvas aspect ratio so the light has a shape of a circle.
                     let flashlight_x = ray.plane_x * camera.view_aspect;
                     // Smooth out the flashlight intensity using the distance
                     let flashlight_intensity = (1.0
-                        - (distance / FLASHLIGHT_DISTANCE).clamp(0.0, 1.0))
-                        * FLASHLIGHT_INTENSITY
+                        - (distance / super::FLASHLIGHT_DISTANCE).clamp(0.0, 1.0))
+                        * super::FLASHLIGHT_INTENSITY
                         * diffuse;
+                    let spotlight = ((super::SPOTLIGHT_DISTANCE - distance)
+                        / super::SPOTLIGHT_SMOOTHED_DISTANCE)
+                        .clamp(0.0, 1.0)
+                        * super::SPOTLIGHT_STRENGTH;
 
                     let flashlight_y = 2.0 * screen_y * camera.height_recip - 1.0;
                     let flashlight_radius = (flashlight_x * flashlight_x
@@ -200,7 +204,8 @@ impl<'a> ObjectDrawData<'a> {
                                 - super::FLASHLIGHT_INNER_RADIUS))
                             .clamp(0.0, 1.0);
                     let flashlight = t * t * (3.0 - t * 2.0) * flashlight_intensity;
-                    let light = flashlight + self.ambient_light_intensity;
+                    let light = self.ambient_light_intensity
+                        + (flashlight * self.use_flashlight).max(spotlight);
                     // Red channel
                     pixel[0] = (r as f32 * light) as u8;
                     // Green channel

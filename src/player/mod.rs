@@ -11,14 +11,16 @@ use crate::{
 
 use self::{
     camera::Camera,
-    physics::{CylinderBody, PhysicsStateDebugData}, render::PointXZ,
+    physics::{CylinderBody, PhysicsStateDebugData},
 };
 
 pub struct Player {
+    score: u32,
     camera: Camera,
     body: CylinderBody,
     current_room: RoomID,
     input_state: PlayerInputState,
+    use_flashlight: bool,
 }
 
 impl Player {
@@ -26,10 +28,12 @@ impl Player {
         let body = CylinderBody::new(0.2, 2.0, 0.9, 1.2, 3.5, 3.0, -4.0, 2.5, 0.0);
 
         Self {
+            score: 0,
             camera,
             body,
             current_room,
             input_state: PlayerInputState::default(),
+            use_flashlight: false,
         }
     }
 
@@ -84,6 +88,11 @@ impl Player {
     }
 
     #[inline]
+    pub fn increase_score(&mut self, add: u32) {
+        self.score += add
+    }
+
+    #[inline]
     pub fn camera(&self) -> &Camera {
         &self.camera
     }
@@ -115,6 +124,9 @@ impl Player {
             GameInput::Jump => self.input_state.jump = is_pressed,
             GameInput::FlyUp => self.input_state.fly_up = is_pressed,
             GameInput::FlyDown => self.input_state.fly_down = is_pressed,
+            GameInput::FlashlightSwitch if !is_pressed => {
+                self.use_flashlight = !self.use_flashlight
+            }
             // the rest is not interpretable by player
             _ => (),
         }
@@ -122,6 +134,7 @@ impl Player {
 
     pub fn collect_dbg_data(&self) -> PlayerDebugData {
         PlayerDebugData {
+            score: self.score,
             eye_pos: self.camera.origin,
             forward_dir: self.camera.forward_dir,
             yaw_angle: self.camera.yaw_angle.to_degrees(),
@@ -134,6 +147,7 @@ impl Player {
 
 #[derive(Debug)]
 pub struct PlayerDebugData {
+    pub score: u32,
     pub eye_pos: Vec3,
     pub forward_dir: Vec3,
     pub yaw_angle: f32,

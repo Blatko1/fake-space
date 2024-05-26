@@ -85,9 +85,14 @@ impl Dbg {
             player.physics_state.air_velocity
         );
         self.content = Section::default()
-            .with_text(vec![Text::new(&data_str)
-                .with_scale(35.0)
-                .with_color([1.0, 1.0, 0.9, 1.0])])
+            .with_text(vec![
+                Text::new(&data_str)
+                    .with_scale(35.0)
+                    .with_color([1.0, 1.0, 0.9, 1.0]),
+                Text::new(&format!("\nScore: {}", player.score))
+                    .with_scale(60.0)
+                    .with_color([0.81, 0.3, 0.2, 1.0]),
+            ])
             .with_screen_position(self.screen_position)
             .with_layout(
                 Layout::default()

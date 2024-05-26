@@ -15,13 +15,14 @@ use self::ray::Ray;
 use self::skybox::SkyboxSegment;
 use self::wall::WallDrawData;
 
-// Distance in tiles
-const SPOTLIGHT_DISTANCE: f32 = 1.3;
-const SPOTLIGHT_STRENGTH: f32 = 0.65;
+// Distance is in tiles
+const SPOTLIGHT_DISTANCE: f32 = 8.5;
+const SPOTLIGHT_SMOOTHED_DISTANCE: f32 = 2.5;
+const SPOTLIGHT_STRENGTH: f32 = 0.09;
 const FLASHLIGHT_INTENSITY: f32 = 1.35;
 const FLASHLIGHT_OUTER_RADIUS: f32 = 1.1;
 const FLASHLIGHT_INNER_RADIUS: f32 = 0.65;
-const FLASHLIGHT_DISTANCE: f32 = 18.0;
+const FLASHLIGHT_DISTANCE: f32 = 16.0;
 
 const NORMAL_Y_POSITIVE: Vec3 = Vec3::new(0.0, 1.0, 0.0);
 const NORMAL_Y_NEGATIVE: Vec3 = Vec3::new(0.0, -1.0, 0.0);
@@ -52,6 +53,7 @@ struct ColumnDrawer<'a> {
 
     current_room: RoomRef<'a>,
     current_room_dimensions: (i64, i64),
+    use_flashlight: f32,
 }
 
 impl<'a> ColumnDrawer<'a> {
@@ -59,17 +61,19 @@ impl<'a> ColumnDrawer<'a> {
         let camera = player.camera();
         let current_room = world.get_room_data(player.current_room_id());
         let current_room_dimensions = current_room.segment.dimensions_i64();
+        let use_flashlight = if player.use_flashlight { 1.0 } else { 0.0 };
 
         Self {
             world,
             camera,
 
             ray,
-            top_draw_bound: camera.view_width as usize,
+            top_draw_bound: camera.view_height as usize,
             bottom_draw_bound: 0,
 
             current_room,
             current_room_dimensions,
+            use_flashlight,
         }
     }
 
@@ -186,6 +190,7 @@ impl<'a> ColumnDrawer<'a> {
                             .ambient_light_intensity(),
                         bottom_draw_bound: self.bottom_draw_bound,
                         top_draw_bound: self.top_draw_bound,
+                        use_flashlight: self.use_flashlight,
                     });
                 }
             }
@@ -202,7 +207,10 @@ impl<'a> ColumnDrawer<'a> {
                         self.current_room_dimensions =
                             self.current_room.segment.dimensions_i64();
                     }
-                    None => break,
+                    None => {
+                        fill_black(column, self.bottom_draw_bound, self.top_draw_bound);
+                        break;
+                    }
                 }
             }
 
@@ -233,6 +241,10 @@ where
             object::draw_objects(encountered_objects, camera, column);
         }
     })
+}
+
+fn fill_black(column: &mut [u8], bottom_bound: usize, top_bound: usize) {
+    column[bottom_bound * 3..top_bound * 3].fill(0)
 }
 
 #[derive(Debug, Clone, Copy)]

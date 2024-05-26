@@ -87,8 +87,7 @@ impl<'a> ColumnDrawer<'a> {
         let four_tex_width = tex_width * 4;
         let four_tex_x = tex_x * 4;
 
-        // TODO why does this give negative results
-        let diffuse = (-ray.dir.dot(normal)).max(0.0);
+        let diffuse = ((-ray.dir).dot(normal)).max(0.0);
         // Multiply by the canvas aspect ratio so the light has a shape of a circle.
         let flashlight_x = ray.plane_x * cam.view_aspect;
         // Smooth out the flashlight intensity using the distance
@@ -97,9 +96,10 @@ impl<'a> ColumnDrawer<'a> {
             * super::FLASHLIGHT_INTENSITY
             * diffuse;
 
-        // Smoothstep distance to get the spotlight
-        let t = 1.0 - (ray.wall_dist / super::SPOTLIGHT_DISTANCE).clamp(0.0, 1.0);
-        let spotlight = t * t * (3.0 - t * 2.0) * super::SPOTLIGHT_STRENGTH;
+        let spotlight = ((super::SPOTLIGHT_DISTANCE - ray.wall_dist)
+            / super::SPOTLIGHT_SMOOTHED_DISTANCE)
+            .clamp(0.0, 1.0)
+            * super::SPOTLIGHT_STRENGTH;
 
         column
             .chunks_exact_mut(3)
@@ -121,7 +121,7 @@ impl<'a> ColumnDrawer<'a> {
                         .clamp(0.0, 1.0);
                 let flashlight = t * t * (3.0 - t * 2.0) * flashlight_intensity;
                 // Modify pixel
-                let t = flashlight + ambient + spotlight;
+                let t = ambient + (flashlight * self.use_flashlight).max(spotlight);
                 pixel.iter_mut().zip(color).for_each(|(dest, &src)| {
                     *dest = (src as f32 * t) as u8;
                 });

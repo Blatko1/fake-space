@@ -26,6 +26,7 @@ impl ControllerSettings {
             GameInput::FlyUp => KeyCode::Space,
             GameInput::FlyDown => KeyCode::ShiftLeft,
             GameInput::PhysicsSwitch => KeyCode::Equal,
+            GameInput::FlashlightSwitch => KeyCode::KeyF,
         }
     }
 }
@@ -59,4 +60,5 @@ pub enum GameInput {
     FlyUp,
     FlyDown,
     PhysicsSwitch,
+    FlashlightSwitch,
 }

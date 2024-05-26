@@ -19,7 +19,7 @@ use self::model::{ModelData, ModelDataRef, ModelID, ModelManager};
 use self::parser::cleanup_input;
 use self::textures::TextureDataRef;
 
-const VOXEL_CHANCE: f64 = 0.1;
+const VOXEL_CHANCE: f64 = 0.3;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RoomID(pub usize);
@@ -107,7 +107,7 @@ impl World {
         }
     }
 
-    pub fn update(&mut self, player: &Player) {
+    pub fn update(&mut self, player: &mut Player) {
         let current_room_id = player.current_room_id();
         let current_tile_pos = player.current_tile_pos();
         self.fully_generate_room(current_room_id);
@@ -117,9 +117,12 @@ impl World {
             .get_tile_checked(current_tile_pos.0, current_tile_pos.1)
         {
             if let Some(object) = tile.object {
-                let maybe_exists = self.rooms[current_room_id.0].objects.get_mut(object.0).unwrap();
+                let maybe_exists = self.rooms[current_room_id.0]
+                    .objects
+                    .get_mut(object.0)
+                    .unwrap();
                 if maybe_exists.is_some() {
-                    println!("removed!");
+                    player.increase_score(1);
                     maybe_exists.take();
                 }
             }
@@ -275,11 +278,6 @@ impl Room {
 
     pub fn skybox(&self) -> &SkyboxTextureIDs {
         &self.skybox
-    }
-
-    // TODO show in dbg
-    pub fn id(&self) -> RoomID {
-        self.id
     }
 }
 
