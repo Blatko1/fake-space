@@ -111,24 +111,6 @@ impl Ray {
         }
     }
 
-    pub fn dda_step(&mut self) {
-        if self.side_dist_x < self.side_dist_z {
-            self.wall_dist = self.side_dist_x.max(0.0);
-            self.next_tile.x += self.step_x;
-            self.side_dist_x += self.delta_dist_x;
-            self.hit_wall_side = Side::Vertical;
-            let wall_offset = self.origin.z + self.wall_dist * self.dir.z;
-            self.wall_offset = wall_offset - wall_offset.floor();
-        } else {
-            self.wall_dist = self.side_dist_z.max(0.0);
-            self.next_tile.z += self.step_z;
-            self.side_dist_z += self.delta_dist_z;
-            self.hit_wall_side = Side::Horizontal;
-            let wall_offset = self.origin.x + self.wall_dist * self.dir.x;
-            self.wall_offset = wall_offset - wall_offset.floor();
-        }
-    }
-
     pub fn portal_teleport(&mut self, src: Portal, dest: Portal) {
         let (new_origin, _) = src.teleport_to(self.origin, dest);
         self.origin = new_origin;

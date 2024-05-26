@@ -11,16 +11,13 @@ use crate::{
 
 use self::{
     camera::Camera,
-    physics::{CylinderBody, PhysicsStateDebugData},
+    physics::{CylinderBody, PhysicsStateDebugData}, render::PointXZ,
 };
 
 pub struct Player {
     camera: Camera,
-
     body: CylinderBody,
-
     current_room: RoomID,
-
     input_state: PlayerInputState,
 }
 
@@ -30,11 +27,8 @@ impl Player {
 
         Self {
             camera,
-
             body,
-
             current_room,
-
             input_state: PlayerInputState::default(),
         }
     }
@@ -55,7 +49,7 @@ impl Player {
         // Teleportation between rooms
         if let Some(tile) = room
             .segment
-            .get_tile(self.camera.origin.x as i64, self.camera.origin.z as i64)
+            .get_tile_checked(self.camera.origin.x as i64, self.camera.origin.z as i64)
         {
             // Check if tile has a portal
             if let Some(src_dummy_portal) = tile.portal {
@@ -89,12 +83,18 @@ impl Player {
         render::cast_and_draw(self, world, column_iter)
     }
 
+    #[inline]
     pub fn camera(&self) -> &Camera {
         &self.camera
     }
 
+    #[inline]
     pub fn current_room_id(&self) -> RoomID {
         self.current_room
+    }
+
+    pub fn current_tile_pos(&self) -> (i64, i64) {
+        (self.camera.origin.x as i64, self.camera.origin.z as i64)
     }
 
     #[inline]

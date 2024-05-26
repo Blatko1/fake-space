@@ -10,6 +10,7 @@ use rand::{rngs::ThreadRng, seq::SliceRandom};
 use std::path::PathBuf;
 
 use crate::player::render::PointXZ;
+use crate::player::Player;
 use crate::world::portal::{DummyPortal, Portal, PortalID};
 use parser::WorldParser;
 use textures::{TextureData, TextureID, TextureManager};
@@ -106,8 +107,23 @@ impl World {
         }
     }
 
-    pub fn update(&mut self, current_room_id: RoomID) {
+    pub fn update(&mut self, player: &Player) {
+        let current_room_id = player.current_room_id();
+        let current_tile_pos = player.current_tile_pos();
         self.fully_generate_room(current_room_id);
+        if let Some(tile) = self
+            .get_room_data(current_room_id)
+            .segment
+            .get_tile_checked(current_tile_pos.0, current_tile_pos.1)
+        {
+            if let Some(object) = tile.object {
+                let maybe_exists = self.rooms[current_room_id.0].objects.get_mut(object.0).unwrap();
+                if maybe_exists.is_some() {
+                    println!("removed!");
+                    maybe_exists.take();
+                }
+            }
+        }
         // The current room is now fully generated
         let current_room = &mut self.rooms[current_room_id.0];
         // Clone needed for the borrow checker. Is there a better solution???
@@ -335,7 +351,7 @@ impl Segment {
     /// and `z` represents moving forward or backward on the map.
     /// Returns [`Tile::Void`] if coordinates are out of bounds.
     #[inline]
-    pub fn get_tile(&self, x: i64, z: i64) -> Option<&Tile> {
+    pub fn get_tile_checked(&self, x: i64, z: i64) -> Option<&Tile> {
         // TODO do something about i64 arguments and 'if' conditions
         if x >= self.dimensions.0 as i64
             || x < 0
@@ -346,6 +362,15 @@ impl Segment {
         }
         self.tiles
             .get(z as usize * self.dimensions.0 as usize + x as usize)
+    }
+
+    #[inline]
+    pub fn get_tile(&self, x: usize, z: usize) -> Option<&Tile> {
+        self.tiles.get(z * self.dimensions.0 as usize + x)
+    }
+
+    pub fn dimensions_i64(&self) -> (i64, i64) {
+        (self.dimensions.0 as i64, self.dimensions.1 as i64)
     }
 }
 

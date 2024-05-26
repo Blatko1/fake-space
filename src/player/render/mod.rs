@@ -51,11 +51,14 @@ struct ColumnDrawer<'a> {
     bottom_draw_bound: usize,
 
     current_room: RoomRef<'a>,
+    current_room_dimensions: (i64, i64),
 }
 
 impl<'a> ColumnDrawer<'a> {
     fn new(ray: Ray, player: &'a Player, world: &'a World) -> Self {
         let camera = player.camera();
+        let current_room = world.get_room_data(player.current_room_id());
+        let current_room_dimensions = current_room.segment.dimensions_i64();
 
         Self {
             world,
@@ -65,7 +68,8 @@ impl<'a> ColumnDrawer<'a> {
             top_draw_bound: camera.view_width as usize,
             bottom_draw_bound: 0,
 
-            current_room: world.get_room_data(player.current_room_id()),
+            current_room,
+            current_room_dimensions,
         }
     }
 
@@ -73,10 +77,34 @@ impl<'a> ColumnDrawer<'a> {
         let mut encountered_objects = Vec::new();
         // DDA loop
         loop {
-            let current_tile_x = self.ray.next_tile.x;
-            let current_tile_z = self.ray.next_tile.z;
+            let current_tile_x = self.ray.next_tile.x as usize;
+            let current_tile_z = self.ray.next_tile.z as usize;
 
-            self.ray.dda_step();
+            if self.ray.side_dist_x < self.ray.side_dist_z {
+                self.ray.wall_dist = self.ray.side_dist_x.max(0.0);
+                self.ray.next_tile.x += self.ray.step_x;
+                if self.ray.next_tile.x >= self.current_room_dimensions.0
+                    || self.ray.next_tile.x < 0
+                {
+                    break;
+                }
+                self.ray.side_dist_x += self.ray.delta_dist_x;
+                self.ray.hit_wall_side = Side::Vertical;
+                let wall_offset = self.ray.origin.z + self.ray.wall_dist * self.ray.dir.z;
+                self.ray.wall_offset = wall_offset - wall_offset.floor();
+            } else {
+                self.ray.wall_dist = self.ray.side_dist_z.max(0.0);
+                self.ray.next_tile.z += self.ray.step_z;
+                if self.ray.next_tile.z >= self.current_room_dimensions.1
+                    || self.ray.next_tile.z < 0
+                {
+                    break;
+                }
+                self.ray.side_dist_z += self.ray.delta_dist_z;
+                self.ray.hit_wall_side = Side::Horizontal;
+                let wall_offset = self.ray.origin.x + self.ray.wall_dist * self.ray.dir.x;
+                self.ray.wall_offset = wall_offset - wall_offset.floor();
+            }
 
             // Tile which the ray just traveled over before hitting a wall.
             let current_tile = match self
@@ -114,7 +142,7 @@ impl<'a> ColumnDrawer<'a> {
             let next_tile = match self
                 .current_room
                 .segment
-                .get_tile(self.ray.next_tile.x, self.ray.next_tile.z)
+                .get_tile(self.ray.next_tile.x as usize, self.ray.next_tile.z as usize)
             {
                 Some(&t) => t,
                 None => break,
@@ -171,6 +199,8 @@ impl<'a> ColumnDrawer<'a> {
                         let dest_portal = dest_room.get_portal(portal_id);
                         self.ray.portal_teleport(src_portal, dest_portal);
                         self.current_room = dest_room;
+                        self.current_room_dimensions =
+                            self.current_room.segment.dimensions_i64();
                     }
                     None => break,
                 }

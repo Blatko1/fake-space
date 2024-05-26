@@ -77,7 +77,7 @@ impl CylinderBody {
 
         let mut feet_position = Vec3::new(origin.x, origin.y - self.eye_height, origin.z);
         let current_tile =
-            match segment.get_tile(feet_position.x as i64, feet_position.z as i64) {
+            match segment.get_tile_checked(feet_position.x as i64, feet_position.z as i64) {
                 Some(t) => t,
                 None => return origin,
             };
@@ -88,7 +88,7 @@ impl CylinderBody {
         let pos_z = current_tile.position.z as i64;
         let intersected_vertical =
             if (feet_position.x + self.radius) > (pos_x as f32 + 1.0) {
-                if let Some(tile) = segment.get_tile(pos_x + 1, pos_z) {
+                if let Some(tile) = segment.get_tile_checked(pos_x + 1, pos_z) {
                     if (tile.ground_level - TILE_COLLISION_OFFSET) > feet_position.y
                         || (tile.ceiling_level + TILE_COLLISION_OFFSET)
                             < (feet_position.y + self.height)
@@ -102,7 +102,7 @@ impl CylinderBody {
                 }
                 Some(IntersectedVerticalSide::Right)
             } else if (feet_position.x - self.radius) < pos_x as f32 {
-                if let Some(tile) = segment.get_tile(pos_x - 1, pos_z) {
+                if let Some(tile) = segment.get_tile_checked(pos_x - 1, pos_z) {
                     if (tile.ground_level - TILE_COLLISION_OFFSET) > feet_position.y
                         || (tile.ceiling_level + TILE_COLLISION_OFFSET)
                             < (feet_position.y + self.height)
@@ -120,7 +120,7 @@ impl CylinderBody {
             };
         let intersected_horizontal =
             if (feet_position.z + self.radius) > (pos_z as f32 + 1.0) {
-                if let Some(tile) = segment.get_tile(pos_x, pos_z + 1) {
+                if let Some(tile) = segment.get_tile_checked(pos_x, pos_z + 1) {
                     if (tile.ground_level - TILE_COLLISION_OFFSET) > feet_position.y
                         || (tile.ceiling_level + TILE_COLLISION_OFFSET)
                             < (feet_position.y + self.height)
@@ -134,7 +134,7 @@ impl CylinderBody {
                 }
                 Some(IntersectedHorizontalSide::Top)
             } else if (feet_position.z - self.radius) < pos_z as f32 {
-                if let Some(tile) = segment.get_tile(pos_x, pos_z - 1) {
+                if let Some(tile) = segment.get_tile_checked(pos_x, pos_z - 1) {
                     if (tile.ground_level - TILE_COLLISION_OFFSET) > feet_position.y
                         || (tile.ceiling_level + TILE_COLLISION_OFFSET)
                             < (feet_position.y + self.height)
@@ -153,7 +153,7 @@ impl CylinderBody {
         if let (Some(v), Some(h)) = (intersected_vertical, intersected_horizontal) {
             let offset = (v as i64, h as i64);
             let (offset_x, offset_z) = (offset.0 * 2 - 1, offset.1 * 2 - 1);
-            if let Some(tile) = segment.get_tile(pos_x + offset_x, pos_z + offset_z) {
+            if let Some(tile) = segment.get_tile_checked(pos_x + offset_x, pos_z + offset_z) {
                 if (tile.ground_level - TILE_COLLISION_OFFSET) > feet_position.y
                     || (tile.ceiling_level + TILE_COLLISION_OFFSET)
                         < (feet_position.y + self.height)

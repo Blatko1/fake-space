@@ -34,8 +34,8 @@ use winit::{
 use world::RoomID;
 
 const FPS_CAP: u32 = 60;
-const CANVAS_WIDTH: u32 = 240;
-const CANVAS_HEIGHT: u32 = 135;
+const CANVAS_WIDTH: u32 = 240 ;
+const CANVAS_HEIGHT: u32 = 135 ;
 const PHYSICS_TIMESTEP: f32 = 0.01;
 const SLEEP_BETWEEN_FRAMES: bool = false;
 
@@ -84,7 +84,7 @@ impl State {
             self.player.update(&self.world, PHYSICS_TIMESTEP);
             self.delta_accumulator -= PHYSICS_TIMESTEP;
         }
-        self.world.update(self.player.current_room_id());
+        self.world.update(&self.player);
 
         let dbg_data = self.collect_dbg_data();
 
