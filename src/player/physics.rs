@@ -95,7 +95,7 @@ impl CylinderBody {
                             < (feet_position.y + self.height)
                     {
                         feet_position.x = (pos_x as f32 + 1.0) - self.radius;
-                        self.movement_velocity.x = 0.0;
+                        //self.movement_velocity.x = 0.0;
                     } else {
                         ground_level = ground_level.max(tile.ground_level);
                         ceiling_level = ceiling_level.min(tile.ceiling_level);
@@ -109,7 +109,7 @@ impl CylinderBody {
                             < (feet_position.y + self.height)
                     {
                         feet_position.x = pos_x as f32 + self.radius;
-                        self.movement_velocity.x = 0.0;
+                        //self.movement_velocity.x = 0.0;
                     } else {
                         ground_level = ground_level.max(tile.ground_level);
                         ceiling_level = ceiling_level.min(tile.ceiling_level);
@@ -127,7 +127,7 @@ impl CylinderBody {
                             < (feet_position.y + self.height)
                     {
                         feet_position.z = (pos_z as f32 + 1.0) - self.radius;
-                        self.movement_velocity.y = 0.0;
+                        //self.movement_velocity.y = 0.0;
                     } else {
                         ground_level = ground_level.max(tile.ground_level);
                         ceiling_level = ceiling_level.min(tile.ceiling_level);
@@ -141,7 +141,7 @@ impl CylinderBody {
                             < (feet_position.y + self.height)
                     {
                         feet_position.z = pos_z as f32 + self.radius;
-                        self.movement_velocity.y = 0.0;
+                        //self.movement_velocity.y = 0.0;
                     } else {
                         ground_level = ground_level.max(tile.ground_level);
                         ceiling_level = ceiling_level.min(tile.ceiling_level);
@@ -167,10 +167,10 @@ impl CylinderBody {
                     let dist_z = edge_z - feet_position.z;
                     if dist_x.abs() > dist_z.abs() {
                         feet_position.x = edge_x - offset_x as f32 * self.radius;
-                        self.movement_velocity.x = 0.0;
+                        //self.movement_velocity.x = 0.0;
                     } else {
                         feet_position.z = edge_z - offset_z as f32 * self.radius;
-                        self.movement_velocity.y = 0.0;
+                        //self.movement_velocity.y = 0.0;
                     }
                 } else {
                     ground_level = ground_level.max(tile.ground_level);
@@ -241,8 +241,7 @@ impl CylinderBody {
         origin.z += self.movement_velocity.y * delta * MOVEMENT_CONST;
         origin.y += self.air_velocity * delta * VERTICAL_MOVEMENT_CONST;
 
-        // Apply friction and gravity
-        self.movement_velocity /= 1.0 + self.friction * delta;
+        // Apply gravity
         if !self.can_fly {
             self.air_velocity = (self.air_velocity + self.gravity_accel * delta)
                 .clamp(-self.max_in_air_velocity, self.max_in_air_velocity);
