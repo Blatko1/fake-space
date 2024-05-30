@@ -241,6 +241,9 @@ impl CylinderBody {
         origin.z += self.movement_velocity.y * delta * MOVEMENT_CONST;
         origin.y += self.air_velocity * delta * VERTICAL_MOVEMENT_CONST;
 
+        // Maybe will be used when floor gets a friction attribute
+        self.movement_velocity /= 1.0 + self.friction * delta;
+
         // Apply gravity
         if !self.can_fly {
             self.air_velocity = (self.air_velocity + self.gravity_accel * delta)
