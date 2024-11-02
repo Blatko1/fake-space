@@ -48,6 +48,7 @@ impl Ctx {
                     required_features:
                         wgpu::Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES,
                     required_limits: wgpu::Limits::default(),
+                    memory_hints: wgpu::MemoryHints::Performance,
                 },
                 None,
             )

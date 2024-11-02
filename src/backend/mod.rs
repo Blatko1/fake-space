@@ -151,7 +151,7 @@ impl Canvas {
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
-                entry_point: "vs_main",
+                entry_point: Some("vs_main"),
                 buffers: &[wgpu::VertexBufferLayout {
                     array_stride: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
                     step_mode: wgpu::VertexStepMode::Vertex,
@@ -163,7 +163,7 @@ impl Canvas {
             multisample: wgpu::MultisampleState::default(),
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
-                entry_point: "fs_main",
+                entry_point: Some("fs_main"),
                 targets: &[Some(wgpu::ColorTargetState {
                     format: render_format,
                     blend: Some(wgpu::BlendState::ALPHA_BLENDING),
@@ -173,6 +173,7 @@ impl Canvas {
             }),
             depth_stencil: None,
             multiview: None,
+            cache: None,
         });
 
         let buffer_len = (canvas_width * canvas_height * 3) as usize;

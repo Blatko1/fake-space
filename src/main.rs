@@ -34,8 +34,8 @@ use winit::{
 use world::RoomID;
 
 const FPS_CAP: u32 = 60;
-const CANVAS_WIDTH: u32 = 240;
-const CANVAS_HEIGHT: u32 = 135;
+const CANVAS_WIDTH: u32 = 240 * 1;
+const CANVAS_HEIGHT: u32 = 135 * 1;
 const PHYSICS_TIMESTEP: f32 = 0.01;
 const SLEEP_BETWEEN_FRAMES: bool = false;
 
