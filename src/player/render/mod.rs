@@ -5,8 +5,11 @@ mod skybox;
 mod wall;
 
 use super::Player;
+use crate::map::room::{RoomID, RoomRef};
+use crate::map::Map;
+use crate::models::ModelArray;
 use crate::player::camera::Camera;
-use crate::world::{RoomRef, World};
+use crate::textures::TextureArray;
 use glam::Vec3;
 
 use self::object::ObjectDrawData;
@@ -43,8 +46,10 @@ impl<T> PointXZ<T> {
     }
 }
 
-struct ColumnDrawer<'a> {
-    world: &'a World,
+struct ColumnRenderer<'a> {
+    map: &'a Map,
+    textures: &'a TextureArray,
+    models: &'a ModelArray,
     camera: &'a Camera,
 
     ray: Ray,
@@ -56,15 +61,17 @@ struct ColumnDrawer<'a> {
     use_flashlight: f32,
 }
 
-impl<'a> ColumnDrawer<'a> {
-    fn new(ray: Ray, player: &'a Player, world: &'a World) -> Self {
+impl<'a> ColumnRenderer<'a> {
+    fn new(ray: Ray, player: &'a Player, map: &'a Map, textures: &'a TextureArray, models: &'a ModelArray) -> Self {
         let camera = player.camera();
-        let current_room = world.get_room_data(player.current_room_id());
+        let current_room = map.get_room_data(player.current_room_id());
         let current_room_dimensions = current_room.segment.dimensions_i64();
         let use_flashlight = if player.use_flashlight { 1.0 } else { 0.0 };
 
         Self {
-            world,
+            map,
+            textures,
+            models,
             camera,
 
             ray,
@@ -122,7 +129,7 @@ impl<'a> ColumnDrawer<'a> {
 
             // Draw ground platform
             let ground_platform = PlatformDrawData {
-                texture_data: self.world.get_texture(current_tile.ground_tex),
+                texture_data: self.textures.get_texture_data(current_tile.ground_tex),
                 height_level: current_tile.ground_level,
                 normal: NORMAL_Y_POSITIVE,
                 draw_from_dist: self.ray.previous_wall_dist,
@@ -133,7 +140,7 @@ impl<'a> ColumnDrawer<'a> {
 
             // Draw ceiling platform
             let ceiling_platform = PlatformDrawData {
-                texture_data: self.world.get_texture(current_tile.ceiling_tex),
+                texture_data: self.textures.get_texture_data(current_tile.ceiling_tex),
                 height_level: current_tile.ceiling_level,
                 normal: NORMAL_Y_NEGATIVE,
                 draw_from_dist: self.ray.wall_dist,
@@ -154,7 +161,7 @@ impl<'a> ColumnDrawer<'a> {
 
             // Draw bottom wall
             let bottom_wall_data = WallDrawData {
-                texture_data: self.world.get_texture(next_tile.bottom_wall_tex),
+                texture_data: self.textures.get_texture_data(next_tile.bottom_wall_tex),
                 bottom_wall_level: next_tile.bottom_level,
                 top_wall_level: next_tile.ground_level,
             };
@@ -163,7 +170,7 @@ impl<'a> ColumnDrawer<'a> {
 
             // Draw top wall
             let top_wall_data = WallDrawData {
-                texture_data: self.world.get_texture(next_tile.top_wall_tex),
+                texture_data: self.textures.get_texture_data(next_tile.top_wall_tex),
                 bottom_wall_level: next_tile.ceiling_level,
                 top_wall_level: next_tile.top_level,
             };
@@ -173,7 +180,7 @@ impl<'a> ColumnDrawer<'a> {
             // If a voxel object is hit, store it for later rendering
             if let Some(object_id) = next_tile.object {
                 if let Some(model_id) = self.current_room.get_object(object_id) {
-                    let model_data = self.world.get_model(model_id);
+                    let model_data = self.models.get_model_data(model_id);
                     let dimensions = model_data.dimension as f32;
                     let pos = Vec3::new(
                         next_tile.position.x as f32 * dimensions,
@@ -200,7 +207,7 @@ impl<'a> ColumnDrawer<'a> {
                 let src_portal = self.current_room.get_portal(src_dummy_portal.id);
                 match src_portal.link {
                     Some((room_id, portal_id)) => {
-                        let dest_room = self.world.get_room_data(room_id);
+                        let dest_room = self.map.get_room_data(room_id);
                         let dest_portal = dest_room.get_portal(portal_id);
                         self.ray.portal_teleport(src_portal, dest_portal);
                         self.current_room = dest_room;
@@ -221,20 +228,21 @@ impl<'a> ColumnDrawer<'a> {
     }
 }
 
-pub fn cast_and_draw<'a, C>(player: &Player, world: &World, column_iter: C)
+
+pub fn cast_and_draw<'a, C>(player: &Player, map: &Map, textures: &TextureArray, models: &ModelArray, column_iter: C)
 where
     C: Iterator<Item = &'a mut [u8]>,
 {
     let camera = player.camera();
-    let player_room = world.get_room_data(player.current_room_id());
-    let skybox_textures = world.get_skybox_textures(player_room.data.skybox());
+    let player_room = map.get_room_data(player.current_room_id());
+    let skybox_textures = textures.get_skybox_textures(player_room.data.skybox());
     column_iter.enumerate().for_each(|(column_index, column)| {
         let ray = Ray::camera_cast(camera, column_index);
 
         let skybox = SkyboxSegment::new(camera, ray, skybox_textures);
         skybox.draw_skybox(column);
 
-        let mut column_drawer = ColumnDrawer::new(ray, player, world);
+        let mut column_drawer = ColumnRenderer::new(ray, player, map, textures, models);
         let encountered_objects = column_drawer.draw(column);
 
         if !encountered_objects.is_empty() {

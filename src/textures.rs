@@ -1,5 +1,7 @@
 use std::fmt::Debug;
 
+use crate::map::segment::SkyboxTextureIDs;
+
 const DEFAULT_TEXTURE_WIDTH: u32 = 2;
 const DEFAULT_TEXTURE_HEIGHT: u32 = 2;
 const DEFAULT_TEXTURE_RGBA: [u8; 16] = [
@@ -7,11 +9,11 @@ const DEFAULT_TEXTURE_RGBA: [u8; 16] = [
 ];
 const DEFAULT_TEXTURE_TRANSPARENCY: bool = false;
 
-pub struct TextureManager {
+pub struct TextureArray {
     textures: Vec<TextureData>,
 }
 
-impl TextureManager {
+impl TextureArray {
     pub(super) fn new(mut textures: Vec<TextureData>) -> Self {
         let default_texture = TextureData {
             data: DEFAULT_TEXTURE_RGBA.to_vec(),
@@ -29,6 +31,17 @@ impl TextureManager {
         };
         textures.insert(0, empty_texture);
         Self { textures }
+    }
+
+    pub fn get_skybox_textures(&self, skybox: &SkyboxTextureIDs) -> SkyboxTexturesRef {
+        SkyboxTexturesRef {
+            north: self.get_texture_data(skybox.north),
+            east: self.get_texture_data(skybox.east),
+            south: self.get_texture_data(skybox.south),
+            west: self.get_texture_data(skybox.west),
+            top: self.get_texture_data(skybox.top),
+            bottom: self.get_texture_data(skybox.bottom),
+        }
     }
 
     pub(super) fn get_texture_data(&self, id: TextureID) -> TextureDataRef {
@@ -101,4 +114,14 @@ impl<'a> TextureDataRef<'a> {
     pub fn is_empty(&self) -> bool {
         self.data.is_empty()
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct SkyboxTexturesRef<'a> {
+    pub north: TextureDataRef<'a>,
+    pub east: TextureDataRef<'a>,
+    pub south: TextureDataRef<'a>,
+    pub west: TextureDataRef<'a>,
+    pub top: TextureDataRef<'a>,
+    pub bottom: TextureDataRef<'a>,
 }

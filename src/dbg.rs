@@ -3,7 +3,6 @@ use std::time::Instant;
 use crate::backend::ctx::Ctx;
 use crate::backend::Canvas;
 use crate::player::PlayerDebugData;
-use crate::world::WorldDebugData;
 use wgpu::RenderPass;
 use wgpu_text::glyph_brush::ab_glyph::FontVec;
 use wgpu_text::glyph_brush::{
@@ -13,7 +12,7 @@ use wgpu_text::{BrushBuilder, BrushError, TextBrush};
 
 pub struct DebugData {
     pub player_data: PlayerDebugData,
-    pub world_data: WorldDebugData,
+    //pub world_data: WorldDebugData,
 }
 
 pub struct Dbg {
@@ -76,7 +75,7 @@ impl Dbg {
             player.yaw_angle,
             player.y_shearing,
             player.current_room_id,
-            data.world_data.room_count - 1,
+            0, //data.world_data.room_count - 1,
             player.physics_state.can_fly,
             player.physics_state.is_ghost,
             player.physics_state.is_grounded,

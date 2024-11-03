@@ -1,6 +1,6 @@
-use crate::world::textures::TextureDataRef;
+use crate::textures::TextureDataRef;
 
-use super::{ColumnDrawer, Side};
+use super::{ ColumnRenderer, Side};
 
 // TODO write tests for each draw call function to check for overflows
 pub(super) struct WallDrawData<'a> {
@@ -9,7 +9,7 @@ pub(super) struct WallDrawData<'a> {
     pub top_wall_level: f32,
 }
 
-impl<'a> ColumnDrawer<'a> {
+impl<'a> ColumnRenderer<'a> {
     pub(super) fn draw_wall(
         &self,
         wall_data: WallDrawData,
@@ -20,45 +20,29 @@ impl<'a> ColumnDrawer<'a> {
         let cam = self.camera;
         let ray = self.ray;
         let ambient = self.current_room.data.ambient_light_intensity();
+        let bottom_wall_level = wall_data.bottom_wall_level;
+        let top_wall_level = wall_data.top_wall_level;
+        let texture_data = wall_data.texture_data;
 
-        if wall_data.texture_data.is_empty() {
+        if texture_data.is_empty() {
             return (bottom_draw_bound, top_draw_bound);
         }
 
-        let normal = match ray.hit_wall_side {
-            Side::Vertical => {
-                if ray.dir.x > 0.0 {
-                    // side facing west hit
-                    super::NORMAL_X_NEGATIVE
-                } else {
-                    // side facing east hit
-                    super::NORMAL_X_POSITIVE
-                }
-            }
-            Side::Horizontal => {
-                if ray.dir.z > 0.0 {
-                    // side facing south hit
-                    super::NORMAL_Z_NEGATIVE
-                } else {
-                    // side facing north hit
-                    super::NORMAL_Z_POSITIVE
-                }
-            }
-        };
+        let normal = ray.get_normal();
 
         let (texture, tex_width, tex_height) = (
-            wall_data.texture_data.data,
-            wall_data.texture_data.width as usize,
-            wall_data.texture_data.height as usize,
+            texture_data.data,
+            texture_data.width as usize,
+            texture_data.height as usize,
         );
 
         // Calculate wall pixel height for the parts above and below the middle
         let half_wall_pixel_height = cam.f_half_height / ray.wall_dist;
         let pixels_to_bottom = half_wall_pixel_height
-            * (ray.origin.y - wall_data.bottom_wall_level)
+            * (ray.origin.y - bottom_wall_level)
             - cam.y_shearing;
         let pixels_to_top = half_wall_pixel_height
-            * (wall_data.top_wall_level - ray.origin.y)
+            * (top_wall_level - ray.origin.y)
             + cam.y_shearing;
         let full_wall_pixel_height = pixels_to_top + pixels_to_bottom;
         // From which pixel to begin drawing and on which to end
@@ -76,7 +60,7 @@ impl<'a> ColumnDrawer<'a> {
             }
             _ => (ray.wall_offset * tex_width as f32) as usize,
         };
-        let tex_y_step = (wall_data.top_wall_level - wall_data.bottom_wall_level)
+        let tex_y_step = (top_wall_level - bottom_wall_level)
             * tex_height as f32
             / full_wall_pixel_height
             * 0.5;

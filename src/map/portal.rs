@@ -2,7 +2,9 @@ use std::f32::consts::PI;
 
 use glam::Vec3;
 
-use crate::{player::render::PointXZ, world::RoomID};
+use crate::{player::render::PointXZ};
+
+use super::room::RoomID;
 
 #[derive(Debug, Clone, Copy)]
 pub struct PortalID(pub usize);

@@ -1,11 +1,10 @@
-use crate::world::textures::TextureDataRef;
-use crate::world::SkyboxTexturesRef;
 use glam::Vec3;
 use std::ptr;
 
 use super::ray::Ray;
 use super::Side;
 use crate::player::camera::Camera;
+use crate::textures::{SkyboxTexturesRef, TextureDataRef};
 
 /// Draws over the whole screen (simultaneously clears the whole screen).
 pub(super) struct SkyboxSegment<'a> {

@@ -1,26 +1,34 @@
-/// For the record:
-/// I have tried adding FXAA in the fragment shader, which ended up in a weird
-/// output, have tried MSAA, but it doesn't work on textures, have tried applying
-/// bilinear texture filtering but unnoticeable.
 pub mod backend;
 mod control;
 mod dbg;
 mod player;
-mod world;
+mod map;
+mod textures;
+mod models;
+mod map_parser;
+mod app;
 
 use std::fs;
+use std::path::PathBuf;
+use std::str::FromStr;
 use std::time::{Duration, Instant};
 
 use crate::dbg::Dbg;
-use crate::world::World;
 use backend::ctx::Ctx;
 use backend::Canvas;
 use control::ControllerSettings;
 use dbg::DebugData;
 use glam::Vec2;
+use map::room::RoomID;
+use map::Map;
+use map_parser::{cleanup_input, MapParser};
+use models::ModelArray;
+use nom::error::convert_error;
+use nom::Finish;
 use player::camera::Camera;
-use player::Player;
+use player::{render, Player};
 use pollster::block_on;
+use textures::TextureArray;
 use wgpu_text::glyph_brush::ab_glyph::FontVec;
 use winit::application::ApplicationHandler;
 use winit::event::{DeviceEvent, DeviceId, KeyEvent, StartCause};
@@ -31,7 +39,6 @@ use winit::{
     event::WindowEvent,
     event_loop::{ControlFlow, EventLoop},
 };
-use world::RoomID;
 
 const FPS_CAP: u32 = 60;
 const CANVAS_WIDTH: u32 = 240 * 1;
@@ -44,7 +51,9 @@ pub struct State {
     controls: ControllerSettings,
     dbg: Option<Dbg>,
 
-    world: World,
+    map: Map,
+    textures: TextureArray,
+    models: ModelArray,
     player: Player,
 
     delta_accumulator: f32,
@@ -63,12 +72,27 @@ impl State {
             CANVAS_HEIGHT,
         );
 
+        // TODO remove 'unwrap()'s
+        let path = PathBuf::from_str("maps/map.txt").unwrap();
+        let path: PathBuf = path.canonicalize().unwrap();
+        let parent_path = path.parent().unwrap().to_path_buf();
+        let input = cleanup_input(std::fs::read_to_string(path).unwrap());
+        let (segments, textures, models) = match MapParser::new(&input, parent_path).unwrap().parse().finish() {
+            Ok((_, data)) => data,
+            Err(e) => {
+                println!("verbose errors: \n{}", convert_error(input.as_str(), e));
+                panic!()
+            }
+        };
+
         Self {
             canvas: None,
             controls: ControllerSettings::init(),
             dbg: None,
 
-            world: World::from_path("maps/world.txt").unwrap(),
+            map: Map::new(segments),
+            textures: TextureArray::new(textures),
+            models: ModelArray::new(models),
             player: Player::new(camera, RoomID(0)),
 
             delta_accumulator: 0.0,
@@ -81,10 +105,10 @@ impl State {
         // Update world and player
         self.delta_accumulator += delta;
         while self.delta_accumulator >= PHYSICS_TIMESTEP {
-            self.player.update(&self.world, PHYSICS_TIMESTEP);
+            self.player.update(&self.map, PHYSICS_TIMESTEP);
             self.delta_accumulator -= PHYSICS_TIMESTEP;
         }
-        self.world.update(&mut self.player);
+        //self.world.update(&mut self.player);
 
         let dbg_data = self.collect_dbg_data();
 
@@ -95,11 +119,13 @@ impl State {
 
     pub fn collect_dbg_data(&self) -> DebugData {
         let player_dbg_data = self.player.collect_dbg_data();
-        let world_dbg_data = self.world.collect_dbg_data();
+        //let world_dbg_data = WorldDebugData {
+        //    room_count: 0,
+        //};
 
         DebugData {
             player_data: player_dbg_data,
-            world_data: world_dbg_data,
+            //world_data: world_dbg_data,
         }
     }
 }
@@ -158,8 +184,7 @@ impl ApplicationHandler for State {
                 dbg.queue_data(canvas.ctx()).unwrap();
                 // Clearing the buffer isn't needed since everything is being overwritten
                 // canvas.clear_buffer();
-                self.player
-                    .cast_and_draw(&self.world, canvas.mut_column_iterator());
+                render::cast_and_draw(&self.player, &self.map, &self.textures, &self.models, canvas.mut_column_iterator());
 
                 match canvas.render(dbg) {
                     Ok(_) => (),
@@ -214,6 +239,8 @@ fn main() {
         std::env::set_var("RUST_LOG", "error");
     }
     env_logger::init();
+
+    app::a();
 
     let event_loop = EventLoop::new().unwrap();
     event_loop.set_control_flow(ControlFlow::Poll);

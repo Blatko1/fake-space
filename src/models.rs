@@ -7,23 +7,17 @@ const BLANK: Color = Color {
     a: 0,
 };
 
-pub struct ModelManager {
-    id_list: Vec<ModelID>,
+pub struct ModelArray {
     models: Vec<ModelData>,
 }
 
-impl ModelManager {
+impl ModelArray {
     pub fn new(models: Vec<ModelData>) -> Self {
-        let id_list = models.iter().enumerate().map(|(i, _)| ModelID(i)).collect();
-        Self { id_list, models }
+        Self { models }
     }
 
     pub(super) fn get_model_data(&self, id: ModelID) -> ModelDataRef {
         self.models[id.0].as_ref()
-    }
-
-    pub fn model_list(&self) -> &[ModelID] {
-        &self.id_list
     }
 }
 

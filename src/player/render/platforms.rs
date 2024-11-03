@@ -4,9 +4,9 @@
 
 use glam::Vec3;
 
-use crate::world::textures::TextureDataRef;
+use crate::textures::TextureDataRef;
 
-use super::ColumnDrawer;
+use super::ColumnRenderer;
 
 pub(super) struct PlatformDrawData<'a> {
     pub texture_data: TextureDataRef<'a>,
@@ -16,7 +16,7 @@ pub(super) struct PlatformDrawData<'a> {
     pub draw_to_dist: f32,
 }
 
-impl<'a> ColumnDrawer<'a> {
+impl<'a> ColumnRenderer<'a> {
     pub(super) fn draw_platform(
         &self,
         platform_data: PlatformDrawData,

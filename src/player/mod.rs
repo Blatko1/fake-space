@@ -5,8 +5,7 @@ pub mod render;
 use glam::{Vec2, Vec3};
 
 use crate::{
-    control::GameInput,
-    world::{RoomID, World},
+    control::GameInput, map::{room::RoomID, Map}
 };
 
 use self::{
@@ -37,8 +36,8 @@ impl Player {
         }
     }
 
-    pub fn update(&mut self, world: &World, delta: f32) {
-        let mut room = world.get_room_data(self.current_room);
+    pub fn update(&mut self, map: &Map, delta: f32) {
+        let mut room = map.get_room_data(self.current_room);
 
         self.body.update_physics_state(
             self.camera.forward_dir,
@@ -62,7 +61,7 @@ impl Player {
                 if let Some((room_id, portal_id)) = src_portal.link {
                     // Teleport the player
                     self.current_room = room_id;
-                    let dest_room = world.get_room_data(room_id);
+                    let dest_room = map.get_room_data(room_id);
                     let dest_portal = dest_room.get_portal(portal_id);
                     room = dest_room;
 
@@ -78,13 +77,6 @@ impl Player {
             .body
             .collision_detection_resolution(self.camera.origin, room.segment);
         self.camera.origin = new_origin;
-    }
-
-    pub fn cast_and_draw<'a, C>(&self, world: &World, column_iter: C)
-    where
-        C: Iterator<Item = &'a mut [u8]>,
-    {
-        render::cast_and_draw(self, world, column_iter)
     }
 
     #[inline]

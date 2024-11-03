@@ -1,4 +1,7 @@
+use crate::map::portal::{DummyPortal, PortalDirection, PortalID};
+use crate::map::segment::{ObjectID, Tile};
 use crate::player::render::PointXZ;
+use crate::textures::TextureID;
 use hashbrown::HashMap;
 use nom::bytes::complete::{tag, take_while};
 use nom::character::complete::{char, u64};
@@ -7,10 +10,6 @@ use nom::error::{context, ContextError, ParseError as NomParseError, VerboseErro
 use nom::number::complete::double;
 use nom::sequence::{delimited, preceded, terminated, Tuple};
 use nom::{IResult, Parser};
-
-use crate::world::portal::{DummyPortal, PortalDirection, PortalID};
-use crate::world::textures::TextureID;
-use crate::world::{ObjectID, Tile};
 
 use super::Settings;
 use super::{

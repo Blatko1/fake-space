@@ -2,8 +2,7 @@ use super::{
     ray::Ray, Side, NORMAL_X_NEGATIVE, NORMAL_X_POSITIVE, NORMAL_Y_NEGATIVE,
     NORMAL_Y_POSITIVE, NORMAL_Z_NEGATIVE, NORMAL_Z_POSITIVE,
 };
-use crate::player::camera::Camera;
-use crate::world::model::ModelDataRef;
+use crate::{models::ModelDataRef, player::camera::Camera};
 use dot_vox::Color;
 use glam::Vec3;
 use rayon::{

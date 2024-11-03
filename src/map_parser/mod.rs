@@ -4,7 +4,7 @@ mod segment;
 use std::path::PathBuf;
 
 use hashbrown::HashMap;
-use image::{io::Reader as ImageReader, EncodableLayout};
+use image::{ImageReader, EncodableLayout};
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take, take_until, take_while};
 use nom::character::complete::{alphanumeric1, char};
@@ -17,13 +17,14 @@ use nom::number::complete::double;
 use nom::sequence::{preceded, terminated, Tuple};
 use nom::{Finish, IResult, Parser};
 
-use super::model::{ModelData, ModelID};
+use crate::map::segment::{Segment, SegmentID, SkyboxTextureIDs, Tile};
+use crate::textures::TextureData;
+
+use super::models::{ModelData, ModelID};
 use super::textures::TextureID;
-use super::{SkyboxTextureIDs, TextureData, Tile};
 
 use self::segment::SegmentParser;
 
-use super::{Segment, SegmentID, World};
 
 #[derive(Debug)]
 struct ParsedTexture {
@@ -31,7 +32,7 @@ struct ParsedTexture {
     texture: TextureData,
 }
 
-pub struct WorldParser<'a> {
+pub struct MapParser<'a> {
     input: &'a str,
     parent_path: PathBuf,
 
@@ -45,7 +46,7 @@ pub struct WorldParser<'a> {
     segments: Vec<Segment>,
 }
 
-impl<'a> WorldParser<'a> {
+impl<'a> MapParser<'a> {
     pub fn new<P: Into<PathBuf>>(
         input: &'a str,
         parent_path: P,
@@ -65,7 +66,7 @@ impl<'a> WorldParser<'a> {
         })
     }
 
-    pub fn parse(mut self) -> IResult<&'a str, World, VerboseError<&'a str>> {
+    pub fn parse(mut self) -> IResult<&'a str, (Vec<Segment>, Vec<TextureData>, Vec<ModelData>), VerboseError<&'a str>> {
         let (_, expressions) = separate_expressions(self.input)?;
         for expr in expressions {
             let (i, key) = line_key(expr)?;
@@ -116,7 +117,7 @@ impl<'a> WorldParser<'a> {
                 _ => return context("Unknown line key", fail)(key),
             };
         }
-        Ok(("", World::new(self.segments, self.textures, self.models)))
+        Ok(("", (self.segments, self.textures, self.models)))
     }
 }
 

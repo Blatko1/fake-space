@@ -1,6 +1,6 @@
 use glam::{Vec2, Vec3};
 
-use crate::world::Segment;
+use crate::map::segment::Segment;
 
 use super::PlayerInputState;
 

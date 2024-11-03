@@ -1,8 +1,8 @@
-# fake-space
+# RayVenture
 
 ![showcase1](res/showcase2.png)
 
-`fake-space` is a game. Check out [`pixels`](https://github.com/parasyte/pixels) which helped me learn more about this type of rendering.
+`RayVenture` is a game. Check out [`pixels`](https://github.com/parasyte/pixels) which helped me learn more about this type of rendering.
 
 Excellent explanations about the raycaster [here](https://lodev.org/cgtutor/raycasting.html#The_Basic_Idea_) and [here](https://permadi.com/1996/05/ray-casting-tutorial-table-of-contents/).
 
@@ -33,3 +33,11 @@ Excellent explanations about the raycaster [here](https://lodev.org/cgtutor/rayc
 - [ ] Add collision detection (circle-rectangle collision detection)
 - [ ] Add a UI
 - [ ] Go unsafe for performance increase after most of the project is finished
+
+## Reincarnation
+
+- [ ] Implement a new system for generating a map of rooms instead of the old one with only *rng*.
+
+### Some old comments
+
+- For the record, I have tried adding FXAA in the fragment shader, which ended up in a weird output, have tried MSAA, but it doesn't work on textures, have tried applying bilinear texture filtering but unnoticeable.
