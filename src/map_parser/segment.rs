@@ -1,6 +1,6 @@
 use crate::map::portal::{DummyPortal, PortalDirection, PortalID};
 use crate::map::segment::{ObjectID, Tile};
-use crate::player::render::PointXZ;
+use crate::raycaster::PointXZ;
 use crate::textures::TextureID;
 use hashbrown::HashMap;
 use nom::bytes::complete::{tag, take_while};

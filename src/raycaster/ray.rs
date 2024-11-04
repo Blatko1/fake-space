@@ -1,9 +1,9 @@
 use crate::{
-    map::portal::{Portal, PortalRotationDifference}, player::camera::Camera
+    map::portal::{Portal, PortalRotationDifference}, 
 };
 use glam::Vec3;
 
-use super::{PointXZ, Side};
+use super::{camera::Camera, PointXZ, Side};
 
 // TODO maybe rename to `MovingRay`
 #[derive(Debug, Clone, Copy)]

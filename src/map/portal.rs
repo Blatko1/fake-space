@@ -2,7 +2,7 @@ use std::f32::consts::PI;
 
 use glam::Vec3;
 
-use crate::{player::render::PointXZ};
+use crate::raycaster::PointXZ;
 
 use super::room::RoomID;
 

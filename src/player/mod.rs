@@ -1,6 +1,4 @@
-pub mod camera;
 mod physics;
-pub mod render;
 
 use glam::{Vec2, Vec3};
 
@@ -9,13 +7,11 @@ use crate::{
 };
 
 use self::{
-    camera::Camera,
     physics::{CylinderBody, PhysicsStateDebugData},
 };
 
 pub struct Player {
     score: u32,
-    camera: Camera,
     body: CylinderBody,
     current_room: RoomID,
     input_state: PlayerInputState,
@@ -23,12 +19,11 @@ pub struct Player {
 }
 
 impl Player {
-    pub fn new(camera: Camera, current_room: RoomID) -> Self {
+    pub fn new(current_room: RoomID) -> Self {
         let body = CylinderBody::new(0.2, 2.0, 0.9, 1.2, 3.5, 3.0, -4.0, 2.5, 0.0);
 
         Self {
             score: 0,
-            camera,
             body,
             current_room,
             input_state: PlayerInputState::default(),
@@ -96,6 +91,10 @@ impl Player {
 
     pub fn current_tile_pos(&self) -> (i64, i64) {
         (self.camera.origin.x as i64, self.camera.origin.z as i64)
+    }
+
+    pub fn use_flashlight(&self) -> bool {
+        self.use_flashlight
     }
 
     #[inline]

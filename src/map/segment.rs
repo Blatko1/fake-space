@@ -1,4 +1,4 @@
-use crate::{models::ModelID, player::render::PointXZ, textures::TextureID};
+use crate::{models::ModelID, raycaster::PointXZ, textures::TextureID};
 
 use super::portal::{DummyPortal, Portal};
 

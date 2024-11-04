@@ -3,13 +3,14 @@ mod platforms;
 pub(super) mod ray;
 mod skybox;
 mod wall;
+pub mod camera;
 
-use super::Player;
 use crate::map::room::{RoomID, RoomRef};
 use crate::map::Map;
 use crate::models::ModelArray;
-use crate::player::camera::Camera;
+use crate::player::Player;
 use crate::textures::TextureArray;
+use camera::Camera;
 use glam::Vec3;
 
 use self::object::ObjectDrawData;
@@ -66,7 +67,7 @@ impl<'a> ColumnRenderer<'a> {
         let camera = player.camera();
         let current_room = map.get_room_data(player.current_room_id());
         let current_room_dimensions = current_room.segment.dimensions_i64();
-        let use_flashlight = if player.use_flashlight { 1.0 } else { 0.0 };
+        let use_flashlight = if player.use_flashlight() { 1.0 } else { 0.0 };
 
         Self {
             map,

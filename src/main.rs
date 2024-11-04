@@ -6,7 +6,8 @@ mod map;
 mod textures;
 mod models;
 mod map_parser;
-mod app;
+mod raycaster;
+mod state;
 
 use std::fs;
 use std::path::PathBuf;
@@ -25,9 +26,10 @@ use map_parser::{cleanup_input, MapParser};
 use models::ModelArray;
 use nom::error::convert_error;
 use nom::Finish;
-use player::camera::Camera;
-use player::{render, Player};
+use player::{Player};
 use pollster::block_on;
+use raycaster::camera::Camera;
+use state::{GameState, State};
 use textures::TextureArray;
 use wgpu_text::glyph_brush::ab_glyph::FontVec;
 use winit::application::ApplicationHandler;
@@ -46,54 +48,26 @@ const CANVAS_HEIGHT: u32 = 135 * 1;
 const PHYSICS_TIMESTEP: f32 = 0.01;
 const SLEEP_BETWEEN_FRAMES: bool = false;
 
-pub struct State {
+pub struct App {
     canvas: Option<Canvas>,
     controls: ControllerSettings,
     dbg: Option<Dbg>,
 
-    map: Map,
-    textures: TextureArray,
-    models: ModelArray,
-    player: Player,
+    state: GameState,
 
     delta_accumulator: f32,
     time_per_frame: Duration,
     now: Instant,
 }
 
-impl State {
+impl App {
     pub fn new() -> Self {
-        let camera = Camera::new(
-            10.5,
-            1.0,
-            14.5,
-            90f32.to_radians(),
-            CANVAS_WIDTH,
-            CANVAS_HEIGHT,
-        );
-
-        // TODO remove 'unwrap()'s
-        let path = PathBuf::from_str("maps/map.txt").unwrap();
-        let path: PathBuf = path.canonicalize().unwrap();
-        let parent_path = path.parent().unwrap().to_path_buf();
-        let input = cleanup_input(std::fs::read_to_string(path).unwrap());
-        let (segments, textures, models) = match MapParser::new(&input, parent_path).unwrap().parse().finish() {
-            Ok((_, data)) => data,
-            Err(e) => {
-                println!("verbose errors: \n{}", convert_error(input.as_str(), e));
-                panic!()
-            }
-        };
-
         Self {
             canvas: None,
             controls: ControllerSettings::init(),
             dbg: None,
 
-            map: Map::new(segments),
-            textures: TextureArray::new(textures),
-            models: ModelArray::new(models),
-            player: Player::new(camera, RoomID(0)),
+            state: GameState::new("maps/map.txt"),
 
             delta_accumulator: 0.0,
             time_per_frame: Duration::from_secs_f64(1.0 / FPS_CAP as f64),
@@ -116,21 +90,9 @@ impl State {
             dbg.update(dbg_data)
         }
     }
-
-    pub fn collect_dbg_data(&self) -> DebugData {
-        let player_dbg_data = self.player.collect_dbg_data();
-        //let world_dbg_data = WorldDebugData {
-        //    room_count: 0,
-        //};
-
-        DebugData {
-            player_data: player_dbg_data,
-            //world_data: world_dbg_data,
-        }
-    }
 }
 
-impl ApplicationHandler for State {
+impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         let ctx = block_on(Ctx::new(event_loop)).unwrap();
         // TODO change/fix this
@@ -184,7 +146,7 @@ impl ApplicationHandler for State {
                 dbg.queue_data(canvas.ctx()).unwrap();
                 // Clearing the buffer isn't needed since everything is being overwritten
                 // canvas.clear_buffer();
-                render::cast_and_draw(&self.player, &self.map, &self.textures, &self.models, canvas.mut_column_iterator());
+                raycaster::cast_and_draw(&self.player, &self.map, &self.textures, &self.models, canvas.mut_column_iterator());
 
                 match canvas.render(dbg) {
                     Ok(_) => (),
@@ -240,10 +202,8 @@ fn main() {
     }
     env_logger::init();
 
-    app::a();
-
     let event_loop = EventLoop::new().unwrap();
     event_loop.set_control_flow(ControlFlow::Poll);
-    let mut state = State::new();
+    let mut state = App::new();
     event_loop.run_app(&mut state).unwrap();
 }
