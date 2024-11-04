@@ -112,7 +112,7 @@ impl Ray {
     }
 
     pub fn portal_teleport(&mut self, src: Portal, dest: Portal) {
-        let (new_origin, _) = src.teleport_to(self.origin, dest);
+        let (new_origin, _) = src.teleport(self.origin, dest);
         self.origin = new_origin;
         self.next_tile = PointXZ::new(dest.position.x as i64, dest.position.z as i64);
         match self.hit_wall_side {

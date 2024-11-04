@@ -27,7 +27,7 @@ pub struct Portal {
 
 impl Portal {
     /// Returns new position and a difference in angle
-    pub fn teleport_to(&self, mut origin: Vec3, dest: Portal) -> (Vec3, f32) {
+    pub fn teleport(&self, mut origin: Vec3, dest: Portal) -> (Vec3, f32) {
         let mut yaw_angle_difference = 0.0;
         let offset_x = self.center.x - origin.x;
         let offset_z = self.center.z - origin.z;
@@ -191,7 +191,7 @@ fn teleportation_test() {
     dest.direction = PortalDirection::North;
     assert_eq!(
         (Vec3::new(2.8, 1.0, 4.2), PI),
-        src.teleport_to(origin, dest),
+        src.teleport(origin, dest),
         "from: {:?}, to: {:?}",
         src.direction,
         dest.direction
@@ -200,7 +200,7 @@ fn teleportation_test() {
     dest.direction = PortalDirection::South;
     assert_eq!(
         (Vec3::new(2.2, 1.0, 2.8), 0.0),
-        src.teleport_to(origin, dest),
+        src.teleport(origin, dest),
         "from: {:?}, to: {:?}",
         src.direction,
         dest.direction
@@ -209,7 +209,7 @@ fn teleportation_test() {
     dest.direction = PortalDirection::East;
     assert_eq!(
         (Vec3::new(3.2, 1.0, 3.2), PI * 0.5),
-        src.teleport_to(origin, dest),
+        src.teleport(origin, dest),
         "from: {:?}, to: {:?}",
         src.direction,
         dest.direction
@@ -218,7 +218,7 @@ fn teleportation_test() {
     dest.direction = PortalDirection::West;
     assert_eq!(
         (Vec3::new(1.8, 1.0, 3.8), -PI * 0.5),
-        src.teleport_to(origin, dest),
+        src.teleport(origin, dest),
         "from: {:?}, to: {:?}",
         src.direction,
         dest.direction
@@ -229,7 +229,7 @@ fn teleportation_test() {
     dest.direction = PortalDirection::North;
     assert_eq!(
         (Vec3::new(2.4, 1.0, 4.2), 0.0),
-        src.teleport_to(origin, dest),
+        src.teleport(origin, dest),
         "from: {:?}, to: {:?}",
         src.direction,
         dest.direction
@@ -238,7 +238,7 @@ fn teleportation_test() {
     dest.direction = PortalDirection::South;
     assert_eq!(
         (Vec3::new(2.6, 1.0, 2.8), PI),
-        src.teleport_to(origin, dest),
+        src.teleport(origin, dest),
         "from: {:?}, to: {:?}",
         src.direction,
         dest.direction
@@ -247,7 +247,7 @@ fn teleportation_test() {
     dest.direction = PortalDirection::East;
     assert_eq!(
         (Vec3::new(3.2, 1.0, 3.6), -PI * 0.5),
-        src.teleport_to(origin, dest),
+        src.teleport(origin, dest),
         "from: {:?}, to: {:?}",
         src.direction,
         dest.direction
@@ -256,7 +256,7 @@ fn teleportation_test() {
     dest.direction = PortalDirection::West;
     assert_eq!(
         (Vec3::new(1.8, 1.0, 3.4), PI * 0.5),
-        src.teleport_to(origin, dest),
+        src.teleport(origin, dest),
         "from: {:?}, to: {:?}",
         src.direction,
         dest.direction
@@ -267,7 +267,7 @@ fn teleportation_test() {
     dest.direction = PortalDirection::North;
     assert_eq!(
         (Vec3::new(2.2, 1.0, 4.2), -PI * 0.5),
-        src.teleport_to(origin, dest),
+        src.teleport(origin, dest),
         "from: {:?}, to: {:?}",
         src.direction,
         dest.direction
@@ -276,7 +276,7 @@ fn teleportation_test() {
     dest.direction = PortalDirection::South;
     assert_eq!(
         (Vec3::new(2.8, 1.0, 2.8), PI * 0.5),
-        src.teleport_to(origin, dest),
+        src.teleport(origin, dest),
         "from: {:?}, to: {:?}",
         src.direction,
         dest.direction
@@ -285,7 +285,7 @@ fn teleportation_test() {
     dest.direction = PortalDirection::East;
     assert_eq!(
         (Vec3::new(3.2, 1.0, 3.8), PI),
-        src.teleport_to(origin, dest),
+        src.teleport(origin, dest),
         "from: {:?}, to: {:?}",
         src.direction,
         dest.direction
@@ -294,7 +294,7 @@ fn teleportation_test() {
     dest.direction = PortalDirection::West;
     assert_eq!(
         (Vec3::new(1.8, 1.0, 3.2), 0.0),
-        src.teleport_to(origin, dest),
+        src.teleport(origin, dest),
         "from: {:?}, to: {:?}",
         src.direction,
         dest.direction
@@ -305,7 +305,7 @@ fn teleportation_test() {
     dest.direction = PortalDirection::North;
     assert_eq!(
         (Vec3::new(2.8, 1.0, 4.2), PI * 0.5),
-        src.teleport_to(origin, dest),
+        src.teleport(origin, dest),
         "from: {:?}, to: {:?}",
         src.direction,
         dest.direction
@@ -314,7 +314,7 @@ fn teleportation_test() {
     dest.direction = PortalDirection::South;
     assert_eq!(
         (Vec3::new(2.2, 1.0, 2.8), -PI * 0.5),
-        src.teleport_to(origin, dest),
+        src.teleport(origin, dest),
         "from: {:?}, to: {:?}",
         src.direction,
         dest.direction
@@ -323,7 +323,7 @@ fn teleportation_test() {
     dest.direction = PortalDirection::East;
     assert_eq!(
         (Vec3::new(3.2, 1.0, 3.2), 0.0),
-        src.teleport_to(origin, dest),
+        src.teleport(origin, dest),
         "from: {:?}, to: {:?}",
         src.direction,
         dest.direction
@@ -332,7 +332,7 @@ fn teleportation_test() {
     dest.direction = PortalDirection::West;
     assert_eq!(
         (Vec3::new(1.8, 1.0, 3.8), PI),
-        src.teleport_to(origin, dest),
+        src.teleport(origin, dest),
         "from: {:?}, to: {:?}",
         src.direction,
         dest.direction

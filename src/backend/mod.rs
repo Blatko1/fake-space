@@ -1,9 +1,12 @@
 pub mod ctx;
+mod debug;
 
-use crate::dbg::Dbg;
 use std::ptr;
+use debug::DebugUI;
+use pollster::block_on;
 use wgpu::util::DeviceExt;
-use winit::dpi::PhysicalSize;
+use wgpu_text::glyph_brush::ab_glyph::FontVec;
+use winit::{dpi::PhysicalSize, event_loop::ActiveEventLoop};
 
 use self::ctx::Ctx;
 
@@ -29,12 +32,15 @@ pub struct Canvas {
     matrix_buffer: wgpu::Buffer,
     texture: wgpu::Texture,
     size: wgpu::Extent3d,
+
+    debug_ui: DebugUI,
 }
 
 impl Canvas {
     const CANVAS_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
 
-    pub fn new(ctx: Ctx, canvas_width: u32, canvas_height: u32) -> Self {
+    pub fn new(event_loop: &ActiveEventLoop, canvas_width: u32, canvas_height: u32) -> Self {
+        let ctx = block_on(Ctx::new(event_loop)).unwrap();
         let device = ctx.device();
         let render_format = ctx.config().format;
 
@@ -179,6 +185,11 @@ impl Canvas {
         let buffer_len = (canvas_width * canvas_height * 3) as usize;
         let frame_buffer_len = (canvas_width * canvas_height * 4) as usize;
 
+        // TODO change/fix this
+        let font_data = std::fs::read("res/Minecraft.ttf").unwrap();
+        let font = FontVec::try_from_vec(font_data).unwrap();
+        let debug_ui = DebugUI::new(&ctx, font);
+
         Self {
             // RGB - 3 bytes per pixel
             buffer: vec![255; buffer_len],
@@ -196,6 +207,8 @@ impl Canvas {
             matrix_buffer,
             texture,
             size,
+
+            debug_ui
         }
     }
 
@@ -210,7 +223,7 @@ impl Canvas {
         self.buffer.chunks_exact_mut(self.height as usize * 3)
     }
 
-    pub fn render(&mut self, dbg: &Dbg) -> Result<(), wgpu::SurfaceError> {
+    pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         // Flip the buffer texture to correct position (90 degrees anticlockwise)
         self.frame
             .chunks_exact_mut(self.width as usize * 4)
@@ -288,7 +301,7 @@ impl Canvas {
                 self.region.height,
             );
             rpass.draw(0..3, 0..1);
-            dbg.render(&mut rpass);
+            self.debug_ui.render(&mut rpass);
         }
 
         self.ctx.queue().submit(Some(encoder.finish()));
@@ -337,6 +350,8 @@ impl Canvas {
             width: scaled_width.min(window_width) as u32,
             height: scaled_height.min(window_height) as u32,
         };
+
+        self.debug_ui.resize(self.region, &self.ctx);
     }
 
     pub fn request_redraw(&self) {

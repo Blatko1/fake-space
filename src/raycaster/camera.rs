@@ -1,11 +1,11 @@
 use glam::{Vec2, Vec3};
+use winit::event::MouseScrollDelta;
 use std::f32::consts::{PI, TAU};
 
-const ONE_DEGREE_RAD: f32 = PI / 180.0;
+use crate::control::GameInput;
+
 const DEFAULT_PLANE_V: Vec3 = Vec3::new(0.0, 0.5, 0.0);
 const Y_SHEARING_SENSITIVITY: f32 = 0.8;
-const MOUSE_DRAG_SPEED: f32 = 0.08;
-const YAW_CHANGE_FACTOR: f32 = ONE_DEGREE_RAD * MOUSE_DRAG_SPEED;
 
 #[derive(Debug)]
 /// Draws the player view on the screen framebuffer.
@@ -27,7 +27,7 @@ pub struct Camera {
     /// Raycaster (camera) vertical plane.
     pub(super) vertical_plane: Vec3,
     /// Angle in radians.
-    pub(super) yaw_angle: f32,
+    pub(super) yaw: f32,
     /// Width of the output screen/texture.
     pub(super) view_width: u32,
     /// Height of the output screen/texture.
@@ -51,16 +51,16 @@ impl Camera {
         pos_x: f32,
         pos_y: f32,
         pos_z: f32,
-        yaw_angle_radian: f32,
+        yaw_radian: f32,
         view_width: u32,
         view_height: u32,
     ) -> Self {
-        let yaw_angle = yaw_angle_radian;
+        let yaw = yaw_radian;
         let f_width = view_width as f32;
         let f_height = view_height as f32;
 
         let view_aspect = f_width / f_height;
-        let forward_dir = Vec3::new(yaw_angle.cos(), 0.0, yaw_angle.sin());
+        let forward_dir = Vec3::new(yaw.cos(), 0.0, yaw.sin());
 
         Self {
             origin: Vec3::new(pos_x, pos_y, pos_z),
@@ -68,7 +68,7 @@ impl Camera {
             right_dir: Vec3::new(forward_dir.z, forward_dir.y, -forward_dir.x),
             horizontal_plane: Vec3::cross(DEFAULT_PLANE_V, forward_dir) * view_aspect,
             vertical_plane: DEFAULT_PLANE_V,
-            yaw_angle,
+            yaw,
             view_width,
             view_height,
             view_aspect,
@@ -81,28 +81,32 @@ impl Camera {
         }
     }
 
-    pub fn on_mouse_move(&mut self, delta: Vec2) {
-        self.y_shearing = (self.y_shearing + delta.y * Y_SHEARING_SENSITIVITY)
-            .clamp(-self.f_height, self.f_height);
-
-        self.add_yaw_angle(-delta.x * YAW_CHANGE_FACTOR);
+    pub fn handle_mouse_wheel(&mut self, delta: MouseScrollDelta) {
+        match delta {
+            MouseScrollDelta::LineDelta(_, _) => println!("its scrol"),
+            MouseScrollDelta::PixelDelta(physical_position) => println!("its pixel"),
+        }
     }
 
-    pub fn set_yaw(&mut self, yaw_angle_rad: f32) {
-        self.yaw_angle = normalize_rad(yaw_angle_rad);
-        self.forward_dir = Vec3::new(self.yaw_angle.cos(), 0.0, self.yaw_angle.sin());
+    pub fn set_yaw(&mut self, yaw_rad: f32) {
+        self.yaw = normalize_rad(yaw_rad);
+        self.forward_dir = Vec3::new(self.yaw.cos(), 0.0, self.yaw.sin());
         self.right_dir =
             Vec3::new(self.forward_dir.z, self.forward_dir.y, -self.forward_dir.x);
         self.horizontal_plane =
             Vec3::cross(DEFAULT_PLANE_V, self.forward_dir) * self.view_aspect;
     }
-
-    pub fn add_yaw_angle(&mut self, rad: f32) {
-        self.set_yaw(self.yaw_angle + rad);
-    }
 }
 
 #[inline]
-fn normalize_rad(angle: f32) -> f32 {
+pub fn normalize_rad(angle: f32) -> f32 {
     angle - (angle / TAU).floor() * TAU
+}
+
+pub trait CameraManipulator {
+    fn get_yaw(&self) -> f32;
+    fn get_pitch(&self) -> f32;
+    fn get_camera_origin(&self) -> Vec3;
+    fn get_forward_dir(&self) -> Vec3;
+    fn get_right_dir(&self) -> Vec3;
 }

@@ -63,8 +63,7 @@ struct ColumnRenderer<'a> {
 }
 
 impl<'a> ColumnRenderer<'a> {
-    fn new(ray: Ray, player: &'a Player, map: &'a Map, textures: &'a TextureArray, models: &'a ModelArray) -> Self {
-        let camera = player.camera();
+    fn new(ray: Ray, camera: &'a Camera, player: &'a Player, map: &'a Map, textures: &'a TextureArray, models: &'a ModelArray) -> Self {
         let current_room = map.get_room_data(player.current_room_id());
         let current_room_dimensions = current_room.segment.dimensions_i64();
         let use_flashlight = if player.use_flashlight() { 1.0 } else { 0.0 };
@@ -230,11 +229,10 @@ impl<'a> ColumnRenderer<'a> {
 }
 
 
-pub fn cast_and_draw<'a, C>(player: &Player, map: &Map, textures: &TextureArray, models: &ModelArray, column_iter: C)
+pub fn cast_and_draw<'a, C>(camera: &Camera, player: &Player, map: &Map, textures: &TextureArray, models: &ModelArray, column_iter: C)
 where
     C: Iterator<Item = &'a mut [u8]>,
 {
-    let camera = player.camera();
     let player_room = map.get_room_data(player.current_room_id());
     let skybox_textures = textures.get_skybox_textures(player_room.data.skybox());
     column_iter.enumerate().for_each(|(column_index, column)| {
@@ -243,7 +241,7 @@ where
         let skybox = SkyboxSegment::new(camera, ray, skybox_textures);
         skybox.draw_skybox(column);
 
-        let mut column_drawer = ColumnRenderer::new(ray, player, map, textures, models);
+        let mut column_drawer = ColumnRenderer::new( ray, camera, player, map, textures, models);
         let encountered_objects = column_drawer.draw(column);
 
         if !encountered_objects.is_empty() {

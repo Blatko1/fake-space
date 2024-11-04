@@ -10,12 +10,14 @@ use wgpu_text::glyph_brush::{
 };
 use wgpu_text::{BrushBuilder, BrushError, TextBrush};
 
+use super::ScissorRegion;
+
 pub struct DebugData {
     pub player_data: PlayerDebugData,
     //pub world_data: WorldDebugData,
 }
 
-pub struct Dbg {
+pub struct DebugUI {
     screen_position: (f32, f32),
     brush: TextBrush<FontVec>,
     content: OwnedSection<Extra>,
@@ -26,7 +28,7 @@ pub struct Dbg {
     current_fps: u32,
 }
 
-impl Dbg {
+impl DebugUI {
     pub fn new(ctx: &Ctx, font: FontVec) -> Self {
         let config = ctx.config();
         let brush = BrushBuilder::using_font(font).build(
@@ -110,13 +112,12 @@ impl Dbg {
         }
     }
 
-    pub fn resize(&mut self, canvas: &Canvas) {
-        let region = canvas.region();
-        let ctx = canvas.ctx();
+    pub fn resize(&mut self, region: ScissorRegion, ctx: &Ctx) {
+        let queue = ctx.queue();
         let config = ctx.config();
         self.screen_position = (region.x as f32 + 5.0, region.y as f32 + 5.0);
         self.brush
-            .resize_view(config.width as f32, config.height as f32, ctx.queue());
+            .resize_view(config.width as f32, config.height as f32, queue);
     }
 
     pub fn queue_data(&mut self, ctx: &Ctx) -> Result<(), BrushError> {

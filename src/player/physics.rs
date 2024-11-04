@@ -1,8 +1,9 @@
+use core::f32;
+use std::f32::consts::{FRAC_2_PI, FRAC_PI_2, PI};
+
 use glam::{Vec2, Vec3};
 
-use crate::map::segment::Segment;
-
-use super::PlayerInputState;
+use crate::{control::GameInput, map::segment::Segment, raycaster::camera::{normalize_rad, CameraManipulator}};
 
 const MOVEMENT_CONST: f32 = 1.5;
 const VERTICAL_MOVEMENT_CONST: f32 = 10.0;
@@ -11,12 +12,20 @@ const ACCELERATION_CONST: f32 = 10.0;
 const SLOWDOWN_CONST: f32 = 10.0;
 
 pub struct CylinderBody {
+    pub(super) feet_position: Vec3,
+    pub(super) yaw: f32,
+    pub(super) pitch: f32,
+    forward_dir: Vec3,
+    right_dir: Vec3,
+
     radius: f32,
     height: f32,
     eye_height: f32,
 
     is_ghost: bool,
     can_fly: bool,
+    is_grounded: bool,
+
     movement_velocity: Vec2,
     air_velocity: f32,
     movement_accel: f32,
@@ -26,15 +35,20 @@ pub struct CylinderBody {
     jump_strength: f32,
     slowdown_friction: f32,
     friction: f32,
-    is_grounded: bool,
+    input_state: InputState,
 }
 
 impl CylinderBody {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
+        feet_position: Vec3,
+        yaw: f32,
+        pitch: f32,
+
         radius: f32,
         height: f32,
         eye_height_factor: f32,
+
         jump_strength: f32,
         movement_accel: f32,
         max_movement_vel: f32,
@@ -46,7 +60,15 @@ impl CylinderBody {
             (0.0..=1.0).contains(&eye_height_factor),
             "Eye height not in range [0, 1]!"
         );
+        let forward_dir = Vec3::new(yaw.cos(), 0.0, yaw.sin());
+        let right_dir = Vec3::new(forward_dir.z, forward_dir.y, -forward_dir.x);
         Self {
+            feet_position,
+            yaw,
+            pitch,
+            forward_dir,
+            right_dir,
+            
             radius,
             height,
             eye_height: eye_height_factor * height,
@@ -63,38 +85,35 @@ impl CylinderBody {
             slowdown_friction,
             friction,
             is_grounded: false,
+            input_state: InputState::default(),
         }
     }
 
     pub fn collision_detection_resolution(
         &mut self,
-        origin: Vec3,
         segment: &Segment,
-    ) -> Vec3 {
+    ) {
         if self.is_ghost {
-            return origin;
+            return;
         }
 
-        let mut feet_position = Vec3::new(origin.x, origin.y - self.eye_height, origin.z);
-        let current_tile = match segment
-            .get_tile_checked(feet_position.x as i64, feet_position.z as i64)
-        {
-            Some(t) => t,
-            None => return origin,
-        };
+        let Some(current_tile) = segment
+            .get_tile_checked(self.feet_position.x as i64, self.feet_position.z as i64) else {
+                return
+            };
         let mut ground_level = current_tile.ground_level;
         let mut ceiling_level = current_tile.ceiling_level;
 
         let pos_x = current_tile.position.x as i64;
         let pos_z = current_tile.position.z as i64;
         let intersected_vertical =
-            if (feet_position.x + self.radius) > (pos_x as f32 + 1.0) {
+            if (self.feet_position.x + self.radius) > (pos_x as f32 + 1.0) {
                 if let Some(tile) = segment.get_tile_checked(pos_x + 1, pos_z) {
-                    if (tile.ground_level - TILE_COLLISION_OFFSET) > feet_position.y
+                    if (tile.ground_level - TILE_COLLISION_OFFSET) > self.feet_position.y
                         || (tile.ceiling_level + TILE_COLLISION_OFFSET)
-                            < (feet_position.y + self.height)
+                            < (self.feet_position.y + self.height)
                     {
-                        feet_position.x = (pos_x as f32 + 1.0) - self.radius;
+                        self.feet_position.x = (pos_x as f32 + 1.0) - self.radius;
                         //self.movement_velocity.x = 0.0;
                     } else {
                         ground_level = ground_level.max(tile.ground_level);
@@ -102,13 +121,13 @@ impl CylinderBody {
                     }
                 }
                 Some(IntersectedVerticalSide::Right)
-            } else if (feet_position.x - self.radius) < pos_x as f32 {
+            } else if (self.feet_position.x - self.radius) < pos_x as f32 {
                 if let Some(tile) = segment.get_tile_checked(pos_x - 1, pos_z) {
-                    if (tile.ground_level - TILE_COLLISION_OFFSET) > feet_position.y
+                    if (tile.ground_level - TILE_COLLISION_OFFSET) > self.feet_position.y
                         || (tile.ceiling_level + TILE_COLLISION_OFFSET)
-                            < (feet_position.y + self.height)
+                            < (self.feet_position.y + self.height)
                     {
-                        feet_position.x = pos_x as f32 + self.radius;
+                        self.feet_position.x = pos_x as f32 + self.radius;
                         //self.movement_velocity.x = 0.0;
                     } else {
                         ground_level = ground_level.max(tile.ground_level);
@@ -120,13 +139,13 @@ impl CylinderBody {
                 None
             };
         let intersected_horizontal =
-            if (feet_position.z + self.radius) > (pos_z as f32 + 1.0) {
+            if (self.feet_position.z + self.radius) > (pos_z as f32 + 1.0) {
                 if let Some(tile) = segment.get_tile_checked(pos_x, pos_z + 1) {
-                    if (tile.ground_level - TILE_COLLISION_OFFSET) > feet_position.y
+                    if (tile.ground_level - TILE_COLLISION_OFFSET) > self.feet_position.y
                         || (tile.ceiling_level + TILE_COLLISION_OFFSET)
-                            < (feet_position.y + self.height)
+                            < (self.feet_position.y + self.height)
                     {
-                        feet_position.z = (pos_z as f32 + 1.0) - self.radius;
+                        self.feet_position.z = (pos_z as f32 + 1.0) - self.radius;
                         //self.movement_velocity.y = 0.0;
                     } else {
                         ground_level = ground_level.max(tile.ground_level);
@@ -134,13 +153,13 @@ impl CylinderBody {
                     }
                 }
                 Some(IntersectedHorizontalSide::Top)
-            } else if (feet_position.z - self.radius) < pos_z as f32 {
+            } else if (self.feet_position.z - self.radius) < pos_z as f32 {
                 if let Some(tile) = segment.get_tile_checked(pos_x, pos_z - 1) {
-                    if (tile.ground_level - TILE_COLLISION_OFFSET) > feet_position.y
+                    if (tile.ground_level - TILE_COLLISION_OFFSET) > self.feet_position.y
                         || (tile.ceiling_level + TILE_COLLISION_OFFSET)
-                            < (feet_position.y + self.height)
+                            < (self.feet_position.y + self.height)
                     {
-                        feet_position.z = pos_z as f32 + self.radius;
+                        self.feet_position.z = pos_z as f32 + self.radius;
                         //self.movement_velocity.y = 0.0;
                     } else {
                         ground_level = ground_level.max(tile.ground_level);
@@ -157,19 +176,19 @@ impl CylinderBody {
             if let Some(tile) =
                 segment.get_tile_checked(pos_x + offset_x, pos_z + offset_z)
             {
-                if (tile.ground_level - TILE_COLLISION_OFFSET) > feet_position.y
+                if (tile.ground_level - TILE_COLLISION_OFFSET) > self.feet_position.y
                     || (tile.ceiling_level + TILE_COLLISION_OFFSET)
-                        < (feet_position.y + self.height)
+                        < (self.feet_position.y + self.height)
                 {
                     let edge_x = (pos_x + offset.0) as f32;
                     let edge_z = (pos_z + offset.1) as f32;
-                    let dist_x = edge_x - feet_position.x;
-                    let dist_z = edge_z - feet_position.z;
+                    let dist_x = edge_x - self.feet_position.x;
+                    let dist_z = edge_z - self.feet_position.z;
                     if dist_x.abs() > dist_z.abs() {
-                        feet_position.x = edge_x - offset_x as f32 * self.radius;
+                        self.feet_position.x = edge_x - offset_x as f32 * self.radius;
                         //self.movement_velocity.x = 0.0;
                     } else {
-                        feet_position.z = edge_z - offset_z as f32 * self.radius;
+                        self.feet_position.z = edge_z - offset_z as f32 * self.radius;
                         //self.movement_velocity.y = 0.0;
                     }
                 } else {
@@ -179,36 +198,27 @@ impl CylinderBody {
             }
         }
 
-        if feet_position.y < ground_level {
-            feet_position.y = ground_level;
+        if self.feet_position.y < ground_level {
+            self.feet_position.y = ground_level;
             self.air_velocity = 0.0;
-        } else if (feet_position.y + self.height) > ceiling_level {
-            feet_position.y = ceiling_level - self.height;
+        } else if (self.feet_position.y + self.height) > ceiling_level {
+            self.feet_position.y = ceiling_level - self.height;
             self.air_velocity = 0.0;
         }
-        self.is_grounded = feet_position.y <= ground_level;
+        self.is_grounded = self.feet_position.y <= ground_level;
         if self.is_grounded {
             self.air_velocity = 0.0;
         }
-
-        Vec3::new(
-            feet_position.x,
-            feet_position.y + self.eye_height,
-            feet_position.z,
-        )
     }
 
-    pub fn update_physics_state(
+    pub fn update_physics(
         &mut self,
-        forward_dir: Vec3,
-        right_dir: Vec3,
-        input_state: &PlayerInputState,
         delta: f32,
     ) {
-        let movement = input_state.movement();
+        let movement = self.input_state.movement();
         let (horizontal_movement, vertical_movement) = (movement.x, movement.y);
         let movement_dir =
-            forward_dir * vertical_movement + right_dir * horizontal_movement;
+            self.forward_dir * vertical_movement + self.right_dir * horizontal_movement;
 
         let acceleration = Vec2::new(movement_dir.x, movement_dir.z)
             * self.movement_accel
@@ -230,16 +240,14 @@ impl CylinderBody {
             .clamp_length_max(self.max_movement_vel);
 
         if self.can_fly {
-            self.air_velocity = self.jump_strength * input_state.fly_direction();
-        } else if input_state.jump && self.is_grounded {
+            self.air_velocity = self.jump_strength * self.input_state.fly_direction();
+        } else if self.input_state.jump && self.is_grounded {
             self.air_velocity = self.jump_strength;
         }
-    }
 
-    pub fn apply_physics(&mut self, mut origin: Vec3, delta: f32) -> Vec3 {
-        origin.x += self.movement_velocity.x * delta * MOVEMENT_CONST;
-        origin.z += self.movement_velocity.y * delta * MOVEMENT_CONST;
-        origin.y += self.air_velocity * delta * VERTICAL_MOVEMENT_CONST;
+        self.feet_position.x += self.movement_velocity.x * delta * MOVEMENT_CONST;
+        self.feet_position.z += self.movement_velocity.y * delta * MOVEMENT_CONST;
+        self.feet_position.y += self.air_velocity * delta * VERTICAL_MOVEMENT_CONST;
 
         // Maybe will be used when floor gets a friction attribute
         self.movement_velocity /= 1.0 + self.friction * delta;
@@ -249,8 +257,6 @@ impl CylinderBody {
             self.air_velocity = (self.air_velocity + self.gravity_accel * delta)
                 .clamp(-self.max_in_air_velocity, self.max_in_air_velocity);
         }
-
-        origin
     }
 
     pub fn rotate_velocity(&mut self, yaw_angle_rotate: f32) {
@@ -262,14 +268,36 @@ impl CylinderBody {
         self.movement_velocity.y = z;
     }
 
-    #[inline]
-    pub fn toggle_ghost(&mut self) {
-        self.is_ghost = !self.is_ghost
+    pub fn handle_mouse_motion(&mut self, delta: (f64, f64)) {
+        let (yaw_delta, pitch_delta) = (delta.0 as f32, delta.1 as f32);
+        self.yaw = normalize_rad(self.yaw + yaw_delta * f32::consts::PI / 180.0 * 0.08);
+        
+        self.pitch += pitch_delta * PI / 180.0 * 0.08;
+        if self.pitch > FRAC_PI_2 {
+            self.pitch = FRAC_PI_2;
+        } else if self.pitch < (-FRAC_PI_2) {
+            self.pitch = -FRAC_PI_2;
+        }
+
+        self.forward_dir = Vec3::new(self.yaw.cos(), 0.0, self.yaw.sin());
+        self.right_dir = Vec3::new(self.forward_dir.z, 0.0, -self.forward_dir.x);
     }
 
-    #[inline]
-    pub fn toggle_fly(&mut self) {
-        self.can_fly = !self.can_fly
+    pub fn handle_game_input(&mut self, input: GameInput, is_pressed: bool) {
+        match input {
+            GameInput::MoveForward => self.input_state.forward = is_pressed,
+            GameInput::MoveBackward => self.input_state.backward = is_pressed,
+            GameInput::StrafeLeft => self.input_state.left = is_pressed,
+            GameInput::StrafeRight => self.input_state.right = is_pressed,
+            GameInput::PhysicsSwitch if !is_pressed => {
+                self.is_ghost = !self.is_ghost;
+                self.can_fly = !self.can_fly;
+            }
+            GameInput::Jump => self.input_state.jump = is_pressed,
+            GameInput::FlyUp => self.input_state.fly_up = is_pressed,
+            GameInput::FlyDown => self.input_state.fly_down = is_pressed,
+            _ => ()
+        }
     }
 
     pub fn collect_dbg_data(&self) -> PhysicsStateDebugData {
@@ -293,6 +321,52 @@ enum IntersectedVerticalSide {
 enum IntersectedHorizontalSide {
     Bottom,
     Top,
+}
+
+#[derive(Debug, Default)]
+pub struct InputState {
+    pub jump: bool,
+    pub fly_up: bool,
+    pub fly_down: bool,
+    pub forward: bool,
+    pub backward: bool,
+    pub left: bool,
+    pub right: bool,
+}
+
+impl InputState {
+    pub fn movement(&self) -> Vec2 {
+        let x = if self.left { -1.0 } else { 0.0 } + if self.right { 1.0 } else { 0.0 };
+        let z =
+            if self.forward { 1.0 } else { 0.0 } + if self.backward { -1.0 } else { 0.0 };
+        Vec2::new(x, z).try_normalize().unwrap_or_default()
+    }
+
+    pub fn fly_direction(&self) -> f32 {
+        (if self.fly_up { 1.0 } else { 0.0 } - if self.fly_down { 1.0 } else { 0.0 })
+    }
+}
+
+impl CameraManipulator for CylinderBody {
+    fn get_yaw(&self) -> f32 {
+        self.yaw
+    }
+
+    fn get_pitch(&self) -> f32 {
+        self.pitch
+    }
+
+    fn get_camera_origin(&self) -> Vec3 {
+        Vec3::new(self.feet_position.x, self.feet_position.y + self.eye_height, self.feet_position.z)
+    }
+
+    fn get_forward_dir(&self) -> Vec3 {
+        self.forward_dir
+    }
+
+    fn get_right_dir(&self) -> Vec3 {
+        self.right_dir
+    }
 }
 
 #[derive(Debug)]
