@@ -27,6 +27,10 @@ impl ControllerSettings {
             GameInput::FlyDown => KeyCode::ShiftLeft,
             GameInput::PhysicsSwitch => KeyCode::Equal,
             GameInput::FlashlightSwitch => KeyCode::KeyF,
+            GameInput::ToggleSleepBetweenFrames => KeyCode::End,
+            GameInput::ToggleFullScreen => KeyCode::F11,
+            GameInput::IncreaseResolution => KeyCode::PageUp,
+            GameInput::DecreaseResolution => KeyCode::PageDown
         }
     }
 }
@@ -61,4 +65,8 @@ pub enum GameInput {
     FlyDown,
     PhysicsSwitch,
     FlashlightSwitch,
+    ToggleSleepBetweenFrames,
+    ToggleFullScreen,
+    IncreaseResolution,
+    DecreaseResolution
 }

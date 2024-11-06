@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use nom::{error::convert_error, Finish};
 use winit::event::DeviceEvent;
 
-use crate::{control::GameInput, map::{room::RoomID, Map}, map_parser::{cleanup_input, MapParser}, models::ModelArray, player::Player, raycaster::{self, camera::Camera}, textures::TextureArray, CANVAS_HEIGHT, CANVAS_WIDTH};
+use crate::{control::GameInput, map::{room::RoomID, Map}, map_parser::{cleanup_input, MapParser}, models::ModelArray, player::Player, raycaster::{self, camera::Camera}, textures::TextureArray};
 
 const PHYSICS_TIMESTEP: f32 = 0.01;
 
@@ -20,7 +20,7 @@ pub struct GameState {
 }
 
 impl GameState {
-    pub fn new<P: Into<PathBuf>>(data_path: P) -> Self {
+    pub fn new<P: Into<PathBuf>>(data_path: P, view_width: u32, view_height: u32) -> Self {
                 // TODO remove 'unwrap()'s
                 let path: PathBuf = data_path.into().canonicalize().unwrap();
                 let parent_path = path.parent().unwrap().to_path_buf();
@@ -35,8 +35,8 @@ impl GameState {
                 };
 
         let camera = Camera::new(
-            CANVAS_WIDTH,
-            CANVAS_HEIGHT,
+            view_width,
+            view_height,
         );
 
         Self {
@@ -78,6 +78,10 @@ impl GameState {
             DeviceEvent::MouseWheel { delta } => self.camera.handle_mouse_wheel(delta),
             _ => ()
         }
+    }
+
+    pub fn recreate_camera(&mut self, view_width: u32, view_height: u32) {
+        self.camera = Camera::new(view_width, view_height);
     }
 
     /*pub fn collect_dbg_data(&self) -> DebugData {

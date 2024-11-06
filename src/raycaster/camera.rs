@@ -5,7 +5,6 @@ use std::f32::consts::{PI, TAU};
 use crate::control::GameInput;
 
 const DEFAULT_PLANE_V: Vec3 = Vec3::new(0.0, 0.5, 0.0);
-const Y_SHEARING_SENSITIVITY: f32 = 0.8;
 
 #[derive(Debug, Default)]
 /// Draws the player view on the screen framebuffer.

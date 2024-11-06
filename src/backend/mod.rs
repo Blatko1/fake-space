@@ -8,6 +8,8 @@ use wgpu::util::DeviceExt;
 use wgpu_text::glyph_brush::ab_glyph::FontVec;
 use winit::{dpi::PhysicalSize, event_loop::ActiveEventLoop};
 
+use crate::{CANVAS_HEIGHT_FACTOR, CANVAS_WIDTH_FACTOR};
+
 use self::ctx::Ctx;
 
 const TRIANGLE_VERTICES: [[f32; 2]; 3] = [
@@ -20,16 +22,18 @@ const TRIANGLE_VERTICES: [[f32; 2]; 3] = [
 pub struct Canvas {
     buffer: Vec<u8>,
     frame: Vec<u8>,
-    width: u32,
-    height: u32,
+    view_width: u32,
+    view_height: u32,
 
     ctx: Ctx,
     pipeline: wgpu::RenderPipeline,
+    bind_group_layout: wgpu::BindGroupLayout,
     bind_group: wgpu::BindGroup,
 
     region: ScissorRegion,
     vertex_buffer: wgpu::Buffer,
     matrix_buffer: wgpu::Buffer,
+    sampler: wgpu::Sampler,
     texture: wgpu::Texture,
     size: wgpu::Extent3d,
 
@@ -182,8 +186,8 @@ impl Canvas {
             cache: None,
         });
 
-        let buffer_len = (canvas_width * canvas_height * 3) as usize;
-        let frame_buffer_len = (canvas_width * canvas_height * 4) as usize;
+        let buffer_size = (canvas_width * canvas_height * 3) as usize;
+        let frame_size = (canvas_width * canvas_height * 4) as usize;
 
         // TODO change/fix this
         let font_data = std::fs::read("res/Minecraft.ttf").unwrap();
@@ -192,19 +196,21 @@ impl Canvas {
 
         Self {
             // RGB - 3 bytes per pixel
-            buffer: vec![255; buffer_len],
+            buffer: vec![255; buffer_size],
             // RGBA - 4 bytes per pixel
-            frame: vec![255; frame_buffer_len],
-            width: canvas_width,
-            height: canvas_height,
+            frame: vec![255; frame_size],
+            view_width: canvas_width,
+            view_height: canvas_height,
 
             ctx,
             pipeline,
+            bind_group_layout,
             bind_group,
 
             region: ScissorRegion::default(),
             vertex_buffer,
             matrix_buffer,
+            sampler,
             texture,
             size,
 
@@ -220,20 +226,20 @@ impl Canvas {
     }
 
     pub fn mut_column_iterator(&mut self) -> impl Iterator<Item = &mut [u8]> {
-        self.buffer.chunks_exact_mut(self.height as usize * 3)
+        self.buffer.chunks_exact_mut(self.view_height as usize * 3)
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         // Flip the buffer texture to correct position (90 degrees anticlockwise)
         self.frame
-            .chunks_exact_mut(self.width as usize * 4)
+            .chunks_exact_mut(self.view_width as usize * 4)
             .rev()
             .enumerate()
             .for_each(|(x, row)| {
                 self.buffer
                     .chunks_exact(3)
                     .skip(x)
-                    .step_by(self.height as usize)
+                    .step_by(self.view_height as usize)
                     .zip(row.chunks_exact_mut(4))
                     .for_each(|(src, dest)| {
                         //dest[0..3].copy_from_slice(src);
@@ -253,7 +259,7 @@ impl Canvas {
             bytemuck::cast_slice(&self.frame),
             wgpu::ImageDataLayout {
                 offset: 0,
-                bytes_per_row: Some(self.width * 4),
+                bytes_per_row: Some(self.view_width * 4),
                 rows_per_image: None,
             },
             self.size,
@@ -319,7 +325,7 @@ impl Canvas {
 
         let window_width = config.width as f32;
         let window_height = config.height as f32;
-        let (texture_width, texture_height) = (self.width as f32, self.height as f32);
+        let (texture_width, texture_height) = (self.view_width as f32, self.view_height as f32);
 
         let scale = (window_width / texture_width)
             .min(window_height / texture_height)
@@ -354,6 +360,96 @@ impl Canvas {
         self.debug_ui.resize(self.region, &self.ctx);
     }
 
+    pub fn toggle_full_screen(&mut self) {
+        self.ctx.toggle_full_screen();
+    }
+
+    pub fn increase_resolution(&mut self) {
+        let device = self.ctx.device();
+        self.view_width += CANVAS_WIDTH_FACTOR;
+        self.view_height += CANVAS_HEIGHT_FACTOR;
+        let (size, texture, view) = Self::create_frame_texture(device, self.view_width, self.view_height);
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Main Bind Group"),
+            layout: &self.bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&self.sampler),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: self.matrix_buffer.as_entire_binding(),
+                },
+            ],
+        });
+        self.size = size;
+        self.texture = texture;
+        self.bind_group = bind_group;
+        
+        let buffer_len = (self.view_width * self.view_height * 3) as usize;
+        let frame_len = (self.view_width * self.view_height * 4) as usize;
+        self.buffer = vec![255; buffer_len];
+        self.frame = vec![255; frame_len];
+    }
+    
+    pub fn decrease_resolution(&mut self) {
+        let device = self.ctx.device();
+        self.view_width = self.view_width.saturating_sub(CANVAS_WIDTH_FACTOR).max(CANVAS_WIDTH_FACTOR);
+        self.view_height = self.view_height.saturating_sub(CANVAS_HEIGHT_FACTOR).max(CANVAS_HEIGHT_FACTOR);
+        let (size, texture, view) = Self::create_frame_texture(device, self.view_width, self.view_height);
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Main Bind Group"),
+            layout: &self.bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&self.sampler),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: self.matrix_buffer.as_entire_binding(),
+                },
+            ],
+        });
+        self.size = size;
+        self.texture = texture;
+        self.bind_group = bind_group;
+
+        let buffer_len = (self.view_width * self.view_height * 3) as usize;
+        let frame_len = (self.view_width * self.view_height * 4) as usize;
+        self.buffer = vec![255; buffer_len];
+        self.frame = vec![255; frame_len];
+    }
+
+    pub fn create_frame_texture(device: &wgpu::Device, width: u32, height: u32) -> (wgpu::Extent3d, wgpu::Texture, wgpu::TextureView) {
+        let size = wgpu::Extent3d {
+            width,
+            height,
+            depth_or_array_layers: 1,
+        };
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("Canvas Texture"),
+            size,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: Self::CANVAS_FORMAT,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
+        });
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        (size, texture, view)
+    }
+
     pub fn request_redraw(&self) {
         self.ctx.window().request_redraw()
     }
@@ -362,20 +458,12 @@ impl Canvas {
         self.ctx.recreate_sc()
     }
 
-    pub fn width(&self) -> u32 {
-        self.width
+    pub fn view_width(&self) -> u32 {
+        self.view_width
     }
 
-    pub fn height(&self) -> u32 {
-        self.height
-    }
-
-    pub fn ctx(&self) -> &Ctx {
-        &self.ctx
-    }
-
-    pub fn region(&self) -> ScissorRegion {
-        self.region
+    pub fn view_height(&self) -> u32 {
+        self.view_height
     }
 }
 
