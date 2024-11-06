@@ -21,7 +21,7 @@ pub struct Player {
 
 impl Player {
     pub fn new(current_room: RoomID) -> Self {
-        let body = CylinderBody::new(0.2, 2.0, 0.9, 1.2, 3.5, 3.0, -4.0, 2.5, 0.0);
+        let body = CylinderBody::new(Vec3::new(10.5, 1.0, 14.5), 90.0f32.to_radians(), 0.0, 0.2, 2.0, 0.9, 1.2, 3.5, 3.0, -4.0, 2.5, 0.0);
 
         Self {
             score: 0,
@@ -34,9 +34,7 @@ impl Player {
     pub fn update(&mut self, map: &Map, delta: f32) {
         let mut room = map.get_room_data(self.current_room);
 
-        self.body.update_physics(
-            delta,
-        );
+        self.body.update_physics(delta);
 
         // Teleportation between rooms
         if let Some(tile) = room
@@ -57,8 +55,7 @@ impl Player {
                     let (new_origin, yaw_angle_difference) =
                         src_portal.teleport(self.body.feet_position, dest_portal);
                     self.body.feet_position = new_origin;
-                    self.camera.add_yaw_angle(yaw_angle_difference);
-                    self.body.rotate_velocity(yaw_angle_difference);
+                    self.body.add_yaw(yaw_angle_difference);
                 }
             }
         }
@@ -94,6 +91,10 @@ impl Player {
             }
             _ => self.body.handle_game_input(input, is_pressed),
         }
+    }
+
+    pub fn get_camera_target(&self) -> &CylinderBody {
+        &self.body
     }
 
     /*pub fn collect_dbg_data(&self) -> PlayerDebugData {

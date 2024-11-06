@@ -40,8 +40,8 @@ use winit::{
 };
 
 const FPS_CAP: u32 = 60;
-const CANVAS_WIDTH: u32 = 240 * 1;
-const CANVAS_HEIGHT: u32 = 135 * 1;
+const CANVAS_WIDTH: u32 = 240 * 2;
+const CANVAS_HEIGHT: u32 = 135 * 2;
 const SLEEP_BETWEEN_FRAMES: bool = false;
 
 pub struct App {
@@ -133,7 +133,6 @@ impl ApplicationHandler for App {
 
         if elapsed >= self.time_per_frame {
             self.now = Instant::now();
-
             // Update game
             self.state.update(elapsed.as_secs_f32());
 

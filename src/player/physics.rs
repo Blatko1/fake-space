@@ -3,7 +3,7 @@ use std::f32::consts::{FRAC_2_PI, FRAC_PI_2, PI};
 
 use glam::{Vec2, Vec3};
 
-use crate::{control::GameInput, map::segment::Segment, raycaster::camera::{normalize_rad, CameraManipulator}};
+use crate::{control::GameInput, map::segment::Segment, raycaster::camera::{normalize_rad, CameraTarget, CameraTargetData}};
 
 const MOVEMENT_CONST: f32 = 1.5;
 const VERTICAL_MOVEMENT_CONST: f32 = 10.0;
@@ -259,28 +259,29 @@ impl CylinderBody {
         }
     }
 
-    pub fn rotate_velocity(&mut self, yaw_angle_rotate: f32) {
-        let cos = yaw_angle_rotate.cos();
-        let sin = yaw_angle_rotate.sin();
-        let x = self.movement_velocity.x * cos - self.movement_velocity.y * sin;
-        let z = self.movement_velocity.x * sin + self.movement_velocity.y * cos;
-        self.movement_velocity.x = x;
-        self.movement_velocity.y = z;
+    /// Angle increases in a counter clockwise direction.
+    pub fn add_yaw(&mut self, add: f32) {
+        self.set_yaw(self.yaw + add);
+    }
+
+    pub fn add_pitch(&mut self, add: f32) {
+        self.set_pitch(self.pitch + add);
+    }
+
+    pub fn set_yaw(&mut self, yaw: f32) {
+        self.yaw = normalize_rad(yaw);
+        self.forward_dir = Vec3::new(self.yaw.cos(), 0.0, self.yaw.sin());
+    }
+
+    pub fn set_pitch(&mut self, pitch: f32) {
+        self.pitch = pitch.clamp(-FRAC_PI_2, FRAC_PI_2);
+        self.right_dir = Vec3::new(self.forward_dir.z, 0.0, -self.forward_dir.x);
     }
 
     pub fn handle_mouse_motion(&mut self, delta: (f64, f64)) {
         let (yaw_delta, pitch_delta) = (delta.0 as f32, delta.1 as f32);
-        self.yaw = normalize_rad(self.yaw + yaw_delta * f32::consts::PI / 180.0 * 0.08);
-        
-        self.pitch += pitch_delta * PI / 180.0 * 0.08;
-        if self.pitch > FRAC_PI_2 {
-            self.pitch = FRAC_PI_2;
-        } else if self.pitch < (-FRAC_PI_2) {
-            self.pitch = -FRAC_PI_2;
-        }
-
-        self.forward_dir = Vec3::new(self.yaw.cos(), 0.0, self.yaw.sin());
-        self.right_dir = Vec3::new(self.forward_dir.z, 0.0, -self.forward_dir.x);
+        self.add_yaw(-yaw_delta * f32::consts::PI / 180.0 * 0.08);
+        self.add_pitch(pitch_delta * PI / 180.0 * 0.08);
     }
 
     pub fn handle_game_input(&mut self, input: GameInput, is_pressed: bool) {
@@ -347,25 +348,15 @@ impl InputState {
     }
 }
 
-impl CameraManipulator for CylinderBody {
-    fn get_yaw(&self) -> f32 {
-        self.yaw
-    }
-
-    fn get_pitch(&self) -> f32 {
-        self.pitch
-    }
-
-    fn get_camera_origin(&self) -> Vec3 {
-        Vec3::new(self.feet_position.x, self.feet_position.y + self.eye_height, self.feet_position.z)
-    }
-
-    fn get_forward_dir(&self) -> Vec3 {
-        self.forward_dir
-    }
-
-    fn get_right_dir(&self) -> Vec3 {
-        self.right_dir
+impl CameraTarget for CylinderBody {
+    fn get_target_data(&self) -> CameraTargetData {
+        CameraTargetData {
+            origin: Vec3::new(self.feet_position.x, self.feet_position.y + self.eye_height, self.feet_position.z),
+            forward_dir: self.forward_dir,
+            right_dir: self.right_dir,
+            yaw: self.yaw,
+            pitch: self.pitch,
+        }
     }
 }
 

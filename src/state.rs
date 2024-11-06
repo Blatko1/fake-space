@@ -35,10 +35,6 @@ impl GameState {
                 };
 
         let camera = Camera::new(
-            10.5,
-            1.0,
-            14.5,
-            90f32.to_radians(),
             CANVAS_WIDTH,
             CANVAS_HEIGHT,
         );
@@ -63,6 +59,7 @@ impl GameState {
             self.player.update(&self.map, PHYSICS_TIMESTEP);
             self.delta_accumulator -= PHYSICS_TIMESTEP;
         }
+        self.camera.follow(self.player.get_camera_target());
         //self.world.update(&mut self.player);
     }
 
