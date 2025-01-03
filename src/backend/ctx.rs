@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use winit::{dpi::PhysicalSize, event_loop::ActiveEventLoop, window::Window};
+use winit::{dpi::PhysicalSize, event_loop::ActiveEventLoop, window::{Fullscreen, Window}};
 
 pub struct Ctx {
     window: Arc<Window>,
@@ -8,6 +8,8 @@ pub struct Ctx {
     device: wgpu::Device,
     config: wgpu::SurfaceConfiguration,
     queue: wgpu::Queue,
+
+    full_screen: bool
 }
 
 impl Ctx {
@@ -75,6 +77,8 @@ impl Ctx {
             device,
             config,
             queue,
+
+            full_screen: false
         })
     }
 
@@ -82,6 +86,15 @@ impl Ctx {
         self.config.width = new_size.width.max(1);
         self.config.height = new_size.height.max(1);
         self.surface.configure(&self.device, &self.config);
+    }
+
+    pub fn toggle_full_screen(&mut self) {
+        self.full_screen = !self.full_screen;
+        if self.full_screen {
+            self.window.set_fullscreen(Some(Fullscreen::Borderless(None)));
+        } else {
+            self.window.set_fullscreen(None);
+        }
     }
 
     #[inline]

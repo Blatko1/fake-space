@@ -5,7 +5,6 @@ use winit::event::MouseScrollDelta;
 use crate::control::GameInput;
 
 const DEFAULT_PLANE_V: Vec3 = Vec3::new(0.0, 0.5, 0.0);
-const Y_SHEARING_SENSITIVITY: f32 = 0.8;
 
 // TODO revert to pub(super) later
 
