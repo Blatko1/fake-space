@@ -3,7 +3,17 @@ use std::path::PathBuf;
 use nom::{error::convert_error, Finish};
 use winit::event::DeviceEvent;
 
-use crate::{control::GameInput, map::{room::RoomID, Map}, map_parser::{cleanup_input, MapParser}, models::ModelArray, player::Player, raycaster::{self, camera::Camera}, textures::TextureArray, CANVAS_HEIGHT, CANVAS_WIDTH};
+use crate::{
+    basic_raycaster,
+    control::GameInput,
+    map::{room::RoomID, Map},
+    map_parser::{cleanup_input, MapParser},
+    models::ModelArray,
+    player::Player,
+    raycaster::{self, camera::Camera},
+    textures::TextureArray,
+    CANVAS_HEIGHT, CANVAS_WIDTH,
+};
 
 const PHYSICS_TIMESTEP: f32 = 0.01;
 
@@ -21,27 +31,27 @@ pub struct GameState {
 
 impl GameState {
     pub fn new<P: Into<PathBuf>>(data_path: P) -> Self {
-                // TODO remove 'unwrap()'s
-                let path: PathBuf = data_path.into().canonicalize().unwrap();
-                let parent_path = path.parent().unwrap().to_path_buf();
-                let input = cleanup_input(std::fs::read_to_string(path).unwrap());
-                let (segments, textures, models) = 
-                    match MapParser::new(&input, parent_path).unwrap().parse().finish() {
-                    Ok((_, data)) => data,
-                    Err(e) => {
-                        println!("verbose errors: \n{}", convert_error(input.as_str(), e));
-                        panic!()
-                    }
-                };
+        // TODO remove 'unwrap()'s
+        let path: PathBuf = data_path.into().canonicalize().unwrap();
+        let parent_path = path.parent().unwrap().to_path_buf();
+        let input = cleanup_input(std::fs::read_to_string(path).unwrap());
+        let (segments, textures, models) = match MapParser::new(&input, parent_path)
+            .unwrap()
+            .parse()
+            .finish()
+        {
+            Ok((_, data)) => data,
+            Err(e) => {
+                println!("verbose errors: \n{}", convert_error(input.as_str(), e));
+                panic!()
+            }
+        };
 
-        let camera = Camera::new(
-            CANVAS_WIDTH,
-            CANVAS_HEIGHT,
-        );
+        let camera = Camera::new(CANVAS_WIDTH, CANVAS_HEIGHT);
 
         Self {
             camera,
-            
+
             map: Map::new(segments),
             textures: TextureArray::new(textures),
             models: ModelArray::new(models),
@@ -63,9 +73,17 @@ impl GameState {
         //self.world.update(&mut self.player);
     }
 
-    pub fn render<'a, C>(&mut self, canvas_column_iter: C) where
-    C: Iterator<Item = &'a mut [u8]> {
-        raycaster::cast_and_draw(&self.camera, &self.player, &self.map, &self.textures, &self.models, canvas_column_iter);
+    pub fn render<'a, C>(&mut self, canvas_column_iter: C)
+    where
+        C: Iterator<Item = &'a mut [u8]>,
+    {
+        basic_raycaster::cast_and_draw(
+            &self.camera,
+            &self.player,
+            &self.map,
+            &self.textures,
+            canvas_column_iter,
+        );
     }
 
     pub fn handle_game_input(&mut self, input: GameInput, is_pressed: bool) {
@@ -74,9 +92,9 @@ impl GameState {
 
     pub fn handle_device_event(&mut self, event: DeviceEvent) {
         match event {
-            DeviceEvent::MouseMotion { delta } =>  self.player.handle_mouse_motion(delta),
+            DeviceEvent::MouseMotion { delta } => self.player.handle_mouse_motion(delta),
             DeviceEvent::MouseWheel { delta } => self.camera.handle_mouse_wheel(delta),
-            _ => ()
+            _ => (),
         }
     }
 

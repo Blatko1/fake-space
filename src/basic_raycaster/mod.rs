@@ -1,39 +1,16 @@
-pub mod camera;
-mod object;
 mod platforms;
-pub(super) mod ray;
-mod skybox;
+mod ray;
 mod wall;
 
 use crate::map::room::{RoomID, RoomRef};
 use crate::map::Map;
-use crate::models::ModelArray;
 use crate::player::Player;
 use crate::textures::TextureArray;
-use camera::Camera;
-use glam::Vec3;
+use crate::raycaster::camera::Camera;
 
-use self::object::ObjectDrawData;
 use self::platforms::PlatformDrawData;
 use self::ray::Ray;
-use self::skybox::SkyboxSegment;
 use self::wall::WallDrawData;
-
-// Distance is in tiles
-const SPOTLIGHT_DISTANCE: f32 = 8.5;
-const SPOTLIGHT_SMOOTHED_DISTANCE: f32 = 2.5;
-const SPOTLIGHT_STRENGTH: f32 = 0.09;
-const FLASHLIGHT_INTENSITY: f32 = 1.35;
-const FLASHLIGHT_OUTER_RADIUS: f32 = 1.1;
-const FLASHLIGHT_INNER_RADIUS: f32 = 0.65;
-const FLASHLIGHT_DISTANCE: f32 = 16.0;
-
-const NORMAL_Y_POSITIVE: Vec3 = Vec3::new(0.0, 1.0, 0.0);
-const NORMAL_Y_NEGATIVE: Vec3 = Vec3::new(0.0, -1.0, 0.0);
-const NORMAL_X_POSITIVE: Vec3 = Vec3::new(1.0, 0.0, 0.0);
-const NORMAL_X_NEGATIVE: Vec3 = Vec3::new(-1.0, 0.0, 0.0);
-const NORMAL_Z_POSITIVE: Vec3 = Vec3::new(0.0, 0.0, 1.0);
-const NORMAL_Z_NEGATIVE: Vec3 = Vec3::new(0.0, 0.0, -1.0);
 
 #[derive(Debug, Copy, Clone)]
 pub struct PointXZ<T> {
@@ -52,7 +29,6 @@ impl<T> PointXZ<T> {
 struct ColumnRenderer<'a> {
     map: &'a Map,
     textures: &'a TextureArray,
-    models: &'a ModelArray,
     camera: &'a Camera,
 
     ray: Ray,
@@ -61,7 +37,6 @@ struct ColumnRenderer<'a> {
 
     current_room: RoomRef<'a>,
     current_room_dimensions: (i64, i64),
-    use_flashlight: f32,
 }
 
 impl<'a> ColumnRenderer<'a> {
@@ -71,16 +46,13 @@ impl<'a> ColumnRenderer<'a> {
         player: &'a Player,
         map: &'a Map,
         textures: &'a TextureArray,
-        models: &'a ModelArray,
     ) -> Self {
         let current_room = map.get_room_data(player.current_room_id());
         let current_room_dimensions = current_room.segment.dimensions_i64();
-        let use_flashlight = if player.use_flashlight() { 1.0 } else { 0.0 };
 
         Self {
             map,
             textures,
-            models,
             camera,
 
             ray,
@@ -89,12 +61,10 @@ impl<'a> ColumnRenderer<'a> {
 
             current_room,
             current_room_dimensions,
-            use_flashlight,
         }
     }
 
-    fn draw(&mut self, column: &mut [u8]) -> Vec<ObjectDrawData<'a>> {
-        let mut encountered_objects = Vec::new();
+    fn draw(&mut self, column: &mut [u8]) {
         // DDA loop
         loop {
             let current_tile_x = self.ray.next_tile.x as usize;
@@ -126,21 +96,16 @@ impl<'a> ColumnRenderer<'a> {
                 self.ray.wall_offset = wall_offset - wall_offset.floor();
             }
 
-            // Tile which the ray just traveled over before hitting a wall.
-            let current_tile = match self
+            // Tile which the ray just traveled over before hitting a wall
+            let current_tile = self
                 .current_room
                 .segment
-                .get_tile(current_tile_x, current_tile_z)
-            {
-                Some(&current_tile) => current_tile,
-                None => break,
-            };
+                .get_tile_unchecked(current_tile_x, current_tile_z);
 
             // Draw ground platform
             let ground_platform = PlatformDrawData {
                 texture_data: self.textures.get_texture_data(current_tile.ground_tex),
                 height_level: current_tile.ground_level,
-                normal: NORMAL_Y_POSITIVE,
                 draw_from_dist: self.ray.previous_wall_dist,
                 draw_to_dist: self.ray.wall_dist,
             };
@@ -151,22 +116,17 @@ impl<'a> ColumnRenderer<'a> {
             let ceiling_platform = PlatformDrawData {
                 texture_data: self.textures.get_texture_data(current_tile.ceiling_tex),
                 height_level: current_tile.ceiling_level,
-                normal: NORMAL_Y_NEGATIVE,
                 draw_from_dist: self.ray.wall_dist,
                 draw_to_dist: self.ray.previous_wall_dist,
             };
             let (drawn_from, _) = self.draw_platform(ceiling_platform, column);
             self.top_draw_bound = drawn_from;
 
-            // The next tile ray is going to travel over
-            let next_tile = match self
+            // The tile ray hit
+            let next_tile = self
                 .current_room
                 .segment
-                .get_tile(self.ray.next_tile.x as usize, self.ray.next_tile.z as usize)
-            {
-                Some(&t) => t,
-                None => break,
-            };
+                .get_tile_unchecked(self.ray.next_tile.x as usize, self.ray.next_tile.z as usize);
 
             // Draw bottom wall
             let bottom_wall_data = WallDrawData {
@@ -185,31 +145,6 @@ impl<'a> ColumnRenderer<'a> {
             };
             let (drawn_from, _) = self.draw_wall(top_wall_data, column);
             self.top_draw_bound = drawn_from;
-
-            // If a voxel object is hit, store it for later rendering
-            if let Some(object_id) = next_tile.object {
-                if let Some(model_id) = self.current_room.get_object(object_id) {
-                    let model_data = self.models.get_model_data(model_id);
-                    let dimensions = model_data.dimension as f32;
-                    let pos = Vec3::new(
-                        next_tile.position.x as f32 * dimensions,
-                        next_tile.ground_level * dimensions * 0.5,
-                        next_tile.position.z as f32 * dimensions,
-                    );
-                    encountered_objects.push(ObjectDrawData {
-                        pos,
-                        model_data,
-                        ray: self.ray,
-                        ambient_light_intensity: self
-                            .current_room
-                            .data
-                            .ambient_light_intensity(),
-                        bottom_draw_bound: self.bottom_draw_bound,
-                        top_draw_bound: self.top_draw_bound,
-                        use_flashlight: self.use_flashlight,
-                    });
-                }
-            }
 
             // Switch to the different room if portal is hit
             if let Some(src_dummy_portal) = next_tile.portal {
@@ -230,10 +165,10 @@ impl<'a> ColumnRenderer<'a> {
                 }
             }
 
+            fill_black(column, self.bottom_draw_bound, self.top_draw_bound);
+
             self.ray.previous_wall_dist = self.ray.wall_dist;
         }
-
-        encountered_objects
     }
 }
 
@@ -242,27 +177,18 @@ pub fn cast_and_draw<'a, C>(
     player: &Player,
     map: &Map,
     textures: &TextureArray,
-    models: &ModelArray,
     column_iter: C,
 ) where
     C: Iterator<Item = &'a mut [u8]>,
 {
-    let player_room = map.get_room_data(player.current_room_id());
-    let skybox_textures = textures.get_skybox_textures(player_room.data.skybox());
-
+    // TODO ask ChatGPT how to multitrhead this. 
     for (column_index, column) in column_iter.enumerate() {
         let ray = Ray::camera_cast(camera, column_index);
 
-        //let skybox = SkyboxSegment::new(camera, ray, skybox_textures);
-        //skybox.draw_skybox(column);
-
         let mut column_drawer =
-            ColumnRenderer::new(ray, camera, player, map, textures, models);
-        let encountered_objects = column_drawer.draw(column);
+            ColumnRenderer::new(ray, camera, player, map, textures);
 
-        if !encountered_objects.is_empty() {
-            object::draw_objects(encountered_objects, camera, column);
-        }
+        column_drawer.draw(column);
     }
 }
 

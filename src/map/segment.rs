@@ -86,9 +86,14 @@ impl Segment {
             .get(z as usize * self.dimensions.0 as usize + x as usize)
     }
 
+    // TODO do check while in loop like if x > 'bound' {break;}
     #[inline]
     pub fn get_tile(&self, x: usize, z: usize) -> Option<&Tile> {
         self.tiles.get(z * self.dimensions.0 as usize + x)
+    }
+
+    pub fn get_tile_unchecked(&self, x: usize, z: usize) -> &Tile {
+        &self.tiles[z * self.dimensions.0 as usize + x]
     }
 
     pub fn dimensions_i64(&self) -> (i64, i64) {

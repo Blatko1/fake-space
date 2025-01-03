@@ -4,7 +4,7 @@ mod segment;
 use std::path::PathBuf;
 
 use hashbrown::HashMap;
-use image::{ImageReader, EncodableLayout};
+use image::{EncodableLayout, ImageReader};
 use nom::branch::alt;
 use nom::bytes::complete::{tag, take, take_until, take_while};
 use nom::character::complete::{alphanumeric1, char};
@@ -24,7 +24,6 @@ use super::models::{ModelData, ModelID};
 use super::textures::TextureID;
 
 use self::segment::SegmentParser;
-
 
 #[derive(Debug)]
 struct ParsedTexture {
@@ -66,7 +65,13 @@ impl<'a> MapParser<'a> {
         })
     }
 
-    pub fn parse(mut self) -> IResult<&'a str, (Vec<Segment>, Vec<TextureData>, Vec<ModelData>), VerboseError<&'a str>> {
+    pub fn parse(
+        mut self,
+    ) -> IResult<
+        &'a str,
+        (Vec<Segment>, Vec<TextureData>, Vec<ModelData>),
+        VerboseError<&'a str>,
+    > {
         let (_, expressions) = separate_expressions(self.input)?;
         for expr in expressions {
             let (i, key) = line_key(expr)?;

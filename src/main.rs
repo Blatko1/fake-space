@@ -1,12 +1,13 @@
 mod backend;
+mod basic_raycaster;
 mod control;
-mod player;
 mod map;
-mod textures;
-mod models;
 mod map_parser;
+mod models;
+mod player;
 mod raycaster;
 mod state;
+mod textures;
 
 use std::fs;
 use std::path::PathBuf;
@@ -23,10 +24,10 @@ use map_parser::{cleanup_input, MapParser};
 use models::ModelArray;
 use nom::error::convert_error;
 use nom::Finish;
-use player::{Player};
+use player::Player;
 use pollster::block_on;
 use raycaster::camera::Camera;
-use state::{GameState};
+use state::GameState;
 use textures::TextureArray;
 use wgpu_text::glyph_brush::ab_glyph::FontVec;
 use winit::application::ApplicationHandler;
@@ -137,12 +138,11 @@ impl ApplicationHandler for App {
             self.state.update(elapsed.as_secs_f32());
 
             if let Some(canvas) = self.canvas.as_mut() {
-                // First render game by pixel manipulation
+                // First render game by pixel manipulation, ...
                 self.state.render(canvas.mut_column_iterator());
-                // Then request the screen redraw
+                // ... then request the screen redraw.
                 canvas.request_redraw();
             }
-
         } else if SLEEP_BETWEEN_FRAMES {
             event_loop.set_control_flow(ControlFlow::WaitUntil(
                 Instant::now()

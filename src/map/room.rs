@@ -1,8 +1,14 @@
 use rand::{rngs::ThreadRng, seq::SliceRandom, Rng};
 
-use crate::{models::ModelID, textures::{TextureArray, TextureDataRef}};
+use crate::{
+    models::ModelID,
+    textures::{TextureArray, TextureDataRef},
+};
 
-use super::{portal::{Portal, PortalID}, segment::{ObjectID, Segment, SegmentID, SkyboxTextureIDs}};
+use super::{
+    portal::{Portal, PortalID},
+    segment::{ObjectID, Segment, SegmentID, SkyboxTextureIDs},
+};
 
 const VOXEL_CHANCE: f64 = 0.3;
 

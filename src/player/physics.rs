@@ -3,7 +3,11 @@ use std::f32::consts::{FRAC_2_PI, FRAC_PI_2, PI};
 
 use glam::{Vec2, Vec3};
 
-use crate::{control::GameInput, map::segment::Segment, raycaster::camera::{normalize_rad, CameraTarget, CameraTargetData}};
+use crate::{
+    control::GameInput,
+    map::segment::Segment,
+    raycaster::camera::{normalize_rad, CameraTarget, CameraTargetData},
+};
 
 const MOVEMENT_CONST: f32 = 1.5;
 const VERTICAL_MOVEMENT_CONST: f32 = 10.0;
@@ -68,7 +72,7 @@ impl CylinderBody {
             pitch,
             forward_dir,
             right_dir,
-            
+
             radius,
             height,
             eye_height: eye_height_factor * height,
@@ -89,18 +93,16 @@ impl CylinderBody {
         }
     }
 
-    pub fn collision_detection_resolution(
-        &mut self,
-        segment: &Segment,
-    ) {
+    pub fn collision_detection_resolution(&mut self, segment: &Segment) {
         if self.is_ghost {
             return;
         }
 
         let Some(current_tile) = segment
-            .get_tile_checked(self.feet_position.x as i64, self.feet_position.z as i64) else {
-                return
-            };
+            .get_tile_checked(self.feet_position.x as i64, self.feet_position.z as i64)
+        else {
+            return;
+        };
         let mut ground_level = current_tile.ground_level;
         let mut ceiling_level = current_tile.ceiling_level;
 
@@ -211,10 +213,7 @@ impl CylinderBody {
         }
     }
 
-    pub fn update_physics(
-        &mut self,
-        delta: f32,
-    ) {
+    pub fn update_physics(&mut self, delta: f32) {
         let movement = self.input_state.movement();
         let (horizontal_movement, vertical_movement) = (movement.x, movement.y);
         let movement_dir =
@@ -297,7 +296,7 @@ impl CylinderBody {
             GameInput::Jump => self.input_state.jump = is_pressed,
             GameInput::FlyUp => self.input_state.fly_up = is_pressed,
             GameInput::FlyDown => self.input_state.fly_down = is_pressed,
-            _ => ()
+            _ => (),
         }
     }
 
@@ -351,7 +350,11 @@ impl InputState {
 impl CameraTarget for CylinderBody {
     fn get_target_data(&self) -> CameraTargetData {
         CameraTargetData {
-            origin: Vec3::new(self.feet_position.x, self.feet_position.y + self.eye_height, self.feet_position.z),
+            origin: Vec3::new(
+                self.feet_position.x,
+                self.feet_position.y + self.eye_height,
+                self.feet_position.z,
+            ),
             forward_dir: self.forward_dir,
             right_dir: self.right_dir,
             yaw: self.yaw,

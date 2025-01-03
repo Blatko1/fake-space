@@ -1,7 +1,8 @@
 use super::{
-    camera::Camera, ray::Ray, Side, NORMAL_X_NEGATIVE, NORMAL_X_POSITIVE, NORMAL_Y_NEGATIVE, NORMAL_Y_POSITIVE, NORMAL_Z_NEGATIVE, NORMAL_Z_POSITIVE
+    camera::Camera, ray::Ray, Side, NORMAL_X_NEGATIVE, NORMAL_X_POSITIVE,
+    NORMAL_Y_NEGATIVE, NORMAL_Y_POSITIVE, NORMAL_Z_NEGATIVE, NORMAL_Z_POSITIVE,
 };
-use crate::{models::ModelDataRef, };
+use crate::models::ModelDataRef;
 use dot_vox::Color;
 use glam::Vec3;
 use rayon::{

@@ -1,9 +1,9 @@
 pub mod ctx;
 mod debug;
 
-use std::ptr;
 use debug::DebugUI;
 use pollster::block_on;
+use std::ptr;
 use wgpu::util::DeviceExt;
 use wgpu_text::glyph_brush::ab_glyph::FontVec;
 use winit::{dpi::PhysicalSize, event_loop::ActiveEventLoop};
@@ -39,7 +39,11 @@ pub struct Canvas {
 impl Canvas {
     const CANVAS_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8UnormSrgb;
 
-    pub fn new(event_loop: &ActiveEventLoop, canvas_width: u32, canvas_height: u32) -> Self {
+    pub fn new(
+        event_loop: &ActiveEventLoop,
+        canvas_width: u32,
+        canvas_height: u32,
+    ) -> Self {
         let ctx = block_on(Ctx::new(event_loop)).unwrap();
         let device = ctx.device();
         let render_format = ctx.config().format;
@@ -208,7 +212,7 @@ impl Canvas {
             texture,
             size,
 
-            debug_ui
+            debug_ui,
         }
     }
 

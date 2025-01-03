@@ -1,8 +1,8 @@
 use glam::Vec3;
 use std::ptr;
 
-use super::{camera::Camera, ray::Ray};
 use super::Side;
+use super::{camera::Camera, ray::Ray};
 use crate::textures::{SkyboxTexturesRef, TextureDataRef};
 
 /// Draws over the whole screen (simultaneously clears the whole screen).

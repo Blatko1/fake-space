@@ -1,7 +1,8 @@
 use crate::map::portal::{Portal, PortalRotationDifference};
+use crate::raycaster::camera::Camera;
 use glam::Vec3;
 
-use super::{camera::Camera, PointXZ, Side};
+use super::{PointXZ, Side};
 
 // TODO maybe rename to `MovingRay`
 #[derive(Debug, Clone, Copy)]
@@ -163,19 +164,6 @@ impl Ray {
                 self.horizontal_plane = -self.horizontal_plane;
                 self.step_x = -self.step_x;
                 self.step_z = -self.step_z;
-            }
-        }
-    }
-
-    pub fn get_normal(&self) -> Vec3 {
-        match self.hit_wall_side {
-            Side::Vertical => {
-                // West or East Face
-                Vec3::new(-self.dir.x.signum(), 0.0, 0.0)
-            }
-            Side::Horizontal => {
-                // South or North Face
-                Vec3::new(0.0, 0.0, -self.dir.z.signum())
             }
         }
     }

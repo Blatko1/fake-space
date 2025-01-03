@@ -4,12 +4,11 @@ use glam::{Vec2, Vec3};
 use winit::event::MouseScrollDelta;
 
 use crate::{
-    control::GameInput, map::{room::RoomID, Map}
+    control::GameInput,
+    map::{room::RoomID, Map},
 };
 
-use self::{
-    physics::{CylinderBody, PhysicsStateDebugData},
-};
+use self::physics::{CylinderBody, PhysicsStateDebugData};
 
 pub struct Player {
     body: CylinderBody,
@@ -21,7 +20,20 @@ pub struct Player {
 
 impl Player {
     pub fn new(current_room: RoomID) -> Self {
-        let body = CylinderBody::new(Vec3::new(10.5, 1.0, 14.5), 90.0f32.to_radians(), 0.0, 0.2, 2.0, 0.9, 1.2, 3.5, 3.0, -4.0, 2.5, 0.0);
+        let body = CylinderBody::new(
+            Vec3::new(10.5, 1.0, 14.5),
+            90.0f32.to_radians(),
+            0.0,
+            0.2,
+            2.0,
+            0.9,
+            1.2,
+            3.5,
+            3.0,
+            -4.0,
+            2.5,
+            0.0,
+        );
 
         Self {
             score: 0,
@@ -37,10 +49,10 @@ impl Player {
         self.body.update_physics(delta);
 
         // Teleportation between rooms
-        if let Some(tile) = room
-            .segment
-            .get_tile_checked(self.body.feet_position.x as i64, self.body.feet_position.z as i64)
-        {
+        if let Some(tile) = room.segment.get_tile_checked(
+            self.body.feet_position.x as i64,
+            self.body.feet_position.z as i64,
+        ) {
             // Check if tile has a portal
             if let Some(src_dummy_portal) = tile.portal {
                 // Check if portal has a linked portal
@@ -59,9 +71,7 @@ impl Player {
                 }
             }
         }
-        self
-            .body
-            .collision_detection_resolution(room.segment);
+        self.body.collision_detection_resolution(room.segment);
     }
 
     pub fn increase_score(&mut self, add: u32) {
@@ -73,7 +83,10 @@ impl Player {
     }
 
     pub fn current_tile_pos(&self) -> (i64, i64) {
-        (self.body.feet_position.x as i64, self.body.feet_position.z as i64)
+        (
+            self.body.feet_position.x as i64,
+            self.body.feet_position.z as i64,
+        )
     }
 
     pub fn use_flashlight(&self) -> bool {
