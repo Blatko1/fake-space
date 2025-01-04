@@ -1,9 +1,19 @@
 use std::path::PathBuf;
 
 use nom::{error::convert_error, Finish};
+use rayon::iter::ParallelIterator;
 use winit::event::DeviceEvent;
 
-use crate::{basic_raycaster, control::GameInput, map::{room::RoomID, Map}, map_parser::{cleanup_input, MapParser}, models::ModelArray, player::Player, raycaster::{self, camera::Camera}, textures::TextureArray};
+use crate::{
+    basic_raycaster,
+    control::GameInput,
+    map::{room::RoomID, Map},
+    map_parser::{cleanup_input, MapParser},
+    models::ModelArray,
+    player::Player,
+    raycaster::{self, camera::Camera},
+    textures::TextureArray,
+};
 
 const PHYSICS_TIMESTEP: f32 = 0.01;
 
@@ -20,24 +30,28 @@ pub struct GameState {
 }
 
 impl GameState {
-    pub fn new<P: Into<PathBuf>>(data_path: P, view_width: u32, view_height: u32) -> Self {
-                // TODO remove 'unwrap()'s
-                let path: PathBuf = data_path.into().canonicalize().unwrap();
-                let parent_path = path.parent().unwrap().to_path_buf();
-                let input = cleanup_input(std::fs::read_to_string(path).unwrap());
-                let (segments, textures, models) = 
-                    match MapParser::new(&input, parent_path).unwrap().parse().finish() {
-                    Ok((_, data)) => data,
-                    Err(e) => {
-                        println!("verbose errors: \n{}", convert_error(input.as_str(), e));
-                        panic!()
-                    }
-                };
+    pub fn new<P: Into<PathBuf>>(
+        data_path: P,
+        view_width: u32,
+        view_height: u32,
+    ) -> Self {
+        // TODO remove 'unwrap()'s
+        let path: PathBuf = data_path.into().canonicalize().unwrap();
+        let parent_path = path.parent().unwrap().to_path_buf();
+        let input = cleanup_input(std::fs::read_to_string(path).unwrap());
+        let (segments, textures, models) = match MapParser::new(&input, parent_path)
+            .unwrap()
+            .parse()
+            .finish()
+        {
+            Ok((_, data)) => data,
+            Err(e) => {
+                println!("verbose errors: \n{}", convert_error(input.as_str(), e));
+                panic!()
+            }
+        };
 
-        let camera = Camera::new(
-            view_width,
-            view_height,
-        );
+        let camera = Camera::new(view_width, view_height);
 
         Self {
             camera,
@@ -73,6 +87,16 @@ impl GameState {
             &self.map,
             &self.textures,
             canvas_column_iter,
+        );
+    }
+
+    pub fn render_par<'a>(&mut self, canvas: &mut [u8]) {
+        basic_raycaster::cast_and_draw2(
+            &self.camera,
+            &self.player,
+            &self.map,
+            &self.textures,
+            canvas,
         );
     }
 

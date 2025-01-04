@@ -3,6 +3,7 @@ mod debug;
 
 use debug::DebugUI;
 use pollster::block_on;
+use rayon::{iter::ParallelIterator, slice::ParallelSliceMut};
 use std::ptr;
 use wgpu::util::DeviceExt;
 use wgpu_text::glyph_brush::ab_glyph::FontVec;
@@ -233,6 +234,10 @@ impl Canvas {
         self.buffer.chunks_exact_mut(self.view_height as usize * 3)
     }
 
+    pub fn mut_par_column_iterator(&mut self) -> &mut [u8] {
+        &mut self.buffer
+    }
+
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         // Flip the buffer texture to correct position (90 degrees anticlockwise)
         self.frame
@@ -329,7 +334,8 @@ impl Canvas {
 
         let window_width = config.width as f32;
         let window_height = config.height as f32;
-        let (texture_width, texture_height) = (self.view_width as f32, self.view_height as f32);
+        let (texture_width, texture_height) =
+            (self.view_width as f32, self.view_height as f32);
 
         let scale = (window_width / texture_width)
             .min(window_height / texture_height)
@@ -372,7 +378,8 @@ impl Canvas {
         let device = self.ctx.device();
         self.view_width += CANVAS_WIDTH_FACTOR;
         self.view_height += CANVAS_HEIGHT_FACTOR;
-        let (size, texture, view) = Self::create_frame_texture(device, self.view_width, self.view_height);
+        let (size, texture, view) =
+            Self::create_frame_texture(device, self.view_width, self.view_height);
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Main Bind Group"),
             layout: &self.bind_group_layout,
@@ -394,18 +401,25 @@ impl Canvas {
         self.size = size;
         self.texture = texture;
         self.bind_group = bind_group;
-        
+
         let buffer_len = (self.view_width * self.view_height * 3) as usize;
         let frame_len = (self.view_width * self.view_height * 4) as usize;
         self.buffer = vec![255; buffer_len];
         self.frame = vec![255; frame_len];
     }
-    
+
     pub fn decrease_resolution(&mut self) {
         let device = self.ctx.device();
-        self.view_width = self.view_width.saturating_sub(CANVAS_WIDTH_FACTOR).max(CANVAS_WIDTH_FACTOR);
-        self.view_height = self.view_height.saturating_sub(CANVAS_HEIGHT_FACTOR).max(CANVAS_HEIGHT_FACTOR);
-        let (size, texture, view) = Self::create_frame_texture(device, self.view_width, self.view_height);
+        self.view_width = self
+            .view_width
+            .saturating_sub(CANVAS_WIDTH_FACTOR)
+            .max(CANVAS_WIDTH_FACTOR);
+        self.view_height = self
+            .view_height
+            .saturating_sub(CANVAS_HEIGHT_FACTOR)
+            .max(CANVAS_HEIGHT_FACTOR);
+        let (size, texture, view) =
+            Self::create_frame_texture(device, self.view_width, self.view_height);
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Main Bind Group"),
             layout: &self.bind_group_layout,
@@ -434,7 +448,11 @@ impl Canvas {
         self.frame = vec![255; frame_len];
     }
 
-    pub fn create_frame_texture(device: &wgpu::Device, width: u32, height: u32) -> (wgpu::Extent3d, wgpu::Texture, wgpu::TextureView) {
+    pub fn create_frame_texture(
+        device: &wgpu::Device,
+        width: u32,
+        height: u32,
+    ) -> (wgpu::Extent3d, wgpu::Texture, wgpu::TextureView) {
         let size = wgpu::Extent3d {
             width,
             height,

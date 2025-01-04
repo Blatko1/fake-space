@@ -15,7 +15,7 @@ use std::str::FromStr;
 use std::time::{Duration, Instant};
 
 use backend::ctx::Ctx;
-use backend::{Canvas, };
+use backend::Canvas;
 use control::{ControllerSettings, GameInput};
 use glam::Vec2;
 use map::room::RoomID;
@@ -43,8 +43,8 @@ use winit::{
 const FPS_CAP: u32 = 60;
 const CANVAS_WIDTH_FACTOR: u32 = 16;
 const CANVAS_HEIGHT_FACTOR: u32 = 9;
-const DEFAULT_CANVAS_WIDTH: u32 = 16 * 10;
-const DEFAULT_CANVAS_HEIGHT: u32 = 9 * 10;
+const DEFAULT_CANVAS_WIDTH: u32 = 16 * 40;
+const DEFAULT_CANVAS_HEIGHT: u32 = 9 * 40;
 
 pub struct App {
     canvas: Option<Canvas>,
@@ -63,7 +63,11 @@ impl App {
             canvas: None,
             controls: ControllerSettings::init(),
 
-            state: GameState::new("maps/map.txt", DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT),
+            state: GameState::new(
+                "maps/map.txt",
+                DEFAULT_CANVAS_WIDTH,
+                DEFAULT_CANVAS_HEIGHT,
+            ),
 
             time_per_frame: Duration::from_secs_f64(1.0 / FPS_CAP as f64),
             now: Instant::now(),
@@ -74,7 +78,11 @@ impl App {
 
 impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        self.canvas = Some(Canvas::new(event_loop, DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT));
+        self.canvas = Some(Canvas::new(
+            event_loop,
+            DEFAULT_CANVAS_WIDTH,
+            DEFAULT_CANVAS_HEIGHT,
+        ));
     }
 
     fn window_event(
@@ -101,11 +109,38 @@ impl ApplicationHandler for App {
                         let is_pressed = event.state.is_pressed();
                         for &input in game_input.iter() {
                             match input {
-                                GameInput::ToggleSleepBetweenFrames if !is_pressed => self.sleep_between_frames = !self.sleep_between_frames,
-                                GameInput::ToggleFullScreen if !is_pressed => 
-                                    self.canvas.as_mut().unwrap().toggle_full_screen(),
-                                GameInput::IncreaseResolution if !is_pressed => {let canvas = self.canvas.as_mut().unwrap(); canvas.increase_resolution(); self.state.recreate_camera(canvas.view_width(), canvas.view_height()); println!("new dimensions: {}x{}", canvas.view_width(), canvas.view_height())},
-                                GameInput::DecreaseResolution if !is_pressed => {let canvas = self.canvas.as_mut().unwrap(); canvas.decrease_resolution(); self.state.recreate_camera(canvas.view_width(), canvas.view_height()); println!("new dimensions: {}x{}", canvas.view_width(), canvas.view_height())},
+                                GameInput::ToggleSleepBetweenFrames if !is_pressed => {
+                                    self.sleep_between_frames = !self.sleep_between_frames
+                                }
+                                GameInput::ToggleFullScreen if !is_pressed => {
+                                    self.canvas.as_mut().unwrap().toggle_full_screen()
+                                }
+                                GameInput::IncreaseResolution if !is_pressed => {
+                                    let canvas = self.canvas.as_mut().unwrap();
+                                    canvas.increase_resolution();
+                                    self.state.recreate_camera(
+                                        canvas.view_width(),
+                                        canvas.view_height(),
+                                    );
+                                    println!(
+                                        "new dimensions: {}x{}",
+                                        canvas.view_width(),
+                                        canvas.view_height()
+                                    )
+                                }
+                                GameInput::DecreaseResolution if !is_pressed => {
+                                    let canvas = self.canvas.as_mut().unwrap();
+                                    canvas.decrease_resolution();
+                                    self.state.recreate_camera(
+                                        canvas.view_width(),
+                                        canvas.view_height(),
+                                    );
+                                    println!(
+                                        "new dimensions: {}x{}",
+                                        canvas.view_width(),
+                                        canvas.view_height()
+                                    )
+                                }
                                 _ => self.state.handle_game_input(input, is_pressed),
                             }
                         }
@@ -148,12 +183,13 @@ impl ApplicationHandler for App {
             self.state.update(elapsed.as_secs_f32());
 
             if let Some(canvas) = self.canvas.as_mut() {
+                println!("elapsed: {} ms, {} FPS", elapsed.as_micros(), 1000000.0 / elapsed.as_micros() as f64);
                 // First render game by pixel manipulation, ...
                 self.state.render(canvas.mut_column_iterator());
+                //self.state.render_par(canvas.mut_par_column_iterator());
                 // ... then request the screen redraw.
                 canvas.request_redraw();
             }
-
         } else if self.sleep_between_frames {
             event_loop.set_control_flow(ControlFlow::WaitUntil(
                 Instant::now()

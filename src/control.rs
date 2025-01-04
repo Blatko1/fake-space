@@ -30,7 +30,7 @@ impl ControllerSettings {
             GameInput::ToggleSleepBetweenFrames => KeyCode::End,
             GameInput::ToggleFullScreen => KeyCode::F11,
             GameInput::IncreaseResolution => KeyCode::PageUp,
-            GameInput::DecreaseResolution => KeyCode::PageDown
+            GameInput::DecreaseResolution => KeyCode::PageDown,
         }
     }
 }
@@ -68,5 +68,5 @@ pub enum GameInput {
     ToggleSleepBetweenFrames,
     ToggleFullScreen,
     IncreaseResolution,
-    DecreaseResolution
+    DecreaseResolution,
 }
