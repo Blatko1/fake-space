@@ -51,6 +51,7 @@ pub struct Ray {
     /// Offset which represent where exactly was the wall hit
     /// (at which x coordinate).
     pub wall_offset: f32,
+    pub skybox_wall_offset: f32
 }
 
 impl Ray {
@@ -86,6 +87,16 @@ impl Ray {
             (Side::Horizontal, wall_offset - wall_offset.floor())
         };
 
+        let skybox_wall_offset = 
+        if (dir.x >= 0.0 && dir.z.abs() <= dir.x) || 
+            (dir.x < 0.0 && dir.z.abs() <= -dir.x) {
+                let t = 0.5 / dir.x;
+                0.5 - t * dir.z
+            } else {
+                let t = 0.5 / dir.z;
+                0.5 + t * dir.x
+            };
+
         Ray {
             column_index,
             dir,
@@ -107,6 +118,7 @@ impl Ray {
             previous_wall_dist: wall_dist,
             hit_wall_side: side,
             wall_offset,
+            skybox_wall_offset
         }
     }
 

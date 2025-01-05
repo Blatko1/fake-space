@@ -234,7 +234,7 @@ impl Canvas {
         self.buffer.chunks_exact_mut(self.view_height as usize * 3)
     }
 
-    pub fn mut_par_column_iterator(&mut self) -> &mut [u8] {
+    pub fn mut_column(&mut self) -> &mut [u8] {
         &mut self.buffer
     }
 

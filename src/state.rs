@@ -77,21 +77,18 @@ impl GameState {
         //self.world.update(&mut self.player);
     }
 
-    pub fn render<'a, C>(&mut self, canvas_column_iter: C)
-    where
-        C: Iterator<Item = &'a mut [u8]>,
-    {
+    pub fn render<'a>(&mut self, canvas: &mut [u8]) {
         basic_raycaster::cast_and_draw(
             &self.camera,
             &self.player,
             &self.map,
             &self.textures,
-            canvas_column_iter,
+            canvas,
         );
     }
 
     pub fn render_par<'a>(&mut self, canvas: &mut [u8]) {
-        basic_raycaster::cast_and_draw2(
+        basic_raycaster::cast_and_draw_par(
             &self.camera,
             &self.player,
             &self.map,

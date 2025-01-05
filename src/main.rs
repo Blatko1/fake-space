@@ -9,29 +9,13 @@ mod raycaster;
 mod state;
 mod textures;
 
-use std::fs;
-use std::path::PathBuf;
-use std::str::FromStr;
 use std::time::{Duration, Instant};
 
-use backend::ctx::Ctx;
 use backend::Canvas;
 use control::{ControllerSettings, GameInput};
-use glam::Vec2;
-use map::room::RoomID;
-use map::Map;
-use map_parser::{cleanup_input, MapParser};
-use models::ModelArray;
-use nom::error::convert_error;
-use nom::Finish;
-use player::Player;
-use pollster::block_on;
-use raycaster::camera::Camera;
 use state::GameState;
-use textures::TextureArray;
-use wgpu_text::glyph_brush::ab_glyph::FontVec;
 use winit::application::ApplicationHandler;
-use winit::event::{self, DeviceEvent, DeviceId, KeyEvent, StartCause};
+use winit::event::{ DeviceEvent, DeviceId, KeyEvent, StartCause};
 use winit::event_loop::ActiveEventLoop;
 use winit::keyboard::{Key, NamedKey, PhysicalKey};
 use winit::window::WindowId;
@@ -43,8 +27,8 @@ use winit::{
 const FPS_CAP: u32 = 60;
 const CANVAS_WIDTH_FACTOR: u32 = 16;
 const CANVAS_HEIGHT_FACTOR: u32 = 9;
-const DEFAULT_CANVAS_WIDTH: u32 = 16 * 40;
-const DEFAULT_CANVAS_HEIGHT: u32 = 9 * 40;
+const DEFAULT_CANVAS_WIDTH: u32 = 16 * 10;
+const DEFAULT_CANVAS_HEIGHT: u32 = 9 * 10;
 
 pub struct App {
     canvas: Option<Canvas>,
@@ -183,10 +167,14 @@ impl ApplicationHandler for App {
             self.state.update(elapsed.as_secs_f32());
 
             if let Some(canvas) = self.canvas.as_mut() {
-                println!("elapsed: {} ms, {} FPS", elapsed.as_micros(), 1000000.0 / elapsed.as_micros() as f64);
+                println!(
+                    "elapsed: {} ms, {} FPS",
+                    elapsed.as_micros(),
+                    1000000.0 / elapsed.as_micros() as f64
+                );
                 // First render game by pixel manipulation, ...
-                self.state.render(canvas.mut_column_iterator());
-                //self.state.render_par(canvas.mut_par_column_iterator());
+                self.state.render(canvas.mut_column());
+                //self.state.render_par(canvas.mut_column());
                 // ... then request the screen redraw.
                 canvas.request_redraw();
             }

@@ -1,7 +1,6 @@
 use std::time::Instant;
 
 use crate::backend::ctx::Ctx;
-use crate::backend::Canvas;
 use crate::player::PlayerDebugData;
 use wgpu::RenderPass;
 use wgpu_text::glyph_brush::ab_glyph::FontVec;
