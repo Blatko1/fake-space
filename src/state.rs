@@ -5,7 +5,7 @@ use rayon::iter::ParallelIterator;
 use winit::event::DeviceEvent;
 
 use crate::{
-    basic_raycaster,
+    basic_raycaster::{self, FrameRenderer},
     control::GameInput,
     map::{room::RoomID, Map},
     map_parser::{cleanup_input, MapParser},
@@ -78,23 +78,11 @@ impl GameState {
     }
 
     pub fn render<'a>(&mut self, canvas: &mut [u8]) {
-        basic_raycaster::cast_and_draw(
-            &self.camera,
-            &self.player,
-            &self.map,
-            &self.textures,
-            canvas,
-        );
+        FrameRenderer::new(&self.camera, &self.player, &self.map, &self.textures).render(canvas);
     }
 
     pub fn render_par<'a>(&mut self, canvas: &mut [u8]) {
-        basic_raycaster::cast_and_draw_par(
-            &self.camera,
-            &self.player,
-            &self.map,
-            &self.textures,
-            canvas,
-        );
+        FrameRenderer::new(&self.camera, &self.player, &self.map, &self.textures).render_par(canvas);
     }
 
     pub fn handle_game_input(&mut self, input: GameInput, is_pressed: bool) {

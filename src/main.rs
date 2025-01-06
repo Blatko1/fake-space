@@ -27,8 +27,8 @@ use winit::{
 const FPS_CAP: u32 = 60;
 const CANVAS_WIDTH_FACTOR: u32 = 16;
 const CANVAS_HEIGHT_FACTOR: u32 = 9;
-const DEFAULT_CANVAS_WIDTH: u32 = 16 * 10;
-const DEFAULT_CANVAS_HEIGHT: u32 = 9 * 10;
+const DEFAULT_CANVAS_WIDTH: u32 = 16 * 15;
+const DEFAULT_CANVAS_HEIGHT: u32 = 9 * 15;
 
 pub struct App {
     canvas: Option<Canvas>,
@@ -173,8 +173,7 @@ impl ApplicationHandler for App {
                     1000000.0 / elapsed.as_micros() as f64
                 );
                 // First render game by pixel manipulation, ...
-                self.state.render(canvas.mut_column());
-                //self.state.render_par(canvas.mut_column());
+                self.state.render_par(canvas.mut_column());
                 // ... then request the screen redraw.
                 canvas.request_redraw();
             }

@@ -51,7 +51,10 @@ pub struct Ray {
     /// Offset which represent where exactly was the wall hit
     /// (at which x coordinate).
     pub wall_offset: f32,
-    pub skybox_wall_offset: f32
+
+    pub skybox_wall_offset: f32,
+    pub skybox_wall: SkyboxSide,
+    pub half_skybox_wall_pixel_height: f32
 }
 
 impl Ray {
@@ -87,15 +90,29 @@ impl Ray {
             (Side::Horizontal, wall_offset - wall_offset.floor())
         };
 
-        let skybox_wall_offset = 
-        if (dir.x >= 0.0 && dir.z.abs() <= dir.x) || 
-            (dir.x < 0.0 && dir.z.abs() <= -dir.x) {
-                let t = 0.5 / dir.x;
-                0.5 - t * dir.z
-            } else {
-                let t = 0.5 / dir.z;
-                0.5 + t * dir.x
-            };
+        let (skybox_wall_offset, half_skybox_wall_pixel_height, skybox_wall);
+        // West/East side
+        if dir.x.abs() >= dir.z.abs() {
+            let t = 0.5 / dir.x;
+            skybox_wall_offset = 0.5 - t * dir.z;
+            // Before was camera.f_height / delta_dist_x
+            half_skybox_wall_pixel_height = camera.f_height * dir.x.abs();
+            skybox_wall = match dir.x >= 0.0 {
+                true => SkyboxSide::East,
+                false => SkyboxSide::West,
+            }
+        } 
+        // North/South side
+        else {
+            let t = 0.5 / dir.z;
+            skybox_wall_offset = 0.5 + t * dir.x;
+            // Before was camera.f_height / delta_dist_z
+            half_skybox_wall_pixel_height = camera.f_height * dir.z.abs();
+            skybox_wall = match dir.z >= 0.0 {
+                true => SkyboxSide::North,
+                false => SkyboxSide::South,
+            }
+        }
 
         Ray {
             column_index,
@@ -118,7 +135,10 @@ impl Ray {
             previous_wall_dist: wall_dist,
             hit_wall_side: side,
             wall_offset,
-            skybox_wall_offset
+
+            skybox_wall_offset,
+            skybox_wall,
+            half_skybox_wall_pixel_height
         }
     }
 
@@ -179,4 +199,12 @@ impl Ray {
             }
         }
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum SkyboxSide {
+    North,
+    East,
+    South,
+    West
 }

@@ -18,12 +18,12 @@
 #SkyTop = src:"../res/sky_top.png", transparency:false;
 #SkyBottom = src:"../res/sky_bottom.png", transparency:false;
 
-//#NightNorth = src:"../res/night_north.png", transparency:false;
-//#NightEast = src:"../res/night_east.png", transparency:false;
-//#NightSouth = src:"../res/night_south.png", transparency:false;
-//#NightWest = src:"../res/night_west.png", transparency:false;
-//#NightTop = src:"../res/night_top.png", transparency:false;
-//#NightBottom = src:"../res/night_bottom.png", transparency:false;
+#NightNorth = src:"../res/night_north.png", transparency:false;
+#NightEast = src:"../res/night_east.png", transparency:false;
+#NightSouth = src:"../res/night_south.png", transparency:false;
+#NightWest = src:"../res/night_west.png", transparency:false;
+#NightTop = src:"../res/night_top.png", transparency:false;
+#NightBottom = src:"../res/night_bottom.png", transparency:false;
 
 #Sky2North = src:"../res/sky2_north.png", transparency:false;
 #Sky2East = src:"../res/sky2_east.png", transparency:false;
@@ -52,9 +52,9 @@
 // Declare the segments
 // You can't have multiple segments with the same name
 !start = src:start.txt, ambientLight: 1.0, 
-    skyboxNorth: SkyNorth, skyboxEast: SkyEast, 
-    skyboxSouth: SkySouth, skyboxWest: SkyWest, 
-    skyboxTop: SkyTop, skyboxBottom: SkyBottom; //, light_effect:
+    skyboxNorth: NightNorth, skyboxEast: NightEast, 
+    skyboxSouth: NightSouth, skyboxWest: NightWest, 
+    skyboxTop: NightTop, skyboxBottom: NightBottom; //, light_effect:
 !root = src:root.txt, ambientLight: 0;//, light_effect:
 //!straight = src:straight.txt, ambientLight: 0;
 !lTurn = src:l_turn.txt, repeatable: true, ambientLight: 0;//, light_effect:
