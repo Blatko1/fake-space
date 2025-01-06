@@ -2,8 +2,8 @@ use std::fmt::Debug;
 
 use crate::map::segment::SkyboxTextureIDs;
 
-const DEFAULT_TEXTURE_WIDTH: u32 = 2;
-const DEFAULT_TEXTURE_HEIGHT: u32 = 2;
+const DEFAULT_TEXTURE_WIDTH: usize = 2;
+const DEFAULT_TEXTURE_HEIGHT: usize = 2;
 const DEFAULT_TEXTURE_RGBA: [u8; 16] = [
     200, 0, 200, 255, 0, 0, 0, 255, 0, 0, 0, 255, 200, 0, 200, 255,
 ];
@@ -61,13 +61,13 @@ impl Default for TextureID {
 
 pub struct TextureData {
     data: Vec<u8>,
-    width: u32,
-    height: u32,
+    width: usize,
+    height: usize,
     transparency: bool,
 }
 
 impl TextureData {
-    pub fn new(data: Vec<u8>, width: u32, height: u32, transparency: bool) -> Self {
+    pub fn new(data: Vec<u8>, width: usize, height: usize, transparency: bool) -> Self {
         Self {
             data,
             width,
@@ -92,7 +92,7 @@ impl Debug for TextureData {
             .field("data size: {}", &self.data.len())
             .field(
                 "color channels: {}",
-                &(self.data.len() as u32 / (self.width * self.height)),
+                &(self.data.len() / (self.width * self.height)),
             )
             .field("width", &self.width)
             .field("height", &self.height)
@@ -104,8 +104,8 @@ impl Debug for TextureData {
 #[derive(Debug, Clone, Copy)]
 pub struct TextureDataRef<'a> {
     pub data: &'a [u8],
-    pub width: u32,
-    pub height: u32,
+    pub width: usize,
+    pub height: usize,
     pub transparency: bool,
 }
 

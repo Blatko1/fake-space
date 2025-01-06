@@ -166,8 +166,8 @@ fn parse_texture(
     };
     let texture = TextureData::new(
         data.to_rgba8().as_bytes().to_vec(),
-        data.width(),
-        data.height(),
+        data.width() as usize,
+        data.height() as usize,
         transparency,
     );
 

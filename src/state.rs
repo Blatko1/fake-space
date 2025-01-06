@@ -78,11 +78,13 @@ impl GameState {
     }
 
     pub fn render<'a>(&mut self, canvas: &mut [u8]) {
-        FrameRenderer::new(&self.camera, &self.player, &self.map, &self.textures).render(canvas);
+        FrameRenderer::new(&self.camera, &self.player, &self.map, &self.textures)
+            .render(canvas);
     }
 
     pub fn render_par<'a>(&mut self, canvas: &mut [u8]) {
-        FrameRenderer::new(&self.camera, &self.player, &self.map, &self.textures).render_par(canvas);
+        FrameRenderer::new(&self.camera, &self.player, &self.map, &self.textures)
+            .render_par(canvas);
     }
 
     pub fn handle_game_input(&mut self, input: GameInput, is_pressed: bool) {

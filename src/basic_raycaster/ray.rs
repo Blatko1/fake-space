@@ -24,16 +24,17 @@ pub struct Ray {
     /// the ray travels across the map.
     pub step_z: i64,
     /// X-coordinate on the horizontal camera plane through which the Ray passes.
-    pub plane_x: f32,
+    //pub plane_x: f32,
 
-    /// Ray cast origin.
+    /// Ray origin.
     pub origin: Vec3,
-    /// Direction of the Camera from which the ray was cast.
+    /// Direction of the camera from which the ray was cast.
     pub camera_dir: Vec3,
     /// Horizontal plane of the Camera from which the ray was cast.
     pub horizontal_plane: Vec3,
 
-    // Variables that change per each DDA step
+    // Variables below change per each DDA step
+
     /// Distance which the ray has already traveled over in order
     /// to reach a new vertical wall.
     pub side_dist_x: f32,
@@ -48,17 +49,14 @@ pub struct Ray {
     pub previous_wall_dist: f32,
     /// The side of which the wall was hit.
     pub hit_wall_side: Side,
+    pub wall_side: WallSide,
     /// Offset which represent where exactly was the wall hit
     /// (at which x coordinate).
     pub wall_offset: f32,
-
-    pub skybox_wall_offset: f32,
-    pub skybox_wall: SkyboxSide,
-    pub half_skybox_wall_pixel_height: f32
 }
 
 impl Ray {
-    pub fn camera_cast(camera: &Camera, column_index: usize) -> Ray {
+    pub fn new(camera: &Camera, origin: Vec3, column_index: usize) -> Ray {
         // X-coordinate on the horizontal camera plane (range [-1.0, 1.0])
         let plane_x = 2.0 * column_index as f32 * camera.width_recip - 1.0;
         // Ray direction for current pixel column
@@ -69,50 +67,71 @@ impl Ray {
         // Distance to nearest x side
         let side_dist_x = delta_dist_x
             * if dir.x < 0.0 {
-                camera.origin.x.fract()
+                origin.x.fract()
             } else {
-                1.0 - camera.origin.x.fract()
+                1.0 - origin.x.fract()
             };
         // Distance to nearest z side
         let side_dist_z = delta_dist_z
             * if dir.z < 0.0 {
-                camera.origin.z.fract()
+                origin.z.fract()
             } else {
-                1.0 - camera.origin.z.fract()
+                1.0 - origin.z.fract()
             };
 
         let wall_dist = 0.0;
-        let (side, wall_offset) = if side_dist_x < side_dist_z {
-            let wall_offset = camera.origin.z + wall_dist * dir.z;
-            (Side::Vertical, wall_offset - wall_offset.floor())
-        } else {
-            let wall_offset = camera.origin.x + wall_dist * dir.x;
-            (Side::Horizontal, wall_offset - wall_offset.floor())
+        // West/East side
+        let (side, wall_side, wall_offset) = if dir.x.abs() >= dir.z.abs() {
+            let wall_offset = origin.z + wall_dist * dir.z;
+            let wall_side = match dir.x >= 0.0 {
+                true => WallSide::East,
+                false => WallSide::West,
+            };
+            (Side::Vertical, wall_side, wall_offset - wall_offset.floor())
+        } 
+        // North/South side
+        else {
+            let wall_offset = origin.x + wall_dist * dir.x;
+            let wall_side = match dir.z >= 0.0 {
+                true => WallSide::North,
+                false => WallSide::South,
+            };
+            (Side::Horizontal, wall_side, wall_offset - wall_offset.floor())
         };
+        //let (side, wall_offset) = if side_dist_x < side_dist_z {
+        //    let wall_offset = origin.z + wall_dist * dir.z;
+        //    (Side::Vertical, wall_offset - wall_offset.floor())
+        //} else {
+        //    let wall_offset = origin.x + wall_dist * dir.x;
+        //    (Side::Horizontal, wall_offset - wall_offset.floor())
+        //};
 
-        let (skybox_wall_offset, half_skybox_wall_pixel_height, skybox_wall);
+        /*let (skybox_wall_offset, skybox_wall_distance, half_skybox_wall_pixel_height, skybox_wall);
         // West/East side
         if dir.x.abs() >= dir.z.abs() {
             let t = 0.5 / dir.x;
             skybox_wall_offset = 0.5 - t * dir.z;
             // Before was camera.f_height / delta_dist_x
+            // TODO shouldn't this be half? * 0.5
             half_skybox_wall_pixel_height = camera.f_height * dir.x.abs();
+            skybox_wall_distance = delta_dist_x;
             skybox_wall = match dir.x >= 0.0 {
                 true => SkyboxSide::East,
                 false => SkyboxSide::West,
             }
-        } 
+        }
         // North/South side
         else {
             let t = 0.5 / dir.z;
             skybox_wall_offset = 0.5 + t * dir.x;
             // Before was camera.f_height / delta_dist_z
             half_skybox_wall_pixel_height = camera.f_height * dir.z.abs();
+            skybox_wall_distance = delta_dist_z;
             skybox_wall = match dir.z >= 0.0 {
                 true => SkyboxSide::North,
                 false => SkyboxSide::South,
             }
-        }
+        }*/
 
         Ray {
             column_index,
@@ -121,25 +140,42 @@ impl Ray {
             delta_dist_z,
             step_x: dir.x.signum() as i64,
             step_z: dir.z.signum() as i64,
-            plane_x,
+            //plane_x,
 
-            origin: camera.origin,
+            origin,
             camera_dir: camera.forward_dir,
             horizontal_plane: camera.horizontal_plane,
 
             // Variables that change per each DDA step
             side_dist_x,
             side_dist_z,
-            next_tile: PointXZ::new(camera.origin.x as i64, camera.origin.z as i64),
+            next_tile: PointXZ::new(origin.x as i64, origin.z as i64),
             wall_dist,
             previous_wall_dist: wall_dist,
             hit_wall_side: side,
+            wall_side,
             wall_offset,
-
-            skybox_wall_offset,
-            skybox_wall,
-            half_skybox_wall_pixel_height
         }
+    }
+
+    pub fn new_one_step(camera: &Camera, origin: Vec3, column_index: usize) -> Ray {
+        let mut ray = Self::new(camera, origin, column_index);
+        if ray.side_dist_x < ray.side_dist_z {
+            ray.wall_dist = ray.side_dist_x.max(0.0);
+            ray.next_tile.x += ray.step_x;
+            ray.side_dist_x += ray.delta_dist_x;
+            ray.hit_wall_side = Side::Vertical;
+            let wall_offset = ray.origin.z + ray.wall_dist * ray.dir.z;
+            ray.wall_offset = wall_offset - wall_offset.floor();
+        } else {
+            ray.wall_dist = ray.side_dist_z.max(0.0);
+            ray.next_tile.z += ray.step_z;
+            ray.side_dist_z += ray.delta_dist_z;
+            ray.hit_wall_side = Side::Horizontal;
+            let wall_offset = ray.origin.x + ray.wall_dist * ray.dir.x;
+            ray.wall_offset = wall_offset - wall_offset.floor();
+        }
+        ray
     }
 
     pub fn portal_teleport(&mut self, src: Portal, dest: Portal) {
@@ -202,9 +238,17 @@ impl Ray {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum SkyboxSide {
+pub enum WallSide {
     North,
     East,
     South,
     West
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum SkyboxSide {
+    North,
+    East,
+    South,
+    West,
 }

@@ -15,7 +15,7 @@ use backend::Canvas;
 use control::{ControllerSettings, GameInput};
 use state::GameState;
 use winit::application::ApplicationHandler;
-use winit::event::{ DeviceEvent, DeviceId, KeyEvent, StartCause};
+use winit::event::{DeviceEvent, DeviceId, KeyEvent, StartCause};
 use winit::event_loop::ActiveEventLoop;
 use winit::keyboard::{Key, NamedKey, PhysicalKey};
 use winit::window::WindowId;
@@ -39,6 +39,9 @@ pub struct App {
     time_per_frame: Duration,
     now: Instant,
     sleep_between_frames: bool,
+
+    acc_fps: u128,
+    time: Instant,
 }
 
 impl App {
@@ -56,6 +59,9 @@ impl App {
             time_per_frame: Duration::from_secs_f64(1.0 / FPS_CAP as f64),
             now: Instant::now(),
             sleep_between_frames: false,
+
+            acc_fps: 0,
+            time: Instant::now()
         }
     }
 }
@@ -167,13 +173,17 @@ impl ApplicationHandler for App {
             self.state.update(elapsed.as_secs_f32());
 
             if let Some(canvas) = self.canvas.as_mut() {
-                println!(
-                    "elapsed: {} ms, {} FPS",
-                    elapsed.as_micros(),
-                    1000000.0 / elapsed.as_micros() as f64
-                );
+                if self.time.elapsed().as_micros() >= 1_000_000 {
+                    println!(
+                        "average: {} FPS",
+                        self.acc_fps
+                    );
+                    self.acc_fps = 0;
+                    self.time = Instant::now();
+                }
+                self.acc_fps += 1;
                 // First render game by pixel manipulation, ...
-                self.state.render_par(canvas.mut_column());
+                self.state.render(canvas.mut_column());
                 // ... then request the screen redraw.
                 canvas.request_redraw();
             }
