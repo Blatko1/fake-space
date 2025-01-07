@@ -2,7 +2,7 @@
 
 // Declare the textures
 // You can't have multiple textures with the same name
-#Grass = src:"../res/grass.jpg", transparency:false;
+#Grass = src:"../res/wood.png", transparency:false;
 #Stone = src:"../res/stone.jpg", transparency:false;
 #Bricks = src:"../res/stone_bricks.jpg", transparency:false;
 #MetalFloor = src:"../res/metal_floor.jpg", transparency:false;

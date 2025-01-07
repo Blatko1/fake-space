@@ -7,7 +7,7 @@ impl<'a> FrameRenderer<'a> {
     // TODO for every write in the for loop make a special function made just for that
     // which takes color pixel as
     // TODO pass as argument column segment between bounds, so 2 arguments less
-    pub fn render_wall(&self, params: WallRenderParams) -> (usize, usize) {
+    pub fn render_wall(&self, params: WallRenderParams, column: &'a mut [u8]) -> (usize, usize) {
         let bottom_draw_bound = params.bottom_draw_bound;
         let top_draw_bound = params.top_draw_bound;
         let ray = params.ray;
@@ -53,7 +53,7 @@ impl<'a> FrameRenderer<'a> {
                     - self.half_view_height)
                     * tex_y_step;
 
-                let segment = params.column
+                let segment = column
                     .chunks_exact_mut(3)
                     .enumerate()
                     .skip(draw_from)
@@ -75,5 +75,5 @@ impl<'a> FrameRenderer<'a> {
 pub struct WallRenderParams<'a> {
     pub ray: Ray, pub bottom_draw_bound: usize, pub top_draw_bound: usize,pub bottom_level: f32,
     pub top_level: f32,
-    pub texture: TextureDataRef<'a>, pub column: &'a mut [u8]
+    pub texture: TextureDataRef<'a>
 }

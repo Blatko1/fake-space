@@ -3,7 +3,7 @@ mod wall;
 mod platform;
 
 use glam::Vec3;
-use platform::PlatformRenderParams;
+use platform::{PlatformRenderParams, PlatformType};
 use ray::{SkyboxSide, WallSide};
 use rayon::iter::{IndexedParallelIterator, ParallelIterator};
 use rayon::slice::ParallelSliceMut;
@@ -15,8 +15,6 @@ use crate::raycaster::camera::Camera;
 use crate::textures::{SkyboxTexturesRef, TextureArray, TextureDataRef, TextureID};
 
 use self::ray::Ray;
-
-const SKYBOX_ORIGIN: Vec3 = Vec3::new(0.5, 0.5, 0.5);
 
 #[derive(Debug, Copy, Clone)]
 pub struct PointXZ<T> {
@@ -139,25 +137,27 @@ impl<'a> FrameRenderer<'a> {
                     bottom_draw_bound,
                     top_draw_bound,
                     height: current_tile.ground_level,
+                    platform_type: PlatformType::Floor,
                     texture: self.textures.get_texture_data(current_tile.ground_tex),
-                    column,
                 };
 
             // Draw ground platform
             let (from, drawn_to) = self.render_platform(
-                params
+                params, column
             );
 
+            std::mem::swap(&mut ray.wall_dist, &mut ray.previous_wall_dist);
             let params = PlatformRenderParams {
                 ray,
                 bottom_draw_bound,
                 top_draw_bound,
                 height: current_tile.ceiling_level,
+                platform_type: PlatformType::Ceiling,
                 texture: self.textures.get_texture_data(current_tile.ceiling_tex),
-                column,
             };
+            std::mem::swap(&mut ray.wall_dist, &mut ray.previous_wall_dist);
             // Draw ceiling platform
-            let (drawn_from, to) = self.render_platform(params);
+            let (drawn_from, to) = self.render_platform(params, column);
             if from != bottom_draw_bound {
                 //println!("floor skiped!");
                 fill_color(column, bottom_draw_bound, from, 200);
@@ -184,12 +184,11 @@ impl<'a> FrameRenderer<'a> {
                     top_draw_bound,
                     bottom_level: next_tile.bottom_level,
                     top_level: next_tile.ground_level,
-                    texture: self.textures.get_texture_data(next_tile.bottom_wall_tex),
-                    column,
+                    texture: self.textures.get_texture_data(next_tile.bottom_wall_tex)
                 };
 
             // Draw bottom wall
-            let (from, drawn_to) = self.render_wall(params
+            let (from, drawn_to) = self.render_wall(params, column
             );
             let params = WallRenderParams {
                 ray,
@@ -197,11 +196,10 @@ impl<'a> FrameRenderer<'a> {
                 top_draw_bound,
                 bottom_level: next_tile.ceiling_level,
                 top_level: next_tile.top_level,
-                texture: self.textures.get_texture_data(next_tile.bottom_wall_tex),
-                column,
+                texture: self.textures.get_texture_data(next_tile.bottom_wall_tex)
             };
             // Draw top wall
-            let (drawn_from, to) = self.render_wall(params
+            let (drawn_from, to) = self.render_wall(params, column
             );
             if from != bottom_draw_bound {
                 //println!("wall bottom skiped!");
@@ -249,11 +247,11 @@ impl<'a> FrameRenderer<'a> {
 
     fn render_skybox(
         &self,
-        ray: Ray,
+        mut ray: Ray,
         skybox_textures: SkyboxTexturesRef,
         column: &mut [u8],
-        draw_from: usize,
-        draw_to: usize,
+        bottom_draw_bound: usize,
+        top_draw_bound: usize,
     ) {
         let wall_texture = match ray.wall_side {
             WallSide::North => skybox_textures.north,
@@ -261,71 +259,47 @@ impl<'a> FrameRenderer<'a> {
             WallSide::South => skybox_textures.south,
             WallSide::West => skybox_textures.west,
         };
-        /*if wall_texture.is_empty() {
-            column.fill(0);
-            return;
-        }
-        let (texture, tex_width, tex_height) = (
-            wall_texture.data,
-            wall_texture.width as usize,
-            wall_texture.height as usize,
-        );
-
-        let pixels_to_bottom = ray.half_skybox_wall_pixel_height - self.y_shearing;
-        let pixels_to_top = ray.half_skybox_wall_pixel_height + self.y_shearing;
-        let full_wall_pixel_height = pixels_to_top + pixels_to_bottom;
-
-        // From which pixel to begin drawing and on which to end
-        let draw_wall_from = ((self.half_view_height - pixels_to_bottom) as usize)
-            .clamp(draw_from, draw_to);
-        let draw_wall_to = ((self.half_view_height + pixels_to_top) as usize)
-            .clamp(draw_wall_from, draw_to);
-
-        let tex_x = (ray.skybox_wall_offset * tex_width as f32) as usize;
-        let tex_y_step = tex_height as f32 / full_wall_pixel_height;
-        let mut tex_y = (draw_wall_from as f32 + pixels_to_bottom
-            - self.half_view_height)
-            * tex_y_step;
-
-        let segment = column
-            .chunks_exact_mut(3)
-            .skip(draw_wall_from)
-            .take(draw_wall_to - draw_wall_from);
-        for pixel in segment {
-            // avoids small artefacts let tex_y_pos = tex_y.round() as usize % tex_height;
-            let tex_y_pos = tex_y as usize % tex_height;
-            tex_y += tex_y_step;
-            let i = 4 * ((tex_height - tex_y_pos - 1) * tex_width + tex_x);
-            let color = &texture[i..i + 3];
-
-            pixel.copy_from_slice(color);
-        }*/
 
         let params = WallRenderParams {
             ray,
-            bottom_draw_bound: draw_from,
-            top_draw_bound: draw_to,
+            bottom_draw_bound,
+            top_draw_bound,
             bottom_level: -0.5,
             top_level: 1.5,
-            texture: wall_texture,
-            column,
+            texture: wall_texture
         };
         
-        let (from, to) = self.render_wall(params);
+        self.render_wall(params, column);
+
 
         let params = PlatformRenderParams {
             ray,
-            bottom_draw_bound: draw_from,
-            top_draw_bound: draw_to,
+            bottom_draw_bound,
+            top_draw_bound,
             height: -0.5,
-            texture: skybox_textures.bottom,
-            column,
+            platform_type: PlatformType::Floor,
+            texture: skybox_textures.bottom
         };
 
     // Draw ground platform
     self.render_platform(
-        params
+        params, column
     );
+
+    std::mem::swap(&mut ray.wall_dist, &mut ray.previous_wall_dist);
+    let params = PlatformRenderParams {
+        ray,
+        bottom_draw_bound,
+        top_draw_bound,
+        height: 1.5,
+        platform_type: PlatformType::Ceiling,
+        texture: skybox_textures.top
+    };
+
+// Draw ceiling platform
+self.render_platform(
+    params, column
+);
 /*
         // Variables used for reducing the amount of calculations and for optimization
         let tile_step_factor = self.camera.horizontal_plane * 2.0 * self.width_recip;
