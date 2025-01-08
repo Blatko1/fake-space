@@ -44,10 +44,6 @@ impl<'a> FrameRenderer<'a> {
 
             let denominator = (height - ray.origin.y) * self.half_view_height;
  
-            let (offset, step) = match params.platform_type {
-                PlatformType::Ceiling => (draw_from as f32, 1.0),
-                PlatformType::Floor => (draw_to as f32, -1.0),
-            };
               // Through trial and error i found that it should be enumerated starting from 1.
             // Before, there was texture bleeding, but now no bleeding!
             let mut y_pixel_pos = 1.0 + draw_from as f32 - self.y_shearing - self.half_view_height;
@@ -56,16 +52,21 @@ impl<'a> FrameRenderer<'a> {
                 let row_dist = denominator / y_pixel_pos;
                 let pos = ray.origin + row_dist * pos_factor;
 
+                // TODO try removing min and test for speed!!!
                 let tex_x =
                     ((tex_width as f32 * pos.x.fract()) as usize).min(tex_width - 1);
                 let tex_y = ((tex_height as f32 * pos.z.fract()) as usize)
                     .min(tex_height - 1);
+                let tex_y = match params.platform_type {
+                    PlatformType::Floor => tex_height - tex_y - 1,
+                    PlatformType::Ceiling => tex_y,
+                };
                 let i = 4 * (tex_width * tex_y + tex_x); //tex_width * 4 * tex_y + tex_x * 4
                 let color = &texture[i..i + 3];
 
                 pixel.copy_from_slice(color);
 
-                y_pixel_pos -= 1.0;
+                y_pixel_pos += 1.0;
             }
             (draw_from, draw_to)
     }

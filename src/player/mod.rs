@@ -19,11 +19,12 @@ pub struct Player {
 }
 
 impl Player {
+    // TODO positive pitch should make camera look UP, not DOWN!!!?
     pub fn new(current_room: RoomID) -> Self {
         let body = CylinderBody::new(
             Vec3::new(10.5, 1.0, 14.5),
             90.0f32.to_radians(),
-            0.0,
+            90.0f32.to_radians(),
             0.2,
             2.0,
             0.9,

@@ -27,8 +27,8 @@ use winit::{
 const FPS_CAP: u32 = 60;
 const CANVAS_WIDTH_FACTOR: u32 = 16;
 const CANVAS_HEIGHT_FACTOR: u32 = 9;
-const DEFAULT_CANVAS_WIDTH: u32 = 16 * 15;
-const DEFAULT_CANVAS_HEIGHT: u32 = 9 * 15;
+const DEFAULT_CANVAS_WIDTH: u32 = 16 * 150;
+const DEFAULT_CANVAS_HEIGHT: u32 = 9 * 150;
 
 pub struct App {
     canvas: Option<Canvas>,
