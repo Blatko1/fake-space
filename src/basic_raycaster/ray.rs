@@ -181,6 +181,7 @@ impl Ray {
     pub fn portal_teleport(&mut self, src: Portal, dest: Portal) {
         let (new_origin, _) = src.teleport(self.origin, dest);
         self.origin = new_origin;
+
         self.next_tile = PointXZ::new(dest.position.x as i64, dest.position.z as i64);
         match self.hit_wall_side {
             Side::Vertical => {
@@ -190,6 +191,22 @@ impl Ray {
                 self.side_dist_z -= self.delta_dist_z;
             }
         }
+
+        /*let rotation_diff = (dest.direction as i32 - src.direction as i32).abs() as f32;
+        
+        // TODO maybe store angle values instead of calulcating it everytime
+        let dir_angle = f32::atan2(self.dir.x, self.dir.y);
+        let new_dir_angle = dir_angle + rotation_diff;
+        self.dir = Vec3::new(new_dir_angle.cos(), 0.0, new_dir_angle.sin());
+        self.step_x = self.dir.x.signum() as i64;
+        self.step_z = self.dir.z.signum() as i64;
+
+        let camera_angle = f32::atan2(self.camera_dir.x, self.camera_dir.y);
+        let new_camera_angle = camera_angle + rotation_diff;
+        self.camera_dir = Vec3::new(new_camera_angle.cos(), 0.0, new_camera_angle.sin());*/
+
+
+
 
         match src.direction.rotation_difference(dest.direction) {
             PortalRotationDifference::None => {}
@@ -202,11 +219,17 @@ impl Ray {
 
                 std::mem::swap(&mut self.delta_dist_x, &mut self.delta_dist_z);
                 std::mem::swap(&mut self.side_dist_x, &mut self.side_dist_z);
-                self.step_x = self.dir.x.signum() as i64;
-                self.step_z = self.dir.z.signum() as i64;
+                //self.step_x = self.dir.x.signum() as i64;
+                //self.step_z = self.dir.z.signum() as i64;
                 self.hit_wall_side = match self.hit_wall_side {
                     Side::Vertical => Side::Horizontal,
                     Side::Horizontal => Side::Vertical,
+                };
+                self.wall_side = match self.wall_side {
+                    WallSide::North => WallSide::East,
+                    WallSide::East => WallSide::South,
+                    WallSide::South => WallSide::West,
+                    WallSide::West => WallSide::North,
                 };
             }
             PortalRotationDifference::AnticlockwiseDeg90 => {
@@ -218,11 +241,17 @@ impl Ray {
 
                 std::mem::swap(&mut self.delta_dist_x, &mut self.delta_dist_z);
                 std::mem::swap(&mut self.side_dist_x, &mut self.side_dist_z);
-                self.step_x = self.dir.x.signum() as i64;
-                self.step_z = self.dir.z.signum() as i64;
+                //self.step_x = self.dir.x.signum() as i64;
+                //self.step_z = self.dir.z.signum() as i64;
                 self.hit_wall_side = match self.hit_wall_side {
                     Side::Vertical => Side::Horizontal,
                     Side::Horizontal => Side::Vertical,
+                };
+                self.wall_side = match self.wall_side {
+                    WallSide::North => WallSide::West,
+                    WallSide::East => WallSide::North,
+                    WallSide::South => WallSide::East,
+                    WallSide::West => WallSide::South,
                 };
             }
             PortalRotationDifference::Deg180 => {
@@ -232,6 +261,12 @@ impl Ray {
                 self.horizontal_plane = -self.horizontal_plane;
                 self.step_x = -self.step_x;
                 self.step_z = -self.step_z;
+                self.wall_side = match self.wall_side {
+                    WallSide::North => WallSide::South,
+                    WallSide::East => WallSide::West,
+                    WallSide::South => WallSide::North,
+                    WallSide::West => WallSide::East,
+                };
             }
         }
     }

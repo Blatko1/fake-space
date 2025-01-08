@@ -83,11 +83,12 @@ impl<'a> FrameRenderer<'a> {
     // TODO maybe draw first the floor, then bottom wall, then top wall, then ceiling
     fn render_column(&self, column_index: usize, column: &mut [u8]) {
         let mut ray = Ray::new(self.camera, self.camera.origin, column_index);
-        let static_ray = Ray::new_one_step(self.camera, Vec3::splat(0.5), column_index);
+        let mut static_ray = Ray::new_one_step(self.camera, Vec3::splat(0.5), column_index);
+
         let mut current_room = self.map.get_room_data(self.player.current_room_id());
         let mut current_room_dimensions = current_room.segment.dimensions_i64();
 
-        let skybox_textures = self
+        let mut skybox_textures = self
             .textures
             .get_skybox_textures(current_room.data.skybox());
 
@@ -132,6 +133,7 @@ impl<'a> FrameRenderer<'a> {
                 .segment
                 .get_tile_unchecked(current_tile_x, current_tile_z);
             
+            // Draw ground platform
                 let params = PlatformRenderParams {
                     ray,
                     bottom_draw_bound,
@@ -141,12 +143,12 @@ impl<'a> FrameRenderer<'a> {
                     texture: self.textures.get_texture_data(current_tile.ground_tex),
                 };
 
-            // Draw ground platform
+            
             let (from, drawn_to) = self.render_platform(
                 params, column
             );
 
-            std::mem::swap(&mut ray.wall_dist, &mut ray.previous_wall_dist);
+            // Draw ceiling platform
             let params = PlatformRenderParams {
                 ray,
                 bottom_draw_bound,
@@ -155,8 +157,7 @@ impl<'a> FrameRenderer<'a> {
                 platform_type: PlatformType::Ceiling,
                 texture: self.textures.get_texture_data(current_tile.ceiling_tex),
             };
-            std::mem::swap(&mut ray.wall_dist, &mut ray.previous_wall_dist);
-            // Draw ceiling platform
+            
             let (drawn_from, to) = self.render_platform(params, column);
             if from != bottom_draw_bound {
                 //println!("floor skiped!");
@@ -203,7 +204,14 @@ impl<'a> FrameRenderer<'a> {
             );
             if from != bottom_draw_bound {
                 //println!("wall bottom skiped!");
-                fill_color(column, bottom_draw_bound, from, 200);
+                self.render_skybox(
+                    static_ray,
+                    skybox_textures,
+                    
+                    bottom_draw_bound,
+                    from,
+                    column
+                );
             }
             if to != top_draw_bound {
                 //println!("wall top skiped!");
@@ -224,8 +232,15 @@ impl<'a> FrameRenderer<'a> {
                         let dest_room = self.map.get_room_data(room_id);
                         let dest_portal = dest_room.get_portal(portal_id);
                         ray.portal_teleport(src_portal, dest_portal);
+                        // TODO fix skybox when looking throguh portals. 
+                        let origin = static_ray.origin;
+                        let hit_wall = static_ray.hit_wall_side;
+                        static_ray.portal_teleport(src_portal, dest_portal);
+                        static_ray.origin = origin;
+                        static_ray.hit_wall_side = hit_wall;
                         current_room = dest_room;
                         current_room_dimensions = current_room.segment.dimensions_i64();
+                        skybox_textures = self.textures.get_skybox_textures(current_room.data.skybox());
                     }
                     None => {
                         fill_color(column, bottom_draw_bound, top_draw_bound, 0);
@@ -239,19 +254,20 @@ impl<'a> FrameRenderer<'a> {
         self.render_skybox(
             static_ray,
             skybox_textures,
-            column,
+            
             bottom_draw_bound,
             top_draw_bound,
+            column
         );
     }
 
     fn render_skybox(
         &self,
-        mut ray: Ray,
+        ray: Ray,
         skybox_textures: SkyboxTexturesRef,
-        column: &mut [u8],
         bottom_draw_bound: usize,
         top_draw_bound: usize,
+        column: &mut [u8],
     ) {
         let wall_texture = match ray.wall_side {
             WallSide::North => skybox_textures.north,
@@ -286,7 +302,6 @@ impl<'a> FrameRenderer<'a> {
         params, column
     );
 
-    std::mem::swap(&mut ray.wall_dist, &mut ray.previous_wall_dist);
     let params = PlatformRenderParams {
         ray,
         bottom_draw_bound,

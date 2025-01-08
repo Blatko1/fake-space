@@ -17,16 +17,20 @@ impl<'a> FrameRenderer<'a> {
             let (texture, tex_width, tex_height) =
             (params.texture.data, params.texture.width as usize, params.texture.height as usize);
 
+            let (draw_from_distance, draw_to_distance) = match params.platform_type {
+                PlatformType::Floor => (ray.previous_wall_dist, ray.wall_dist),
+                PlatformType::Ceiling => (ray.wall_dist, ray.previous_wall_dist),
+            };
 
             // Draw from (always drawing from bottom to top):
-            let half_wall_pixel_height = self.half_view_height / ray.previous_wall_dist;
+            let half_wall_pixel_height = self.half_view_height / draw_from_distance;
             let pixels_to_top =
                 half_wall_pixel_height * (height - ray.origin.y) + self.y_shearing;
             let draw_from = ((self.half_view_height + pixels_to_top) as usize)
                 .clamp(bottom_draw_bound, top_draw_bound);
 
             // Draw to:
-            let half_wall_pixel_height = self.half_view_height / ray.wall_dist;
+            let half_wall_pixel_height = self.half_view_height / draw_to_distance;
             let pixels_to_top =
                 half_wall_pixel_height * (height - ray.origin.y) + self.y_shearing;
             let draw_to = ((self.half_view_height + pixels_to_top) as usize)

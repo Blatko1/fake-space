@@ -124,10 +124,10 @@ impl Portal {
 
 #[derive(Debug, Clone, Copy)]
 pub enum PortalDirection {
-    North,
-    South,
-    East,
-    West,
+    East = 0,
+    North = 90,
+    West = 180,
+    South = 270
 }
 
 impl PortalDirection {
