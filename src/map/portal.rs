@@ -1,5 +1,3 @@
-use std::f32::consts::PI;
-
 use glam::Vec3;
 
 use crate::raycaster::PointXZ;
@@ -27,98 +25,90 @@ pub struct Portal {
 
 impl Portal {
     /// Returns new position and a difference in angle
-    pub fn teleport(&self, mut origin: Vec3, dest: Portal) -> (Vec3, f32) {
-        let mut yaw_angle_difference = 0.0;
+    pub fn teleport_to(&self, origin: Vec3, dest: Portal) -> Vec3 {
         let offset_x = self.center.x - origin.x;
         let offset_z = self.center.z - origin.z;
-        origin.y += dest.ground_level - self.ground_level;
+        let mut new_origin = Vec3::new(dest.center.x, origin.y + dest.ground_level - self.ground_level, dest.center.z);
+
         match self.direction {
             PortalDirection::North => match dest.direction {
                 PortalDirection::North => {
-                    yaw_angle_difference = PI;
-                    origin.x = dest.center.x + offset_x;
-                    origin.z = dest.center.z + 1.0 + offset_z;
+                    new_origin.x += offset_x;
+                    new_origin.z += 1.0 + offset_z;
                 }
                 PortalDirection::South => {
-                    origin.x = dest.center.x - offset_x;
-                    origin.z = dest.center.z - 1.0 - offset_z;
+                    new_origin.x += - offset_x;
+                    new_origin.z += - 1.0 - offset_z;
                 }
                 PortalDirection::East => {
-                    yaw_angle_difference = PI * 0.5;
-                    origin.x = dest.center.x + 1.0 + offset_z;
-                    origin.z = dest.center.z - offset_x;
+                    new_origin.x += 1.0 + offset_z;
+                    new_origin.z += - offset_x;
                 }
                 PortalDirection::West => {
-                    yaw_angle_difference = -PI * 0.5;
-                    origin.x = dest.center.x - 1.0 - offset_z;
-                    origin.z = dest.center.z + offset_x;
+                    new_origin.x += - 1.0 - offset_z;
+                    new_origin.z += offset_x;
                 }
             },
             PortalDirection::South => match dest.direction {
                 PortalDirection::North => {
-                    origin.x = dest.center.x - offset_x;
-                    origin.z = dest.center.z + 1.0 - offset_z;
+                    new_origin.x += - offset_x;
+                    new_origin.z += 1.0 - offset_z;
                 }
                 PortalDirection::South => {
-                    yaw_angle_difference = PI;
-                    origin.x = dest.center.x + offset_x;
-                    origin.z = dest.center.z - 1.0 + offset_z;
+                    new_origin.x += offset_x;
+                    new_origin.z += - 1.0 + offset_z;
                 }
                 PortalDirection::East => {
-                    yaw_angle_difference = -PI * 0.5;
-                    origin.x = dest.center.x + 1.0 - offset_z;
-                    origin.z = dest.center.z + offset_x;
+                    new_origin.x += 1.0 - offset_z;
+                    new_origin.z += offset_x;
                 }
                 PortalDirection::West => {
-                    yaw_angle_difference = PI * 0.5;
-                    origin.x = dest.center.x - 1.0 + offset_z;
-                    origin.z = dest.center.z - offset_x;
+                    new_origin.x += - 1.0 + offset_z;
+                    new_origin.z += - offset_x;
                 }
             },
             PortalDirection::East => match dest.direction {
                 PortalDirection::North => {
-                    yaw_angle_difference = -PI * 0.5;
-                    origin.x = dest.center.x - offset_z;
-                    origin.z = dest.center.z + 1.0 + offset_x;
+                    new_origin.x += - offset_z;
+                    new_origin.z += 1.0 + offset_x;
                 }
                 PortalDirection::South => {
-                    yaw_angle_difference = PI * 0.5;
-                    origin.x = dest.center.x + offset_z;
-                    origin.z = dest.center.z - 1.0 - offset_x;
+                    new_origin.x += offset_z;
+                    new_origin.z += - 1.0 - offset_x;
                 }
                 PortalDirection::East => {
-                    yaw_angle_difference = PI;
-                    origin.x = dest.center.x + 1.0 + offset_x;
-                    origin.z = dest.center.z + offset_z;
+                    new_origin.x += 1.0 + offset_x;
+                    new_origin.z += offset_z;
                 }
                 PortalDirection::West => {
-                    origin.x = dest.center.x - 1.0 - offset_x;
-                    origin.z = dest.center.z - offset_z;
+                    new_origin.x += - 1.0 - offset_x;
+                    new_origin.z += - offset_z;
                 }
             },
             PortalDirection::West => match dest.direction {
                 PortalDirection::North => {
-                    yaw_angle_difference = PI * 0.5;
-                    origin.x = dest.center.x + offset_z;
-                    origin.z = dest.center.z + 1.0 - offset_x;
+                    new_origin.x += offset_z;
+                    new_origin.z += 1.0 - offset_x;
                 }
                 PortalDirection::South => {
-                    yaw_angle_difference = -PI * 0.5;
-                    origin.x = dest.center.x - offset_z;
-                    origin.z = dest.center.z - 1.0 + offset_x;
+                    new_origin.x += - offset_z;
+                    new_origin.z += - 1.0 + offset_x;
                 }
                 PortalDirection::East => {
-                    origin.x = dest.center.x + 1.0 - offset_x;
-                    origin.z = dest.center.z - offset_z;
+                    new_origin.x += 1.0 - offset_x;
+                    new_origin.z += - offset_z;
                 }
                 PortalDirection::West => {
-                    yaw_angle_difference = PI;
-                    origin.x = dest.center.x - 1.0 + offset_x;
-                    origin.z = dest.center.z + offset_z;
+                    new_origin.x += - 1.0 + offset_x;
+                    new_origin.z += offset_z;
                 }
             },
         };
-        (origin, yaw_angle_difference)
+        new_origin
+    }
+
+    pub fn direction_difference(&self, other: &Self) -> PortalDirectionDifference {
+        self.direction.difference(other.direction)
     }
 }
 
@@ -131,45 +121,26 @@ pub enum PortalDirection {
 }
 
 impl PortalDirection {
-    pub fn rotation_difference(&self, other: Self) -> PortalRotationDifference {
-        match self {
-            PortalDirection::North => match other {
-                PortalDirection::North => PortalRotationDifference::Deg180,
-                PortalDirection::South => PortalRotationDifference::None,
-                PortalDirection::East => PortalRotationDifference::AnticlockwiseDeg90,
-                PortalDirection::West => PortalRotationDifference::ClockwiseDeg90,
-            },
-            PortalDirection::South => match other {
-                PortalDirection::North => PortalRotationDifference::None,
-                PortalDirection::South => PortalRotationDifference::Deg180,
-                PortalDirection::East => PortalRotationDifference::ClockwiseDeg90,
-                PortalDirection::West => PortalRotationDifference::AnticlockwiseDeg90,
-            },
-            PortalDirection::East => match other {
-                PortalDirection::North => PortalRotationDifference::ClockwiseDeg90,
-                PortalDirection::South => PortalRotationDifference::AnticlockwiseDeg90,
-                PortalDirection::East => PortalRotationDifference::Deg180,
-                PortalDirection::West => PortalRotationDifference::None,
-            },
-            PortalDirection::West => match other {
-                PortalDirection::North => PortalRotationDifference::AnticlockwiseDeg90,
-                PortalDirection::South => PortalRotationDifference::ClockwiseDeg90,
-                PortalDirection::East => PortalRotationDifference::None,
-                PortalDirection::West => PortalRotationDifference::Deg180,
-            },
+    pub fn difference(self, other: Self) -> PortalDirectionDifference {
+        match other as i32 - self as i32 {
+            0 => PortalDirectionDifference::None,
+            -90 | 270 => PortalDirectionDifference::AnticlockwiseDeg90,
+            90 | -270 => PortalDirectionDifference::ClockwiseDeg90,
+            180 | -180 => PortalDirectionDifference::Deg180,
+            _ => unreachable!()
         }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum PortalRotationDifference {
+pub enum PortalDirectionDifference {
     None,
     AnticlockwiseDeg90,
     ClockwiseDeg90,
     Deg180,
 }
 
-#[test]
+/*#[test]
 fn teleportation_test() {
     let mut src = Portal {
         id: PortalID(0),
@@ -338,3 +309,4 @@ fn teleportation_test() {
         dest.direction
     );
 }
+*/

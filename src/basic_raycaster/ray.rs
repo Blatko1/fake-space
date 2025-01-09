@@ -1,4 +1,4 @@
-use crate::map::portal::{Portal, PortalRotationDifference};
+use crate::map::portal::{Portal, PortalDirectionDifference};
 use crate::raycaster::camera::Camera;
 use glam::Vec3;
 
@@ -98,40 +98,6 @@ impl Ray {
             };
             (Side::Horizontal, wall_side, wall_offset - wall_offset.floor())
         };
-        //let (side, wall_offset) = if side_dist_x < side_dist_z {
-        //    let wall_offset = origin.z + wall_dist * dir.z;
-        //    (Side::Vertical, wall_offset - wall_offset.floor())
-        //} else {
-        //    let wall_offset = origin.x + wall_dist * dir.x;
-        //    (Side::Horizontal, wall_offset - wall_offset.floor())
-        //};
-
-        /*let (skybox_wall_offset, skybox_wall_distance, half_skybox_wall_pixel_height, skybox_wall);
-        // West/East side
-        if dir.x.abs() >= dir.z.abs() {
-            let t = 0.5 / dir.x;
-            skybox_wall_offset = 0.5 - t * dir.z;
-            // Before was camera.f_height / delta_dist_x
-            // TODO shouldn't this be half? * 0.5
-            half_skybox_wall_pixel_height = camera.f_height * dir.x.abs();
-            skybox_wall_distance = delta_dist_x;
-            skybox_wall = match dir.x >= 0.0 {
-                true => SkyboxSide::East,
-                false => SkyboxSide::West,
-            }
-        }
-        // North/South side
-        else {
-            let t = 0.5 / dir.z;
-            skybox_wall_offset = 0.5 + t * dir.x;
-            // Before was camera.f_height / delta_dist_z
-            half_skybox_wall_pixel_height = camera.f_height * dir.z.abs();
-            skybox_wall_distance = delta_dist_z;
-            skybox_wall = match dir.z >= 0.0 {
-                true => SkyboxSide::North,
-                false => SkyboxSide::South,
-            }
-        }*/
 
         Ray {
             column_index,
@@ -178,39 +144,10 @@ impl Ray {
         ray
     }
 
-    pub fn portal_teleport(&mut self, src: Portal, dest: Portal) {
-        let (new_origin, _) = src.teleport(self.origin, dest);
-        self.origin = new_origin;
-
-        self.next_tile = PointXZ::new(dest.position.x as i64, dest.position.z as i64);
-        match self.hit_wall_side {
-            Side::Vertical => {
-                self.side_dist_x -= self.delta_dist_x;
-            }
-            Side::Horizontal => {
-                self.side_dist_z -= self.delta_dist_z;
-            }
-        }
-
-        /*let rotation_diff = (dest.direction as i32 - src.direction as i32).abs() as f32;
-        
-        // TODO maybe store angle values instead of calulcating it everytime
-        let dir_angle = f32::atan2(self.dir.x, self.dir.y);
-        let new_dir_angle = dir_angle + rotation_diff;
-        self.dir = Vec3::new(new_dir_angle.cos(), 0.0, new_dir_angle.sin());
-        self.step_x = self.dir.x.signum() as i64;
-        self.step_z = self.dir.z.signum() as i64;
-
-        let camera_angle = f32::atan2(self.camera_dir.x, self.camera_dir.y);
-        let new_camera_angle = camera_angle + rotation_diff;
-        self.camera_dir = Vec3::new(new_camera_angle.cos(), 0.0, new_camera_angle.sin());*/
-
-
-
-
-        match src.direction.rotation_difference(dest.direction) {
-            PortalRotationDifference::None => {}
-            PortalRotationDifference::ClockwiseDeg90 => {
+    pub fn rotate(&mut self, rotation: PortalDirectionDifference) {
+        match rotation {
+            PortalDirectionDifference::Deg180 => {}
+            PortalDirectionDifference::ClockwiseDeg90 => {
                 // Rotate 90 degrees clockwise
                 self.dir = Vec3::new(self.dir.z, 0.0, -self.dir.x);
                 self.camera_dir = Vec3::new(self.camera_dir.z, 0.0, -self.camera_dir.x);
@@ -219,8 +156,8 @@ impl Ray {
 
                 std::mem::swap(&mut self.delta_dist_x, &mut self.delta_dist_z);
                 std::mem::swap(&mut self.side_dist_x, &mut self.side_dist_z);
-                //self.step_x = self.dir.x.signum() as i64;
-                //self.step_z = self.dir.z.signum() as i64;
+                self.step_x = self.dir.x.signum() as i64;
+                self.step_z = self.dir.z.signum() as i64;
                 self.hit_wall_side = match self.hit_wall_side {
                     Side::Vertical => Side::Horizontal,
                     Side::Horizontal => Side::Vertical,
@@ -232,7 +169,7 @@ impl Ray {
                     WallSide::West => WallSide::North,
                 };
             }
-            PortalRotationDifference::AnticlockwiseDeg90 => {
+            PortalDirectionDifference::AnticlockwiseDeg90 => {
                 // Rotate 90 degrees anticlockwise
                 self.dir = Vec3::new(-self.dir.z, 0.0, self.dir.x);
                 self.camera_dir = Vec3::new(-self.camera_dir.z, 0.0, self.camera_dir.x);
@@ -241,8 +178,8 @@ impl Ray {
 
                 std::mem::swap(&mut self.delta_dist_x, &mut self.delta_dist_z);
                 std::mem::swap(&mut self.side_dist_x, &mut self.side_dist_z);
-                //self.step_x = self.dir.x.signum() as i64;
-                //self.step_z = self.dir.z.signum() as i64;
+                self.step_x = self.dir.x.signum() as i64;
+                self.step_z = self.dir.z.signum() as i64;
                 self.hit_wall_side = match self.hit_wall_side {
                     Side::Vertical => Side::Horizontal,
                     Side::Horizontal => Side::Vertical,
@@ -254,8 +191,8 @@ impl Ray {
                     WallSide::West => WallSide::South,
                 };
             }
-            PortalRotationDifference::Deg180 => {
-                // Rotate 180 degrees
+            PortalDirectionDifference::None => {
+                // No difference, so the ray should be rotated 180 degrees
                 self.dir = -self.dir;
                 self.camera_dir = -self.camera_dir;
                 self.horizontal_plane = -self.horizontal_plane;
@@ -270,6 +207,20 @@ impl Ray {
             }
         }
     }
+
+    pub fn portal_teleport(&mut self, src: Portal, dest: Portal) {
+        self.origin = src.teleport_to(self.origin, dest);
+
+        self.next_tile = PointXZ::new(dest.position.x as i64, dest.position.z as i64);
+        match self.hit_wall_side {
+            Side::Vertical => {
+                self.side_dist_x -= self.delta_dist_x;
+            }
+            Side::Horizontal => {
+                self.side_dist_z -= self.delta_dist_z;
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -278,12 +229,4 @@ pub enum WallSide {
     East,
     South,
     West
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum SkyboxSide {
-    North,
-    East,
-    South,
-    West,
 }

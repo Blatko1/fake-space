@@ -1,4 +1,4 @@
-use crate::map::portal::{Portal, PortalRotationDifference};
+use crate::map::portal::{Portal, PortalDirectionDifference};
 use glam::Vec3;
 
 use super::{camera::Camera, PointXZ, Side};
@@ -110,7 +110,7 @@ impl Ray {
     }
 
     pub fn portal_teleport(&mut self, src: Portal, dest: Portal) {
-        let (new_origin, _) = src.teleport(self.origin, dest);
+        let new_origin = src.teleport_to(self.origin, dest);
         self.origin = new_origin;
         self.next_tile = PointXZ::new(dest.position.x as i64, dest.position.z as i64);
         match self.hit_wall_side {
@@ -122,9 +122,9 @@ impl Ray {
             }
         }
 
-        match src.direction.rotation_difference(dest.direction) {
-            PortalRotationDifference::None => {}
-            PortalRotationDifference::ClockwiseDeg90 => {
+        match src.direction.difference(dest.direction) {
+            PortalDirectionDifference::Deg180 => {}
+            PortalDirectionDifference::ClockwiseDeg90 => {
                 // Rotate 90 degrees clockwise
                 self.dir = Vec3::new(self.dir.z, 0.0, -self.dir.x);
                 self.camera_dir = Vec3::new(self.camera_dir.z, 0.0, -self.camera_dir.x);
@@ -140,7 +140,7 @@ impl Ray {
                     Side::Horizontal => Side::Vertical,
                 };
             }
-            PortalRotationDifference::AnticlockwiseDeg90 => {
+            PortalDirectionDifference::AnticlockwiseDeg90 => {
                 // Rotate 90 degrees anticlockwise
                 self.dir = Vec3::new(-self.dir.z, 0.0, self.dir.x);
                 self.camera_dir = Vec3::new(-self.camera_dir.z, 0.0, self.camera_dir.x);
@@ -156,7 +156,7 @@ impl Ray {
                     Side::Horizontal => Side::Vertical,
                 };
             }
-            PortalRotationDifference::Deg180 => {
+            PortalDirectionDifference::None => {
                 // Rotate 180 degrees
                 self.dir = -self.dir;
                 self.camera_dir = -self.camera_dir;

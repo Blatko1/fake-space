@@ -43,8 +43,6 @@ pub struct Camera {
     // TODO rename to view_width and view_height
     pub f_height: f32,
     pub width_recip: f32,
-    pub height_recip: f32,
-    pub f_half_height: f32,
 }
 
 impl Camera {
@@ -63,8 +61,6 @@ impl Camera {
 
             f_height,
             width_recip: f_width.recip(),
-            height_recip: f_height.recip(),
-            f_half_height: view_height as f32 * 0.5,
 
             ..Default::default()
         }

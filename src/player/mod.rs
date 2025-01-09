@@ -1,11 +1,13 @@
 mod physics;
 
+use std::f32::consts::PI;
+
 use glam::{Vec2, Vec3};
 use winit::event::MouseScrollDelta;
 
 use crate::{
     control::GameInput,
-    map::{room::RoomID, Map},
+    map::{portal::PortalDirectionDifference, room::RoomID, Map},
 };
 
 use self::physics::{CylinderBody, PhysicsStateDebugData};
@@ -65,8 +67,14 @@ impl Player {
                     let dest_portal = dest_room.get_portal(portal_id);
                     room = dest_room;
 
-                    let (new_origin, yaw_angle_difference) =
-                        src_portal.teleport(self.body.feet_position, dest_portal);
+                    let new_origin =
+                        src_portal.teleport_to(self.body.feet_position, dest_portal);
+                    let yaw_angle_difference = match src_portal.direction_difference(&dest_portal) {
+                        PortalDirectionDifference::None => PI,
+                        PortalDirectionDifference::AnticlockwiseDeg90 => PI * 0.5,
+                        PortalDirectionDifference::ClockwiseDeg90 => -PI * 0.5,
+                        PortalDirectionDifference::Deg180 => 0.0,
+                    };
                     self.body.feet_position = new_origin;
                     self.body.add_yaw(yaw_angle_difference);
                 }

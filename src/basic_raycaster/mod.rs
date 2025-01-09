@@ -4,7 +4,7 @@ mod platform;
 
 use glam::Vec3;
 use platform::{PlatformRenderParams, PlatformType};
-use ray::{SkyboxSide, WallSide};
+use ray::{WallSide};
 use rayon::iter::{IndexedParallelIterator, ParallelIterator};
 use rayon::slice::ParallelSliceMut;
 use wall::WallRenderParams;
@@ -231,13 +231,10 @@ impl<'a> FrameRenderer<'a> {
                     Some((room_id, portal_id)) => {
                         let dest_room = self.map.get_room_data(room_id);
                         let dest_portal = dest_room.get_portal(portal_id);
+                        let rotation = src_portal.direction_difference(&dest_portal);
+                        ray.rotate(rotation);
                         ray.portal_teleport(src_portal, dest_portal);
-                        // TODO fix skybox when looking throguh portals. 
-                        let origin = static_ray.origin;
-                        let hit_wall = static_ray.hit_wall_side;
-                        static_ray.portal_teleport(src_portal, dest_portal);
-                        static_ray.origin = origin;
-                        static_ray.hit_wall_side = hit_wall;
+                        
                         current_room = dest_room;
                         current_room_dimensions = current_room.segment.dimensions_i64();
                         skybox_textures = self.textures.get_skybox_textures(current_room.data.skybox());
@@ -315,70 +312,6 @@ impl<'a> FrameRenderer<'a> {
 self.render_platform(
     params, column
 );
-/*
-        // Variables used for reducing the amount of calculations and for optimization
-        let tile_step_factor = self.camera.horizontal_plane * 2.0 * self.width_recip;
-        let pos_factor = self.camera.forward_dir - self.camera.horizontal_plane
-            + tile_step_factor * ray.column_index as f32;
-        
-    let mut draw_platform = |draw_from: usize, draw_to: usize,
-        texture: TextureDataRef| {
-            if texture.is_empty() {
-                column.fill(0);
-                return;
-            }
-            let (texture, tex_width, tex_height) = (
-                texture.data,
-                texture.width as usize,
-                texture.height as usize,
-            );
-        let segment = column
-            .chunks_exact_mut(3)
-            .enumerate()
-            .skip(draw_from)
-            .take(draw_to - draw_from);
-        for (y, pixel) in segment {
-            let row_dist = self.half_view_height
-                / (y as f32 - self.y_shearing - self.half_view_height);
-            let pos = SKYBOX_ORIGIN + row_dist * pos_factor;
-
-            //let tex_x =
-            //    ((tex_width as f32 * pos.x.fract()) as usize).min(tex_width - 1);
-            //let tex_y =
-            //    ((tex_height as f32 * pos.z.fract()) as usize).min(tex_height - 1);
-            let tex_x = ((tex_width as f32 * pos.x) as usize).min(tex_width - 1);
-            let tex_y = ((tex_height as f32 * pos.z) as usize).min(tex_height - 1);
-
-            let i = 4 * (tex_width * tex_y + tex_x); //tex_width * 4 * tex_y + tex_x * 4
-            let color = &texture[i..i + 3];
-
-            pixel.copy_from_slice(color);
-        }
-    };
-
-    // TODO wrong names
-    // Draw from:
-    let draw_ground_from = draw_from;
-
-    // Draw to:
-    let pixels_to_bottom = ray.half_skybox_wall_pixel_height * 0.5 + self.y_shearing;
-    let draw_ground_to = ((self.half_view_height + pixels_to_bottom) as usize)
-        .clamp(draw_from, draw_to);
-    draw_platform(draw_ground_from, draw_ground_to, skybox_textures.bottom);
-
-
-        // TODO wrong names
-        // Draw from:
-        let pixels_to_bottom = ray.half_skybox_wall_pixel_height * 0.5 - self.y_shearing;
-        let draw_ceiling_from = ((self.half_view_height - pixels_to_bottom) as usize)
-            .clamp(draw_from, draw_to);
-
-        // Draw to:
-        let draw_ceiling_to = draw_to;
-
-        draw_platform(draw_ceiling_from, draw_ceiling_to, skybox_textures.top);
-
-*/
     }
 }
 
