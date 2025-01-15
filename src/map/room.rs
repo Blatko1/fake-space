@@ -6,8 +6,8 @@ use crate::{
 };
 
 use super::{
-    portal::{Portal, PortalID},
-    segment::{ObjectID, Segment, SegmentID, SkyboxTextureIDs},
+    portal::{Orientation, Portal, PortalID, Rotation},
+    blueprint::{ObjectID, Blueprint, BlueprintID, SkyboxTextureIDs},
 };
 
 const VOXEL_CHANCE: f64 = 0.3;
@@ -19,25 +19,31 @@ pub struct RoomID(pub usize);
 #[derive(Debug)]
 pub struct Room {
     pub(super) id: RoomID,
-    pub(super) segment_id: SegmentID,
+    pub(super) segment_id: BlueprintID,
     // Each portal has its own index which is the position in this Vec
     pub(super) portals: Vec<Portal>,
-    pub(super) objects: Vec<Option<ModelID>>,
+    //pub(super) objects: Vec<Option<ModelID>>,
     pub(super) is_fully_generated: bool,
     pub(super) skybox: SkyboxTextureIDs,
     pub(super) ambient_light_intensity: f32,
+
+    // TODO finish orientation for skyboxes to remain in place
+    /// To which side is the room oriented to or to where points the room north
+    pub orientation: Orientation,
 }
 
 impl Room {
-    pub fn new(id: RoomID, segment: &Segment) -> Self {
+    pub fn new(id: RoomID, blueprint: &Blueprint, orientation: Orientation) -> Self {
         Self {
             id,
-            segment_id: segment.id,
-            portals: segment.unlinked_portals.clone(),
-            objects: segment.object_placeholders.clone(),
+            segment_id: blueprint.id,
+            portals: blueprint.unlinked_portals.clone(),
+            //objects: blueprint.object_placeholders.clone(),
             is_fully_generated: false,
-            skybox: segment.skybox,
-            ambient_light_intensity: segment.ambient_light_intensity,
+            skybox: blueprint.skybox,
+            ambient_light_intensity: blueprint.ambient_light_intensity,
+
+            orientation
         }
     }
 
@@ -57,7 +63,7 @@ impl Room {
 
 #[derive(Debug)]
 pub struct RoomRef<'a> {
-    pub segment: &'a Segment,
+    pub blueprint: &'a Blueprint,
     pub data: &'a Room,
 }
 
@@ -66,7 +72,7 @@ impl<'a> RoomRef<'a> {
         self.data.portals[local_id.0]
     }
 
-    pub fn get_object(&self, local_id: ObjectID) -> Option<ModelID> {
-        self.data.objects[local_id.0]
-    }
+    //pub fn get_object(&self, local_id: ObjectID) -> Option<ModelID> {
+    //    self.data.objects[local_id.0]
+    //}
 }

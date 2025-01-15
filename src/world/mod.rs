@@ -21,7 +21,7 @@ use self::parser::cleanup_input;
 use self::textures::TextureDataRef;
 
 pub struct World {
-    segments: Vec<Segment>,
+    blueprints: Vec<blueprint>,
     texture_manager: TextureManager,
     model_manager: ModelManager,
 
@@ -37,7 +37,7 @@ impl World {
         self.fully_generate_room(current_room_id);
         if let Some(tile) = self
             .get_room_data(current_room_id)
-            .segment
+            .blueprint
             .get_tile_checked(current_tile_pos.0, current_tile_pos.1)
         {
             if let Some(object) = tile.object {
@@ -73,7 +73,7 @@ impl World {
                 .filter(|portal| portal.link.is_none())
                 .map(|portal| {
                     // Skip the first (two) rooms since they appear only once
-                    let rand_segment = self.segments[1..].choose(&mut self.rng).unwrap();
+                    let rand_segment = self.blueprints[1..].choose(&mut self.rng).unwrap();
                     let mut new_room = Room::new_with_rng_objects(
                         RoomID(next_id),
                         rand_segment,
@@ -100,7 +100,7 @@ impl World {
     pub fn get_room_data(&self, index: RoomID) -> RoomRef {
         let room = &self.rooms[index.0];
         RoomRef {
-            segment: &self.segments[room.segment_id.0],
+            blueprint: &self.blueprints[room.segment_id.0],
             data: room,
         }
     }

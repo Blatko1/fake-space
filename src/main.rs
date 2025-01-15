@@ -1,11 +1,11 @@
 mod backend;
-mod basic_raycaster;
+mod raycaster;
 mod control;
 mod map;
-mod map_parser;
+//mod map_parser;
 mod models;
 mod player;
-mod raycaster;
+//mod old_raycaster;
 mod state;
 mod textures;
 

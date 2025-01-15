@@ -10,13 +10,13 @@ pub struct PortalID(pub usize);
 #[derive(Debug, Copy, Clone)]
 pub struct DummyPortal {
     pub id: PortalID,
-    pub direction: PortalDirection,
+    pub orientation: Orientation,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct Portal {
     pub id: PortalID,
-    pub direction: PortalDirection,
+    pub direction: Orientation,
     pub position: PointXZ<u64>,
     pub center: PointXZ<f32>,
     pub ground_level: f32,
@@ -31,74 +31,74 @@ impl Portal {
         let mut new_origin = Vec3::new(dest.center.x, origin.y + dest.ground_level - self.ground_level, dest.center.z);
 
         match self.direction {
-            PortalDirection::North => match dest.direction {
-                PortalDirection::North => {
+            Orientation::North => match dest.direction {
+                Orientation::North => {
                     new_origin.x += offset_x;
                     new_origin.z += 1.0 + offset_z;
                 }
-                PortalDirection::South => {
+                Orientation::South => {
                     new_origin.x += - offset_x;
                     new_origin.z += - 1.0 - offset_z;
                 }
-                PortalDirection::East => {
+                Orientation::East => {
                     new_origin.x += 1.0 + offset_z;
                     new_origin.z += - offset_x;
                 }
-                PortalDirection::West => {
+                Orientation::West => {
                     new_origin.x += - 1.0 - offset_z;
                     new_origin.z += offset_x;
                 }
             },
-            PortalDirection::South => match dest.direction {
-                PortalDirection::North => {
+            Orientation::South => match dest.direction {
+                Orientation::North => {
                     new_origin.x += - offset_x;
                     new_origin.z += 1.0 - offset_z;
                 }
-                PortalDirection::South => {
+                Orientation::South => {
                     new_origin.x += offset_x;
                     new_origin.z += - 1.0 + offset_z;
                 }
-                PortalDirection::East => {
+                Orientation::East => {
                     new_origin.x += 1.0 - offset_z;
                     new_origin.z += offset_x;
                 }
-                PortalDirection::West => {
+                Orientation::West => {
                     new_origin.x += - 1.0 + offset_z;
                     new_origin.z += - offset_x;
                 }
             },
-            PortalDirection::East => match dest.direction {
-                PortalDirection::North => {
+            Orientation::East => match dest.direction {
+                Orientation::North => {
                     new_origin.x += - offset_z;
                     new_origin.z += 1.0 + offset_x;
                 }
-                PortalDirection::South => {
+                Orientation::South => {
                     new_origin.x += offset_z;
                     new_origin.z += - 1.0 - offset_x;
                 }
-                PortalDirection::East => {
+                Orientation::East => {
                     new_origin.x += 1.0 + offset_x;
                     new_origin.z += offset_z;
                 }
-                PortalDirection::West => {
+                Orientation::West => {
                     new_origin.x += - 1.0 - offset_x;
                     new_origin.z += - offset_z;
                 }
             },
-            PortalDirection::West => match dest.direction {
-                PortalDirection::North => {
+            Orientation::West => match dest.direction {
+                Orientation::North => {
                     new_origin.x += offset_z;
                     new_origin.z += 1.0 - offset_x;
                 }
-                PortalDirection::South => {
+                Orientation::South => {
                     new_origin.x += - offset_z;
                     new_origin.z += - 1.0 + offset_x;
                 }
-                PortalDirection::East => {
+                Orientation::East => {
                     new_origin.x += 1.0 - offset_x;
                     new_origin.z += - offset_z;
                 }
-                PortalDirection::West => {
+                Orientation::West => {
                     new_origin.x += - 1.0 + offset_x;
                     new_origin.z += offset_z;
                 }
@@ -107,37 +107,47 @@ impl Portal {
         new_origin
     }
 
-    pub fn direction_difference(&self, other: &Self) -> PortalDirectionDifference {
+    pub fn direction_difference(&self, other: &Self) -> Rotation {
         self.direction.difference(other.direction)
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum PortalDirection {
+pub enum Orientation {
     East = 0,
     North = 90,
     West = 180,
     South = 270
 }
 
-impl PortalDirection {
-    pub fn difference(self, other: Self) -> PortalDirectionDifference {
+impl Orientation {
+    pub fn difference(self, other: Self) -> Rotation {
         match other as i32 - self as i32 {
-            0 => PortalDirectionDifference::None,
-            -90 | 270 => PortalDirectionDifference::AnticlockwiseDeg90,
-            90 | -270 => PortalDirectionDifference::ClockwiseDeg90,
-            180 | -180 => PortalDirectionDifference::Deg180,
+            0 => Rotation::Deg0,
+            -90 | 270 => Rotation::AnticlockwiseDeg90,
+            90 | -270 => Rotation::ClockwiseDeg90,
+            180 | -180 => Rotation::Deg180,
+            _ => unreachable!()
+        }
+    }
+
+    pub fn from_angle(angle: i32) -> Self {
+        match angle {
+            0 | 360 => Self::East,
+            -90 | 270 => Self::South,
+            90 | -270 => Self::North,
+            180 | -180 => Self::West,
             _ => unreachable!()
         }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum PortalDirectionDifference {
-    None,
-    AnticlockwiseDeg90,
-    ClockwiseDeg90,
-    Deg180,
+pub enum Rotation {
+    Deg0 = 0,
+    AnticlockwiseDeg90 = 90,
+    ClockwiseDeg90 = -90,
+    Deg180 = 180,
 }
 
 /*#[test]

@@ -8,11 +8,6 @@ impl<'a> FrameRenderer<'a> {
         let top_draw_bound = params.top_draw_bound;
         let ray = params.ray;
         let height = params.height;
-
-            // TODO idk if this 'if' is necessary
-            if params.texture.is_empty() {
-                return (bottom_draw_bound, top_draw_bound);
-            }
                 
             let (texture, tex_width, tex_height) =
             (params.texture.data, params.texture.width as usize, params.texture.height as usize);
@@ -41,7 +36,7 @@ impl<'a> FrameRenderer<'a> {
         let pos_factor = ray.camera_dir - ray.horizontal_plane
             + tile_step_factor * ray.column_index as f32;
 
-            let segment = column
+            let blueprint = column
                 .chunks_exact_mut(3)
                 .skip(draw_from)
                 .take(draw_to - draw_from);
@@ -52,7 +47,7 @@ impl<'a> FrameRenderer<'a> {
             // Before, there was texture bleeding, but now no bleeding!
             let mut y_pixel_pos = 1.0 + draw_from as f32 - self.y_shearing - self.half_view_height;
 
-            for pixel in segment {
+            for pixel in blueprint {
                 let row_dist = denominator / y_pixel_pos;
                 let pos = ray.origin + row_dist * pos_factor;
 

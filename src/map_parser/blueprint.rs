@@ -1,5 +1,5 @@
-use crate::map::portal::{DummyPortal, PortalDirection, PortalID};
-use crate::map::segment::{ObjectID, Tile};
+use crate::map::portal::{DummyPortal, Orientation, PortalID};
+use crate::map::blueprint::{ObjectID, Tile};
 use crate::raycaster::PointXZ;
 use crate::textures::TextureID;
 use hashbrown::HashMap;
@@ -99,7 +99,7 @@ impl<'a> SegmentParser<'a> {
                             Some(direction) => {
                                 let dummy = DummyPortal {
                                     id: PortalID(portal_id),
-                                    direction,
+                                    orientation: direction,
                                 };
                                 portal_id += 1;
                                 Some(dummy)
@@ -141,7 +141,7 @@ impl<'a> SegmentParser<'a> {
                 }
             };
         }
-        context("Segment parser error", fail)(input)
+        context("blueprint parser error", fail)(input)
     }
 }
 
@@ -228,7 +228,7 @@ fn parse_tiles<'a>(
 ) -> IResult<&'a str, Vec<TilePreset>, VerboseError<&'a str>> {
     let tile_ids = input.split_whitespace();
     if tile_ids.clone().count() != dimensions.0 * dimensions.1 {
-        return context("Tile count not matching segment size!", fail)(input);
+        return context("Tile count not matching blueprint size!", fail)(input);
     }
 
     let mut tiles = vec![TilePreset::default(); dimensions.0 * dimensions.1];
@@ -278,7 +278,7 @@ struct TilePreset {
     ground_level: Option<f32>,
     ceiling_level: Option<f32>,
     top_level: Option<f32>,
-    portal_dir: Option<PortalDirection>,
+    portal_dir: Option<Orientation>,
     allow_voxels: Option<bool>,
 }
 
@@ -319,12 +319,12 @@ impl TilePreset {
     }
 }
 
-fn portal_dir_from_str(s: &str) -> Option<PortalDirection> {
+fn portal_dir_from_str(s: &str) -> Option<Orientation> {
     match s {
-        "N" => Some(PortalDirection::North),
-        "S" => Some(PortalDirection::South),
-        "E" => Some(PortalDirection::East),
-        "W" => Some(PortalDirection::West),
+        "N" => Some(Orientation::North),
+        "S" => Some(Orientation::South),
+        "E" => Some(Orientation::East),
+        "W" => Some(Orientation::West),
         _ => None,
     }
 }

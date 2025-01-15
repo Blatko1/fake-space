@@ -1,4 +1,4 @@
-// Declare the segment dimensions
+// Declare the blueprint dimensions
 11x11
 
 //Parameters: pillar1->bottom pillar, pillar2->top pillar, lvl1->bottom starting bound of bottom pillar,

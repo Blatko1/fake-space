@@ -1,0 +1,45 @@
+{
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "tileset.tsx",
+    "expandedProjectPaths": [
+        "."
+    ],
+    "fileStates": {
+        "map.tmx": {
+            "scale": 32,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 8.828125,
+                "y": 10.484375
+            }
+        },
+        "tileset.tsx": {
+            "scaleInDock": 16,
+            "scaleInEditor": 45
+        }
+    },
+    "last.imagePath": "H:/programming/rust/code/RayVenture/tiled_map",
+    "map.lastUsedFormat": "tmx",
+    "map.renderOrder": "1",
+    "map.tileHeight": 1,
+    "map.tileWidth": 1,
+    "map.width": 20,
+    "openFiles": [
+        "map.tmx",
+        "tileset.tsx"
+    ],
+    "project": "test1.tiled-project",
+    "property.type": "float",
+    "recentFiles": [
+        "map.tmx",
+        "tileset.tsx"
+    ],
+    "tileset.lastUsedFormat": "tsx",
+    "tileset.tileSize": {
+        "height": 1,
+        "width": 1
+    }
+}

@@ -5,14 +5,7 @@ use rayon::iter::ParallelIterator;
 use winit::event::DeviceEvent;
 
 use crate::{
-    basic_raycaster::{self, FrameRenderer},
-    control::GameInput,
-    map::{room::RoomID, Map},
-    map_parser::{cleanup_input, MapParser},
-    models::ModelArray,
-    player::Player,
-    raycaster::{self, camera::Camera},
-    textures::TextureArray,
+    control::GameInput, map::{parser::{utils::clean_input, MapParser }, room::RoomID, Map}, models::ModelArray, player::Player, raycaster::{self, camera::Camera, FrameRenderer}, textures::TextureArray
 };
 
 const PHYSICS_TIMESTEP: f32 = 0.01;
@@ -38,10 +31,9 @@ impl GameState {
         // TODO remove 'unwrap()'s
         let path: PathBuf = data_path.into().canonicalize().unwrap();
         let parent_path = path.parent().unwrap().to_path_buf();
-        let input = cleanup_input(std::fs::read_to_string(path).unwrap());
-        let (segments, textures, models) = match MapParser::new(&input, parent_path)
-            .unwrap()
-            .parse()
+        let input = clean_input(std::fs::read_to_string(path).unwrap());
+        let (blueprints, textures, models) = match MapParser::new(parent_path)
+            .parse(&input)
             .finish()
         {
             Ok((_, data)) => data,
@@ -56,7 +48,7 @@ impl GameState {
         Self {
             camera,
 
-            map: Map::new(segments),
+            map: Map::new(blueprints),
             textures: TextureArray::new(textures),
             models: ModelArray::new(models),
 

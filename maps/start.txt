@@ -1,13 +1,13 @@
-// Declare the segment dimensions
+// Declare the blueprint dimensions
 20x20
 
 // Declare the presets used in modifying the tiles
-$noRoof = ceilingL:100000.0, topL:100000.1;
-$pillar = groundL:5.0, bottomT:Stone, groundT:Stone;
+$noRoof = heights: (,,100000.0,100000.1);
+$pillar = heights: (,5.0,,), textures: (Stone, Stone);
 $grass = groundL:0.0, groundT:Grass, bottomT:Stone;
 
 $pt = $pillar, groundL:100.0, ceilingL:100.1;
-$p1 = $pillar, groundL:9.8, ceilingL:11.7, ceilingT:Stone, topT:Stone;
+$p1 = $pillar, heights: ( , 10, 100, 100.1), textures:( , , Stone, Stone), portal: N;
 $p2 = $pillar, groundL:9.0, ceilingL:12.0, ceilingT:Stone, topT:Stone;
 $p3 = $pillar, groundL:8.0, ceilingL:13.0, ceilingT:Stone, topT:Stone;
 $p4 = $pillar, groundL:6.0, ceilingL:18.0, ceilingT:Stone, topT:Stone;

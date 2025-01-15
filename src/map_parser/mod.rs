@@ -1,5 +1,5 @@
 // TODO maybe add tests for the parser
-mod segment;
+mod blueprint;
 
 use std::path::PathBuf;
 
@@ -17,13 +17,13 @@ use nom::number::complete::double;
 use nom::sequence::{preceded, terminated, Tuple};
 use nom::{Finish, IResult, Parser};
 
-use crate::map::segment::{Segment, SegmentID, SkyboxTextureIDs, Tile};
+use crate::map::blueprint::{Blueprint, BlueprintID, SkyboxTextureIDs, Tile};
 use crate::textures::TextureData;
 
 use super::models::{ModelData, ModelID};
 use super::textures::TextureID;
 
-use self::segment::SegmentParser;
+use self::blueprint::SegmentParser;
 
 #[derive(Debug)]
 struct ParsedTexture {
@@ -42,7 +42,7 @@ pub struct MapParser<'a> {
     models: Vec<ModelData>,
     model_map: HashMap<String, ModelID>,
     model_count: usize,
-    segments: Vec<Segment>,
+    blueprints: Vec<Blueprint>,
 }
 
 impl<'a> MapParser<'a> {
@@ -61,7 +61,7 @@ impl<'a> MapParser<'a> {
             models: Vec::new(),
             model_map: HashMap::new(),
             model_count: 0,
-            segments: Vec::new(),
+            blueprints: Vec::new(),
         })
     }
 
@@ -69,7 +69,7 @@ impl<'a> MapParser<'a> {
         mut self,
     ) -> IResult<
         &'a str,
-        (Vec<Segment>, Vec<TextureData>, Vec<ModelData>),
+        (Vec<Blueprint>, Vec<TextureData>, Vec<ModelData>),
         VerboseError<&'a str>,
     > {
         let (_, expressions) = separate_expressions(self.input)?;
@@ -108,21 +108,20 @@ impl<'a> MapParser<'a> {
                             &self.settings,
                             &self.texture_map,
                         )?;
-                    let segment = Segment::new(
-                        SegmentID(self.segments.len()),
-                        name.to_owned(),
+                    let blueprint = Blueprint::new(
+                        BlueprintID(self.blueprints.len()),
                         dimensions,
                         tiles,
                         skybox,
                         repeatable,
                         ambient_light,
                     );
-                    self.segments.push(segment);
+                    self.blueprints.push(blueprint);
                 }
                 _ => return context("Unknown line key", fail)(key),
             };
         }
-        Ok(("", (self.segments, self.textures, self.models)))
+        Ok(("", (self.blueprints, self.textures, self.models)))
     }
 }
 
@@ -342,16 +341,16 @@ fn parse_segment<'a>(
                 let full_path = parent_dir.join(i);
                 let data = match std::fs::read_to_string(full_path.clone()) {
                     Ok(d) => d,
-                    Err(_) => return context("Segment file not found", fail)(i),
+                    Err(_) => return context("blueprint file not found", fail)(i),
                 };
-                let tidy_data = cleanup_input(data);
+                let tidy_data = clean_input(data);
                 let (_, parsed) = match SegmentParser::new(&tidy_data, settings, textures)
                     .parse()
                     .finish()
                 {
                     Ok(p) => p,
                     Err(e) => panic!(
-                        "segment parse error for segment {}: {}",
+                        "blueprint parse error for blueprint {}: {}",
                         full_path.display(),
                         convert_error(tidy_data.as_str(), e)
                     ),
@@ -407,7 +406,7 @@ fn parse_segment<'a>(
                     None => return context("Unknown texture", fail)(i),
                 }
             }
-            _ => return context("Unknown segment field name", fail)(name),
+            _ => return context("Unknown blueprint field name", fail)(name),
         }
     }
 
@@ -501,7 +500,7 @@ fn setting_name<'a, E: NomParseError<&'a str> + ContextError<&'a str>>(
 fn segment_name<'a, E: NomParseError<&'a str> + ContextError<&'a str>>(
     i: &'a str,
 ) -> IResult<&'a str, &'a str, E> {
-    context("segment name", preceded(space, alphanumeric1))(i)
+    context("blueprint name", preceded(space, alphanumeric1))(i)
 }
 
 fn field_name<'a, E: NomParseError<&'a str> + ContextError<&'a str>>(
@@ -537,7 +536,7 @@ fn empty_or_fail<'a, E: NomParseError<&'a str> + ContextError<&'a str>>(
 }
 
 /// Removes comments and empty lines from input.
-pub fn cleanup_input(input: String) -> String {
+pub fn clean_input(input: String) -> String {
     input
         .lines()
         .map(|line| {

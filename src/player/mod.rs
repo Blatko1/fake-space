@@ -7,7 +7,7 @@ use winit::event::MouseScrollDelta;
 
 use crate::{
     control::GameInput,
-    map::{portal::PortalDirectionDifference, room::RoomID, Map},
+    map::{portal::Rotation, room::RoomID, Map},
 };
 
 use self::physics::{CylinderBody, PhysicsStateDebugData};
@@ -52,7 +52,7 @@ impl Player {
         self.body.update_physics(delta);
 
         // Teleportation between rooms
-        if let Some(tile) = room.segment.get_tile_checked(
+        if let Some(tile) = room.blueprint.get_tile_checked(
             self.body.feet_position.x as i64,
             self.body.feet_position.z as i64,
         ) {
@@ -70,17 +70,17 @@ impl Player {
                     let new_origin =
                         src_portal.teleport_to(self.body.feet_position, dest_portal);
                     let yaw_angle_difference = match src_portal.direction_difference(&dest_portal) {
-                        PortalDirectionDifference::None => PI,
-                        PortalDirectionDifference::AnticlockwiseDeg90 => PI * 0.5,
-                        PortalDirectionDifference::ClockwiseDeg90 => -PI * 0.5,
-                        PortalDirectionDifference::Deg180 => 0.0,
+                        Rotation::Deg0 => PI,
+                        Rotation::AnticlockwiseDeg90 => PI * 0.5,
+                        Rotation::ClockwiseDeg90 => -PI * 0.5,
+                        Rotation::Deg180 => 0.0,
                     };
                     self.body.feet_position = new_origin;
                     self.body.add_yaw(yaw_angle_difference);
                 }
             }
         }
-        self.body.collision_detection_resolution(room.segment);
+        self.body.collision_detection_resolution(room.blueprint);
     }
 
     pub fn increase_score(&mut self, add: u32) {

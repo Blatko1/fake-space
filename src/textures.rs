@@ -1,13 +1,6 @@
 use std::fmt::Debug;
 
-use crate::map::segment::SkyboxTextureIDs;
-
-const DEFAULT_TEXTURE_WIDTH: usize = 2;
-const DEFAULT_TEXTURE_HEIGHT: usize = 2;
-const DEFAULT_TEXTURE_RGBA: [u8; 16] = [
-    200, 0, 200, 255, 0, 0, 0, 255, 0, 0, 0, 255, 200, 0, 200, 255,
-];
-const DEFAULT_TEXTURE_TRANSPARENCY: bool = false;
+use crate::map::blueprint::SkyboxTextureIDs;
 
 pub struct TextureArray {
     textures: Vec<TextureData>,
@@ -23,13 +16,6 @@ impl TextureArray {
         };
         textures.insert(0, default_texture);
 
-        let empty_texture = TextureData {
-            data: Vec::new(),
-            width: 0,
-            height: 0,
-            transparency: true,
-        };
-        textures.insert(0, empty_texture);
         Self { textures }
     }
 
@@ -55,7 +41,7 @@ pub struct TextureID(pub usize);
 
 impl Default for TextureID {
     fn default() -> Self {
-        Self(1)
+        Self(0)
     }
 }
 
@@ -86,6 +72,7 @@ impl TextureData {
     }
 }
 
+// TODO probably not needed
 impl Debug for TextureData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TextureData")
@@ -109,13 +96,6 @@ pub struct TextureDataRef<'a> {
     pub transparency: bool,
 }
 
-impl<'a> TextureDataRef<'a> {
-    // TODO probably unneeded
-    pub fn is_empty(&self) -> bool {
-        self.data.is_empty()
-    }
-}
-
 #[derive(Debug, Clone, Copy)]
 pub struct SkyboxTexturesRef<'a> {
     pub north: TextureDataRef<'a>,
@@ -125,3 +105,10 @@ pub struct SkyboxTexturesRef<'a> {
     pub top: TextureDataRef<'a>,
     pub bottom: TextureDataRef<'a>,
 }
+
+const DEFAULT_TEXTURE_WIDTH: usize = 2;
+const DEFAULT_TEXTURE_HEIGHT: usize = 2;
+const DEFAULT_TEXTURE_RGBA: [u8; 16] = [
+    200, 0, 200, 255, 0, 0, 0, 255, 0, 0, 0, 255, 200, 0, 200, 255,
+];
+const DEFAULT_TEXTURE_TRANSPARENCY: bool = false;

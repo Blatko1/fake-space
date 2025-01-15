@@ -5,7 +5,7 @@ use glam::{Vec2, Vec3};
 
 use crate::{
     control::GameInput,
-    map::segment::Segment,
+    map::blueprint::Blueprint,
     raycaster::camera::{normalize_rad, CameraTarget, CameraTargetData},
 };
 
@@ -93,12 +93,12 @@ impl CylinderBody {
         }
     }
 
-    pub fn collision_detection_resolution(&mut self, segment: &Segment) {
+    pub fn collision_detection_resolution(&mut self, blueprint: &Blueprint) {
         if self.is_ghost {
             return;
         }
 
-        let Some(current_tile) = segment
+        let Some(current_tile) = blueprint
             .get_tile_checked(self.feet_position.x as i64, self.feet_position.z as i64)
         else {
             return;
@@ -110,7 +110,7 @@ impl CylinderBody {
         let pos_z = current_tile.position.z as i64;
         let intersected_vertical =
             if (self.feet_position.x + self.radius) > (pos_x as f32 + 1.0) {
-                if let Some(tile) = segment.get_tile_checked(pos_x + 1, pos_z) {
+                if let Some(tile) = blueprint.get_tile_checked(pos_x + 1, pos_z) {
                     if (tile.ground_level - TILE_COLLISION_OFFSET) > self.feet_position.y
                         || (tile.ceiling_level + TILE_COLLISION_OFFSET)
                             < (self.feet_position.y + self.height)
@@ -124,7 +124,7 @@ impl CylinderBody {
                 }
                 Some(IntersectedVerticalSide::Right)
             } else if (self.feet_position.x - self.radius) < pos_x as f32 {
-                if let Some(tile) = segment.get_tile_checked(pos_x - 1, pos_z) {
+                if let Some(tile) = blueprint.get_tile_checked(pos_x - 1, pos_z) {
                     if (tile.ground_level - TILE_COLLISION_OFFSET) > self.feet_position.y
                         || (tile.ceiling_level + TILE_COLLISION_OFFSET)
                             < (self.feet_position.y + self.height)
@@ -142,7 +142,7 @@ impl CylinderBody {
             };
         let intersected_horizontal =
             if (self.feet_position.z + self.radius) > (pos_z as f32 + 1.0) {
-                if let Some(tile) = segment.get_tile_checked(pos_x, pos_z + 1) {
+                if let Some(tile) = blueprint.get_tile_checked(pos_x, pos_z + 1) {
                     if (tile.ground_level - TILE_COLLISION_OFFSET) > self.feet_position.y
                         || (tile.ceiling_level + TILE_COLLISION_OFFSET)
                             < (self.feet_position.y + self.height)
@@ -156,7 +156,7 @@ impl CylinderBody {
                 }
                 Some(IntersectedHorizontalSide::Top)
             } else if (self.feet_position.z - self.radius) < pos_z as f32 {
-                if let Some(tile) = segment.get_tile_checked(pos_x, pos_z - 1) {
+                if let Some(tile) = blueprint.get_tile_checked(pos_x, pos_z - 1) {
                     if (tile.ground_level - TILE_COLLISION_OFFSET) > self.feet_position.y
                         || (tile.ceiling_level + TILE_COLLISION_OFFSET)
                             < (self.feet_position.y + self.height)
@@ -176,7 +176,7 @@ impl CylinderBody {
             let offset = (v as i64, h as i64);
             let (offset_x, offset_z) = (offset.0 * 2 - 1, offset.1 * 2 - 1);
             if let Some(tile) =
-                segment.get_tile_checked(pos_x + offset_x, pos_z + offset_z)
+                blueprint.get_tile_checked(pos_x + offset_x, pos_z + offset_z)
             {
                 if (tile.ground_level - TILE_COLLISION_OFFSET) > self.feet_position.y
                     || (tile.ceiling_level + TILE_COLLISION_OFFSET)

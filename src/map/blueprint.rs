@@ -3,28 +3,28 @@ use crate::{models::ModelID, raycaster::PointXZ, textures::TextureID};
 use super::portal::{DummyPortal, Portal};
 
 #[derive(Debug, Clone, Copy)]
-pub struct SegmentID(pub usize);
+pub struct BlueprintID(pub usize);
 
 // TODO Use a struct or type for dimensions instead
-/// A map segment (room) with immutable data.
+// TODO rename all "blueprints" to "blueprints"
+/// A map blueprint (room) with immutable data.
 /// You can mutate room data in a [`Room`] struct.
 #[derive(Debug)]
-pub struct Segment {
-    pub(super) id: SegmentID,
-    pub(super) name: String,
+pub struct Blueprint {
+    pub(super) id: BlueprintID,
+    /// Room dimensions (width, height).
     pub(super) dimensions: (u64, u64),
     pub(super) tiles: Vec<Tile>,
     pub(super) unlinked_portals: Vec<Portal>,
-    pub(super) object_placeholders: Vec<Option<ModelID>>,
+    //pub(super) object_placeholders: Vec<Option<ModelID>>,
     pub(super) skybox: SkyboxTextureIDs,
     pub(super) repeatable: bool,
     pub(super) ambient_light_intensity: f32,
 }
 
-impl Segment {
+impl Blueprint {
     pub fn new(
-        id: SegmentID,
-        name: String,
+        id: BlueprintID,
         dimensions: (u64, u64),
         tiles: Vec<Tile>,
         skybox: SkyboxTextureIDs,
@@ -39,7 +39,7 @@ impl Segment {
                 let dummy = tile.portal.unwrap();
                 Portal {
                     id: dummy.id,
-                    direction: dummy.direction,
+                    direction: dummy.orientation,
                     position: tile.position,
                     center: PointXZ::new(
                         tile.position.x as f32 + 0.5,
@@ -55,11 +55,10 @@ impl Segment {
             tiles.iter().filter(|tile| tile.object.is_some()).count();
         Self {
             id,
-            name,
             dimensions,
             unlinked_portals,
             tiles,
-            object_placeholders: vec![None; object_placeholders],
+            //object_placeholders: vec![None; object_placeholders],
             skybox,
             repeatable,
             ambient_light_intensity,
@@ -101,13 +100,14 @@ impl Segment {
     }
 }
 
+// TODO maybe rename all with 'level' to 'height'
 // TODO try removing Clone and Copy
 #[derive(Debug, Clone, Copy)]
 pub struct Tile {
     pub position: PointXZ<u64>,
-    /// Texture of the bottom wall walls.
+    /// Texture of the bottom wall.
     pub bottom_wall_tex: TextureID,
-    /// Texture of the top wall walls.
+    /// Texture of the top wall.
     pub top_wall_tex: TextureID,
     /// Texture of the bottom platform.
     pub ground_tex: TextureID,
@@ -124,7 +124,7 @@ pub struct Tile {
     /// `Y-level` - ending upper bound of the top wall;
     /// level to which the top wall stretches.
     pub top_level: f32,
-    /// If the current tile should be a portal to different segment (map).
+    /// If the current tile should be a portal to different blueprint (map).
     pub portal: Option<DummyPortal>,
 
     pub object: Option<ObjectID>,
