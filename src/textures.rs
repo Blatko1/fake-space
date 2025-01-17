@@ -9,6 +9,7 @@ pub struct TextureArray {
 impl TextureArray {
     pub(super) fn new(mut textures: Vec<TextureData>) -> Self {
         let default_texture = TextureData {
+            id: DEFAULT_TEXTURE_ID,
             data: DEFAULT_TEXTURE_RGBA.to_vec(),
             width: DEFAULT_TEXTURE_WIDTH,
             height: DEFAULT_TEXTURE_HEIGHT,
@@ -46,6 +47,7 @@ impl Default for TextureID {
 }
 
 pub struct TextureData {
+    id: TextureID,
     data: Vec<u8>,
     width: usize,
     height: usize,
@@ -53,13 +55,18 @@ pub struct TextureData {
 }
 
 impl TextureData {
-    pub fn new(data: Vec<u8>, width: usize, height: usize, transparency: bool) -> Self {
+    pub fn new(id: TextureID, data: Vec<u8>, width: usize, height: usize, transparency: bool) -> Self {
         Self {
+            id,
             data,
             width,
             height,
             transparency,
         }
+    }
+
+    pub fn id(&self) -> TextureID {
+        self.id
     }
 
     fn as_ref(&self) -> TextureDataRef {
@@ -106,6 +113,7 @@ pub struct SkyboxTexturesRef<'a> {
     pub bottom: TextureDataRef<'a>,
 }
 
+const DEFAULT_TEXTURE_ID: TextureID = TextureID(0);
 const DEFAULT_TEXTURE_WIDTH: usize = 2;
 const DEFAULT_TEXTURE_HEIGHT: usize = 2;
 const DEFAULT_TEXTURE_RGBA: [u8; 16] = [

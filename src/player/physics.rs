@@ -103,37 +103,37 @@ impl CylinderBody {
         else {
             return;
         };
-        let mut ground_level = current_tile.ground_level;
-        let mut ceiling_level = current_tile.ceiling_level;
+        let mut ground_level = current_tile.ground_height;
+        let mut ceiling_level = current_tile.ceiling_height;
 
         let pos_x = current_tile.position.x as i64;
         let pos_z = current_tile.position.z as i64;
         let intersected_vertical =
             if (self.feet_position.x + self.radius) > (pos_x as f32 + 1.0) {
                 if let Some(tile) = blueprint.get_tile_checked(pos_x + 1, pos_z) {
-                    if (tile.ground_level - TILE_COLLISION_OFFSET) > self.feet_position.y
-                        || (tile.ceiling_level + TILE_COLLISION_OFFSET)
+                    if (tile.ground_height - TILE_COLLISION_OFFSET) > self.feet_position.y
+                        || (tile.ceiling_height + TILE_COLLISION_OFFSET)
                             < (self.feet_position.y + self.height)
                     {
                         self.feet_position.x = (pos_x as f32 + 1.0) - self.radius;
                         //self.movement_velocity.x = 0.0;
                     } else {
-                        ground_level = ground_level.max(tile.ground_level);
-                        ceiling_level = ceiling_level.min(tile.ceiling_level);
+                        ground_level = ground_level.max(tile.ground_height);
+                        ceiling_level = ceiling_level.min(tile.ceiling_height);
                     }
                 }
                 Some(IntersectedVerticalSide::Right)
             } else if (self.feet_position.x - self.radius) < pos_x as f32 {
                 if let Some(tile) = blueprint.get_tile_checked(pos_x - 1, pos_z) {
-                    if (tile.ground_level - TILE_COLLISION_OFFSET) > self.feet_position.y
-                        || (tile.ceiling_level + TILE_COLLISION_OFFSET)
+                    if (tile.ground_height - TILE_COLLISION_OFFSET) > self.feet_position.y
+                        || (tile.ceiling_height + TILE_COLLISION_OFFSET)
                             < (self.feet_position.y + self.height)
                     {
                         self.feet_position.x = pos_x as f32 + self.radius;
                         //self.movement_velocity.x = 0.0;
                     } else {
-                        ground_level = ground_level.max(tile.ground_level);
-                        ceiling_level = ceiling_level.min(tile.ceiling_level);
+                        ground_level = ground_level.max(tile.ground_height);
+                        ceiling_level = ceiling_level.min(tile.ceiling_height);
                     }
                 }
                 Some(IntersectedVerticalSide::Left)
@@ -143,29 +143,29 @@ impl CylinderBody {
         let intersected_horizontal =
             if (self.feet_position.z + self.radius) > (pos_z as f32 + 1.0) {
                 if let Some(tile) = blueprint.get_tile_checked(pos_x, pos_z + 1) {
-                    if (tile.ground_level - TILE_COLLISION_OFFSET) > self.feet_position.y
-                        || (tile.ceiling_level + TILE_COLLISION_OFFSET)
+                    if (tile.ground_height - TILE_COLLISION_OFFSET) > self.feet_position.y
+                        || (tile.ceiling_height + TILE_COLLISION_OFFSET)
                             < (self.feet_position.y + self.height)
                     {
                         self.feet_position.z = (pos_z as f32 + 1.0) - self.radius;
                         //self.movement_velocity.y = 0.0;
                     } else {
-                        ground_level = ground_level.max(tile.ground_level);
-                        ceiling_level = ceiling_level.min(tile.ceiling_level);
+                        ground_level = ground_level.max(tile.ground_height);
+                        ceiling_level = ceiling_level.min(tile.ceiling_height);
                     }
                 }
                 Some(IntersectedHorizontalSide::Top)
             } else if (self.feet_position.z - self.radius) < pos_z as f32 {
                 if let Some(tile) = blueprint.get_tile_checked(pos_x, pos_z - 1) {
-                    if (tile.ground_level - TILE_COLLISION_OFFSET) > self.feet_position.y
-                        || (tile.ceiling_level + TILE_COLLISION_OFFSET)
+                    if (tile.ground_height - TILE_COLLISION_OFFSET) > self.feet_position.y
+                        || (tile.ceiling_height + TILE_COLLISION_OFFSET)
                             < (self.feet_position.y + self.height)
                     {
                         self.feet_position.z = pos_z as f32 + self.radius;
                         //self.movement_velocity.y = 0.0;
                     } else {
-                        ground_level = ground_level.max(tile.ground_level);
-                        ceiling_level = ceiling_level.min(tile.ceiling_level);
+                        ground_level = ground_level.max(tile.ground_height);
+                        ceiling_level = ceiling_level.min(tile.ceiling_height);
                     }
                 }
                 Some(IntersectedHorizontalSide::Bottom)
@@ -178,8 +178,8 @@ impl CylinderBody {
             if let Some(tile) =
                 blueprint.get_tile_checked(pos_x + offset_x, pos_z + offset_z)
             {
-                if (tile.ground_level - TILE_COLLISION_OFFSET) > self.feet_position.y
-                    || (tile.ceiling_level + TILE_COLLISION_OFFSET)
+                if (tile.ground_height - TILE_COLLISION_OFFSET) > self.feet_position.y
+                    || (tile.ceiling_height + TILE_COLLISION_OFFSET)
                         < (self.feet_position.y + self.height)
                 {
                     let edge_x = (pos_x + offset.0) as f32;
@@ -194,8 +194,8 @@ impl CylinderBody {
                         //self.movement_velocity.y = 0.0;
                     }
                 } else {
-                    ground_level = ground_level.max(tile.ground_level);
-                    ceiling_level = ceiling_level.min(tile.ceiling_level);
+                    ground_level = ground_level.max(tile.ground_height);
+                    ceiling_level = ceiling_level.min(tile.ceiling_height);
                 }
             }
         }

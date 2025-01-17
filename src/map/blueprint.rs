@@ -45,7 +45,7 @@ impl Blueprint {
                         tile.position.x as f32 + 0.5,
                         tile.position.z as f32 + 0.5,
                     ),
-                    ground_level: tile.ground_level,
+                    ground_level: tile.ground_height,
                     link: None,
                 }
             })
@@ -115,15 +115,15 @@ pub struct Tile {
     pub ceiling_tex: TextureID,
     /// `Y-level` - starting lower bound of the bottom wall;
     /// level from which the bottom wall stretches.
-    pub bottom_level: f32,
+    pub bottom_height: f32,
     /// `Y-level` - ending upper bound of the bottom wall;
     /// area/platform on which the player is walking.
-    pub ground_level: f32,
+    pub ground_height: f32,
     /// `Y-level` - starting lower bound of the top wall; the ceiling.
-    pub ceiling_level: f32,
+    pub ceiling_height: f32,
     /// `Y-level` - ending upper bound of the top wall;
     /// level to which the top wall stretches.
-    pub top_level: f32,
+    pub top_height: f32,
     /// If the current tile should be a portal to different blueprint (map).
     pub portal: Option<DummyPortal>,
 

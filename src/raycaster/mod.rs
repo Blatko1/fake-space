@@ -142,7 +142,7 @@ impl<'a> FrameRenderer<'a> {
                     ray,
                     bottom_draw_bound,
                     top_draw_bound,
-                    height: current_tile.ground_level,
+                    height: current_tile.ground_height,
                     platform_type: PlatformType::Floor,
                     texture: self.textures.get_texture_data(current_tile.ground_tex),
                 };
@@ -157,7 +157,7 @@ impl<'a> FrameRenderer<'a> {
                 ray,
                 bottom_draw_bound,
                 top_draw_bound,
-                height: current_tile.ceiling_level,
+                height: current_tile.ceiling_height,
                 platform_type: PlatformType::Ceiling,
                 texture: self.textures.get_texture_data(current_tile.ceiling_tex),
             };
@@ -187,8 +187,8 @@ impl<'a> FrameRenderer<'a> {
                     ray,
                     bottom_draw_bound,
                     top_draw_bound,
-                    bottom_level: next_tile.bottom_level,
-                    top_level: next_tile.ground_level,
+                    bottom_level: next_tile.bottom_height,
+                    top_level: next_tile.ground_height,
                     texture: self.textures.get_texture_data(next_tile.bottom_wall_tex)
                 };
 
@@ -199,8 +199,8 @@ impl<'a> FrameRenderer<'a> {
                 ray,
                 bottom_draw_bound,
                 top_draw_bound,
-                bottom_level: next_tile.ceiling_level,
-                top_level: next_tile.top_level,
+                bottom_level: next_tile.ceiling_height,
+                top_level: next_tile.top_height,
                 texture: self.textures.get_texture_data(next_tile.bottom_wall_tex)
             };
             // Draw top wall

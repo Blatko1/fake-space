@@ -1,3 +1,4 @@
+// TODO check if these really need to be pub
 pub mod portal;
 pub mod room;
 pub mod blueprint;
@@ -5,7 +6,6 @@ pub mod parser;
 
 use std::path::PathBuf;
 
-use nom::{error::convert_error, Finish};
 use portal::{Orientation, Rotation};
 use rand::seq::SliceRandom;
 use room::{Room, RoomID, RoomRef};
@@ -28,7 +28,7 @@ impl Map {
         let mut starting_room = Room::new(RoomID(room_counter), blueprint, Orientation::North);
         room_counter += 1;
 
-        let root_segment = &blueprints[1];
+        /*let root_segment = &blueprints[1];
         let mut adjacent_rooms: Vec<Room> = starting_room
             .portals
             .iter_mut()
@@ -57,9 +57,9 @@ impl Map {
 
                 new_room
             })
-            .collect();
+            .collect();*/
         rooms.push(starting_room);
-        rooms.append(&mut adjacent_rooms);
+        //rooms.append(&mut adjacent_rooms);
 
         Self { blueprints, rooms }
     }

@@ -1,11 +1,10 @@
 use std::path::PathBuf;
 
-use nom::{error::convert_error, Finish};
 use rayon::iter::ParallelIterator;
 use winit::event::DeviceEvent;
 
 use crate::{
-    control::GameInput, map::{parser::{utils::clean_input, MapParser }, room::RoomID, Map}, models::ModelArray, player::Player, raycaster::{self, camera::Camera, FrameRenderer}, textures::TextureArray
+    control::GameInput, map::{parser::MapParser, room::RoomID, Map}, models::ModelArray, player::Player, raycaster::{self, camera::Camera, FrameRenderer}, textures::TextureArray
 };
 
 const PHYSICS_TIMESTEP: f32 = 0.01;
@@ -31,7 +30,8 @@ impl GameState {
         // TODO remove 'unwrap()'s
         let path: PathBuf = data_path.into().canonicalize().unwrap();
         let parent_path = path.parent().unwrap().to_path_buf();
-        let input = clean_input(std::fs::read_to_string(path).unwrap());
+        let (blueprint, textures) = MapParser::new("tiled/map.tmx").parse();
+        /*let input = clean_input(std::fs::read_to_string(path).unwrap());
         let (blueprints, textures, models) = match MapParser::new(parent_path)
             .parse(&input)
             .finish()
@@ -41,16 +41,16 @@ impl GameState {
                 println!("verbose errors: \n{}", convert_error(input.as_str(), e));
                 panic!()
             }
-        };
+        };*/
 
         let camera = Camera::new(view_width, view_height);
 
         Self {
             camera,
 
-            map: Map::new(blueprints),
+            map: Map::new(vec![blueprint]),
             textures: TextureArray::new(textures),
-            models: ModelArray::new(models),
+            models: ModelArray::new(vec![]),
 
             player: Player::new(RoomID(0)),
 

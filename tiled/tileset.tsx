@@ -3,37 +3,38 @@
  <image source="set.png" width="40" height="40"/>
  <tile id="0">
   <properties>
-   <property name="bottom_height" type="float" value="0"/>
+   <property name="bottom_height" type="float" value="-100"/>
    <property name="bottom_texture" type="file" value="../res/stone_bricks.jpg"/>
-   <property name="ceiling_height" type="float" value="0"/>
+   <property name="ceiling_height" type="float" value="40"/>
    <property name="ceiling_texture" type="file" value="../res/stone_bricks.jpg"/>
-   <property name="ground_height" type="float" value="0"/>
+   <property name="ground_height" type="float" value="-20"/>
    <property name="ground_texture" type="file" value="../res/metal_floor.jpg"/>
-   <property name="top_height" type="float" value="0"/>
+   <property name="top_height" type="float" value="50"/>
    <property name="top_texture" type="file" value="../res/stone_bricks.jpg"/>
   </properties>
  </tile>
  <tile id="1">
   <properties>
-   <property name="bottom_height" type="float" value="0"/>
+   <property name="bottom_height" type="float" value="-5"/>
    <property name="bottom_texture" type="file" value="../res/stone_bricks.jpg"/>
-   <property name="ceiling_height" type="float" value="0"/>
+   <property name="ceiling_height" type="float" value="12"/>
    <property name="ceiling_texture" type="file" value="../res/stone_bricks.jpg"/>
-   <property name="ground_height" type="float" value="0"/>
+   <property name="ground_height" type="float" value="10"/>
    <property name="ground_texture" type="file" value="../res/metal_floor.jpg"/>
-   <property name="top_height" type="float" value="0"/>
+   <property name="top_height" type="float" value="100"/>
    <property name="top_texture" type="file" value="../res/stone_bricks.jpg"/>
   </properties>
  </tile>
  <tile id="2">
   <properties>
-   <property name="bottom_height" type="float" value="0"/>
+   <property name="bottom_height" type="float" value="-1"/>
    <property name="bottom_texture" type="file" value="../res/stone_bricks.jpg"/>
-   <property name="ceiling_height" type="float" value="0"/>
+   <property name="ceiling_height" type="float" value="3"/>
    <property name="ceiling_texture" type="file" value="../res/stone_bricks.jpg"/>
    <property name="ground_height" type="float" value="0"/>
    <property name="ground_texture" type="file" value="../res/metal_floor.jpg"/>
-   <property name="top_height" type="float" value="0"/>
+   <property name="portal_direction" value="E"/>
+   <property name="top_height" type="float" value="4"/>
    <property name="top_texture" type="file" value="../res/stone_bricks.jpg"/>
   </properties>
  </tile>
@@ -41,11 +42,12 @@
   <properties>
    <property name="bottom_height" type="float" value="0"/>
    <property name="bottom_texture" type="file" value="../res/stone_bricks.jpg"/>
-   <property name="ceiling_height" type="float" value="0"/>
+   <property name="ceiling_height" type="float" value="3"/>
    <property name="ceiling_texture" type="file" value="../res/stone_bricks.jpg"/>
    <property name="ground_height" type="float" value="0"/>
    <property name="ground_texture" type="file" value="../res/metal_floor.jpg"/>
-   <property name="top_height" type="float" value="0"/>
+   <property name="portal_direction" value="N"/>
+   <property name="top_height" type="float" value="4"/>
    <property name="top_texture" type="file" value="../res/stone_bricks.jpg"/>
   </properties>
  </tile>
@@ -53,11 +55,12 @@
   <properties>
    <property name="bottom_height" type="float" value="0"/>
    <property name="bottom_texture" type="file" value="../res/stone_bricks.jpg"/>
-   <property name="ceiling_height" type="float" value="0"/>
+   <property name="ceiling_height" type="float" value="3"/>
    <property name="ceiling_texture" type="file" value="../res/stone_bricks.jpg"/>
    <property name="ground_height" type="float" value="0"/>
    <property name="ground_texture" type="file" value="../res/metal_floor.jpg"/>
-   <property name="top_height" type="float" value="0"/>
+   <property name="portal_direction" value="W"/>
+   <property name="top_height" type="float" value="4"/>
    <property name="top_texture" type="file" value="../res/stone_bricks.jpg"/>
   </properties>
  </tile>
@@ -65,23 +68,24 @@
   <properties>
    <property name="bottom_height" type="float" value="0"/>
    <property name="bottom_texture" type="file" value="../res/stone_bricks.jpg"/>
-   <property name="ceiling_height" type="float" value="0"/>
+   <property name="ceiling_height" type="float" value="3"/>
    <property name="ceiling_texture" type="file" value="../res/stone_bricks.jpg"/>
    <property name="ground_height" type="float" value="0"/>
    <property name="ground_texture" type="file" value="../res/metal_floor.jpg"/>
-   <property name="top_height" type="float" value="0"/>
+   <property name="portal_direction" value="S"/>
+   <property name="top_height" type="float" value="4"/>
    <property name="top_texture" type="file" value="../res/stone_bricks.jpg"/>
   </properties>
  </tile>
  <tile id="6">
   <properties>
-   <property name="bottom_height" type="float" value="0"/>
+   <property name="bottom_height" type="float" value="-10"/>
    <property name="bottom_texture" type="file" value="../res/stone_bricks.jpg"/>
-   <property name="ceiling_height" type="float" value="0"/>
+   <property name="ceiling_height" type="float" value="10"/>
    <property name="ceiling_texture" type="file" value="../res/stone_bricks.jpg"/>
    <property name="ground_height" type="float" value="0"/>
    <property name="ground_texture" type="file" value="../res/metal_floor.jpg"/>
-   <property name="top_height" type="float" value="0"/>
+   <property name="top_height" type="float" value="100"/>
    <property name="top_texture" type="file" value="../res/stone_bricks.jpg"/>
   </properties>
  </tile>

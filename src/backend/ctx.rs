@@ -28,12 +28,18 @@ impl Ctx {
 
         let size = window.inner_size();
         let backends =
-            wgpu::util::backend_bits_from_env().unwrap_or(wgpu::Backends::PRIMARY);
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+            wgpu::Backends::from_env().unwrap_or(wgpu::Backends::PRIMARY);
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends,
-            dx12_shader_compiler: wgpu::Dx12Compiler::Fxc,
             flags: wgpu::InstanceFlags::default(),
-            gles_minor_version: wgpu::Gles3MinorVersion::Automatic,
+            backend_options: wgpu::BackendOptions {
+                gl: wgpu::GlBackendOptions {
+                    gles_minor_version: wgpu::Gles3MinorVersion::Automatic,
+                },
+                dx12: wgpu::Dx12BackendOptions {
+                    shader_compiler: wgpu::Dx12Compiler::Fxc,
+                },
+            },
         });
 
         let surface = instance.create_surface(window.clone())?;

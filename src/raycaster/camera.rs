@@ -76,6 +76,7 @@ impl Camera {
     pub fn follow<T: CameraTarget>(&mut self, target: &T) {
         let data = target.get_target_data();
         self.origin = data.origin;
+        println!("origin: {}", self.origin);
         //self.yaw = data.yaw;
         self.forward_dir = data.forward_dir;
         self.horizontal_plane =
