@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.10" tiledversion="1.11.1" orientation="orthogonal" renderorder="right-up" width="20" height="20" tilewidth="5" tileheight="5" infinite="0" nextlayerid="2" nextobjectid="1">
+ <properties>
+  <property name="ambient" type="float" value="0"/>
+  <property name="skybox_east" value=""/>
+  <property name="skybox_north" value=""/>
+  <property name="skybox_south" value=""/>
+  <property name="skybox_west" value=""/>
+ </properties>
  <tileset firstgid="1" source="set.tsx"/>
  <layer id="1" name="Tile Layer 1" width="20" height="20">
   <data encoding="csv">
