@@ -55,7 +55,13 @@ pub struct TextureData {
 }
 
 impl TextureData {
-    pub fn new(id: TextureID, data: Vec<u8>, width: usize, height: usize, transparency: bool) -> Self {
+    pub fn new(
+        id: TextureID,
+        data: Vec<u8>,
+        width: usize,
+        height: usize,
+        transparency: bool,
+    ) -> Self {
         Self {
             id,
             data,

@@ -1,11 +1,11 @@
+pub mod camera;
+mod platform;
 mod ray;
 mod wall;
-mod platform;
-pub mod camera;
 
 use glam::Vec3;
 use platform::{PlatformRenderParams, PlatformType};
-use ray::{WallSide};
+use ray::WallSide;
 use rayon::iter::{IndexedParallelIterator, ParallelIterator};
 use rayon::slice::ParallelSliceMut;
 use wall::WallRenderParams;
@@ -136,21 +136,18 @@ impl<'a> FrameRenderer<'a> {
             let current_tile = current_room
                 .blueprint
                 .get_tile_unchecked(current_tile_x, current_tile_z);
-            
-            // Draw ground platform
-                let params = PlatformRenderParams {
-                    ray,
-                    bottom_draw_bound,
-                    top_draw_bound,
-                    height: current_tile.ground_height,
-                    platform_type: PlatformType::Floor,
-                    texture: self.textures.get_texture_data(current_tile.ground_tex),
-                };
 
-            
-            let (from, drawn_to) = self.render_platform(
-                params, column
-            );
+            // Draw ground platform
+            let params = PlatformRenderParams {
+                ray,
+                bottom_draw_bound,
+                top_draw_bound,
+                height: current_tile.ground_height,
+                platform_type: PlatformType::Floor,
+                texture: self.textures.get_texture_data(current_tile.ground_tex),
+            };
+
+            let (from, drawn_to) = self.render_platform(params, column);
 
             // Draw ceiling platform
             let params = PlatformRenderParams {
@@ -161,7 +158,7 @@ impl<'a> FrameRenderer<'a> {
                 platform_type: PlatformType::Ceiling,
                 texture: self.textures.get_texture_data(current_tile.ceiling_tex),
             };
-            
+
             let (drawn_from, to) = self.render_platform(params, column);
             if from != bottom_draw_bound {
                 //println!("floor skiped!");
@@ -183,39 +180,36 @@ impl<'a> FrameRenderer<'a> {
                 .blueprint
                 .get_tile_unchecked(ray.next_tile.x as usize, ray.next_tile.z as usize);
 
-                let params = WallRenderParams {
-                    ray,
-                    bottom_draw_bound,
-                    top_draw_bound,
-                    bottom_level: next_tile.bottom_height,
-                    top_level: next_tile.ground_height,
-                    texture: self.textures.get_texture_data(next_tile.bottom_wall_tex)
-                };
+            let params = WallRenderParams {
+                ray,
+                bottom_draw_bound,
+                top_draw_bound,
+                bottom_level: next_tile.bottom_height,
+                top_level: next_tile.ground_height,
+                texture: self.textures.get_texture_data(next_tile.bottom_wall_tex),
+            };
 
             // Draw bottom wall
-            let (from, drawn_to) = self.render_wall(params, column
-            );
+            let (from, drawn_to) = self.render_wall(params, column);
             let params = WallRenderParams {
                 ray,
                 bottom_draw_bound,
                 top_draw_bound,
                 bottom_level: next_tile.ceiling_height,
                 top_level: next_tile.top_height,
-                texture: self.textures.get_texture_data(next_tile.bottom_wall_tex)
+                texture: self.textures.get_texture_data(next_tile.bottom_wall_tex),
             };
             // Draw top wall
-            let (drawn_from, to) = self.render_wall(params, column
-            );
+            let (drawn_from, to) = self.render_wall(params, column);
             if from != bottom_draw_bound {
                 //println!("wall bottom skiped!");
                 self.render_skybox(
                     static_ray,
                     room_orientation,
                     skybox_textures,
-                    
                     bottom_draw_bound,
                     from,
-                    column
+                    column,
                 );
             }
             if to != top_draw_bound {
@@ -239,10 +233,12 @@ impl<'a> FrameRenderer<'a> {
                         let rotation = src_portal.direction_difference(&dest_portal);
                         ray.rotate(rotation);
                         ray.portal_teleport(src_portal, dest_portal);
-                        
+
                         current_room = dest_room;
                         current_room_dimensions = current_room.blueprint.dimensions_i64();
-                        skybox_textures = self.textures.get_skybox_textures(current_room.data.skybox());
+                        skybox_textures = self
+                            .textures
+                            .get_skybox_textures(current_room.data.skybox());
                     }
                     None => {
                         fill_color(column, bottom_draw_bound, top_draw_bound, 0);
@@ -257,10 +253,9 @@ impl<'a> FrameRenderer<'a> {
             static_ray,
             room_orientation,
             skybox_textures,
-            
             bottom_draw_bound,
             top_draw_bound,
-            column
+            column,
         );
     }
 
@@ -286,11 +281,10 @@ impl<'a> FrameRenderer<'a> {
             top_draw_bound,
             bottom_level: -0.5,
             top_level: 1.5,
-            texture: wall_texture
+            texture: wall_texture,
         };
-        
-        self.render_wall(params, column);
 
+        self.render_wall(params, column);
 
         let params = PlatformRenderParams {
             ray,
@@ -298,27 +292,23 @@ impl<'a> FrameRenderer<'a> {
             top_draw_bound,
             height: -0.5,
             platform_type: PlatformType::Floor,
-            texture: skybox_textures.bottom
+            texture: skybox_textures.bottom,
         };
 
-    // Draw ground platform
-    self.render_platform(
-        params, column
-    );
+        // Draw ground platform
+        self.render_platform(params, column);
 
-    let params = PlatformRenderParams {
-        ray,
-        bottom_draw_bound,
-        top_draw_bound,
-        height: 1.5,
-        platform_type: PlatformType::Ceiling,
-        texture: skybox_textures.top
-    };
+        let params = PlatformRenderParams {
+            ray,
+            bottom_draw_bound,
+            top_draw_bound,
+            height: 1.5,
+            platform_type: PlatformType::Ceiling,
+            texture: skybox_textures.top,
+        };
 
-// Draw ceiling platform
-self.render_platform(
-    params, column
-);
+        // Draw ceiling platform
+        self.render_platform(params, column);
     }
 }
 
@@ -334,11 +324,11 @@ pub enum Side {
 
 pub struct blueprint<'a> {
     data: &'a mut [u8],
-    start_offset: usize
+    start_offset: usize,
 }
 
 impl<'a> blueprint<'a> {
-    pub fn new(from: usize, to: usize, column: &'a mut[u8]) -> Self {
+    pub fn new(from: usize, to: usize, column: &'a mut [u8]) -> Self {
         Self {
             data: &mut column[from..to],
             start_offset: from,

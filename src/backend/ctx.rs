@@ -27,8 +27,7 @@ impl Ctx {
         );
 
         let size = window.inner_size();
-        let backends =
-            wgpu::Backends::from_env().unwrap_or(wgpu::Backends::PRIMARY);
+        let backends = wgpu::Backends::from_env().unwrap_or(wgpu::Backends::PRIMARY);
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends,
             flags: wgpu::InstanceFlags::default(),

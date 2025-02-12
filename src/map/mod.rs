@@ -1,15 +1,15 @@
 // TODO check if these really need to be pub
-pub mod portal;
-pub mod room;
 pub mod blueprint;
 pub mod parser;
+pub mod portal;
+pub mod room;
 
 use std::path::PathBuf;
 
+use blueprint::Blueprint;
 use portal::{Orientation, Rotation};
 use rand::seq::SliceRandom;
 use room::{Room, RoomID, RoomRef};
-use blueprint::Blueprint;
 
 pub struct Map {
     blueprints: Vec<Blueprint>,
@@ -25,7 +25,8 @@ impl Map {
 
         // Select the first blueprint which repeats only once
         let blueprint = &blueprints[0];
-        let mut starting_room = Room::new(RoomID(room_counter), blueprint, Orientation::North);
+        let mut starting_room =
+            Room::new(RoomID(room_counter), blueprint, Orientation::North);
         room_counter += 1;
 
         /*let root_segment = &blueprints[1];
@@ -41,7 +42,7 @@ impl Map {
                     is_fully_generated: false,
                     skybox: blueprint.skybox,
                     ambient_light_intensity: blueprint.ambient_light_intensity,
-        
+
                     // Temporary value
                     orientation: Orientation::North
                 };

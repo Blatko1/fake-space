@@ -6,8 +6,8 @@ use crate::{
 };
 
 use super::{
+    blueprint::{Blueprint, BlueprintID, ObjectID, SkyboxTextureIDs},
     portal::{Orientation, Portal, PortalID, Rotation},
-    blueprint::{ObjectID, Blueprint, BlueprintID, SkyboxTextureIDs},
 };
 
 const VOXEL_CHANCE: f64 = 0.3;
@@ -43,7 +43,7 @@ impl Room {
             skybox: blueprint.skybox,
             ambient_light_intensity: blueprint.ambient_light_intensity,
 
-            orientation
+            orientation,
         }
     }
 

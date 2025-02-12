@@ -69,12 +69,13 @@ impl Player {
 
                     let new_origin =
                         src_portal.teleport_to(self.body.feet_position, dest_portal);
-                    let yaw_angle_difference = match src_portal.direction_difference(&dest_portal) {
-                        Rotation::Deg0 => PI,
-                        Rotation::AnticlockwiseDeg90 => PI * 0.5,
-                        Rotation::ClockwiseDeg90 => -PI * 0.5,
-                        Rotation::Deg180 => 0.0,
-                    };
+                    let yaw_angle_difference =
+                        match src_portal.direction_difference(&dest_portal) {
+                            Rotation::Deg0 => PI,
+                            Rotation::AnticlockwiseDeg90 => PI * 0.5,
+                            Rotation::ClockwiseDeg90 => -PI * 0.5,
+                            Rotation::Deg180 => 0.0,
+                        };
                     self.body.feet_position = new_origin;
                     self.body.add_yaw(yaw_angle_difference);
                 }

@@ -4,7 +4,12 @@ use rayon::iter::ParallelIterator;
 use winit::event::DeviceEvent;
 
 use crate::{
-    control::GameInput, map::{parser::MapParser, room::RoomID, Map}, models::ModelArray, player::Player, raycaster::{self, camera::Camera, FrameRenderer}, textures::TextureArray
+    control::GameInput,
+    map::{parser::MapParser, room::RoomID, Map},
+    models::ModelArray,
+    player::Player,
+    raycaster::{self, camera::Camera, FrameRenderer},
+    textures::TextureArray,
 };
 
 const PHYSICS_TIMESTEP: f32 = 0.01;

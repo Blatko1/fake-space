@@ -34,7 +34,6 @@ pub struct Ray {
     pub horizontal_plane: Vec3,
 
     // Variables below change per each DDA step
-
     /// Distance which the ray has already traveled over in order
     /// to reach a new vertical wall.
     pub side_dist_x: f32,
@@ -88,7 +87,7 @@ impl Ray {
                 false => WallSide::West,
             };
             (Side::Vertical, wall_side, wall_offset - wall_offset.floor())
-        } 
+        }
         // North/South side
         else {
             let wall_offset = origin.x + wall_dist * dir.x;
@@ -96,7 +95,11 @@ impl Ray {
                 true => WallSide::North,
                 false => WallSide::South,
             };
-            (Side::Horizontal, wall_side, wall_offset - wall_offset.floor())
+            (
+                Side::Horizontal,
+                wall_side,
+                wall_offset - wall_offset.floor(),
+            )
         };
 
         Ray {
@@ -107,7 +110,6 @@ impl Ray {
             step_x: dir.x.signum() as i64,
             step_z: dir.z.signum() as i64,
             //plane_x,
-
             origin,
             camera_dir: camera.forward_dir,
             horizontal_plane: camera.horizontal_plane,
@@ -228,5 +230,5 @@ pub enum WallSide {
     North,
     East,
     South,
-    West
+    West,
 }

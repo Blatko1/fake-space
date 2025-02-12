@@ -1,7 +1,7 @@
 mod backend;
-mod raycaster;
 mod control;
 mod map;
+mod raycaster;
 //mod map_parser;
 mod models;
 mod player;
@@ -61,7 +61,7 @@ impl App {
             sleep_between_frames: false,
 
             acc_fps: 0,
-            time: Instant::now()
+            time: Instant::now(),
         }
     }
 }
@@ -174,10 +174,7 @@ impl ApplicationHandler for App {
 
             if let Some(canvas) = self.canvas.as_mut() {
                 if self.time.elapsed().as_micros() >= 1_000_000 {
-                    println!(
-                        "average: {} FPS",
-                        self.acc_fps
-                    );
+                    println!("average: {} FPS", self.acc_fps);
                     self.acc_fps = 0;
                     self.time = Instant::now();
                 }

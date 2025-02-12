@@ -28,7 +28,11 @@ impl Portal {
     pub fn teleport_to(&self, origin: Vec3, dest: Portal) -> Vec3 {
         let offset_x = self.center.x - origin.x;
         let offset_z = self.center.z - origin.z;
-        let mut new_origin = Vec3::new(dest.center.x, origin.y + dest.ground_level - self.ground_level, dest.center.z);
+        let mut new_origin = Vec3::new(
+            dest.center.x,
+            origin.y + dest.ground_level - self.ground_level,
+            dest.center.z,
+        );
 
         match self.direction {
             Orientation::North => match dest.direction {
@@ -37,52 +41,52 @@ impl Portal {
                     new_origin.z += 1.0 + offset_z;
                 }
                 Orientation::South => {
-                    new_origin.x += - offset_x;
-                    new_origin.z += - 1.0 - offset_z;
+                    new_origin.x += -offset_x;
+                    new_origin.z += -1.0 - offset_z;
                 }
                 Orientation::East => {
                     new_origin.x += 1.0 + offset_z;
-                    new_origin.z += - offset_x;
+                    new_origin.z += -offset_x;
                 }
                 Orientation::West => {
-                    new_origin.x += - 1.0 - offset_z;
+                    new_origin.x += -1.0 - offset_z;
                     new_origin.z += offset_x;
                 }
             },
             Orientation::South => match dest.direction {
                 Orientation::North => {
-                    new_origin.x += - offset_x;
+                    new_origin.x += -offset_x;
                     new_origin.z += 1.0 - offset_z;
                 }
                 Orientation::South => {
                     new_origin.x += offset_x;
-                    new_origin.z += - 1.0 + offset_z;
+                    new_origin.z += -1.0 + offset_z;
                 }
                 Orientation::East => {
                     new_origin.x += 1.0 - offset_z;
                     new_origin.z += offset_x;
                 }
                 Orientation::West => {
-                    new_origin.x += - 1.0 + offset_z;
-                    new_origin.z += - offset_x;
+                    new_origin.x += -1.0 + offset_z;
+                    new_origin.z += -offset_x;
                 }
             },
             Orientation::East => match dest.direction {
                 Orientation::North => {
-                    new_origin.x += - offset_z;
+                    new_origin.x += -offset_z;
                     new_origin.z += 1.0 + offset_x;
                 }
                 Orientation::South => {
                     new_origin.x += offset_z;
-                    new_origin.z += - 1.0 - offset_x;
+                    new_origin.z += -1.0 - offset_x;
                 }
                 Orientation::East => {
                     new_origin.x += 1.0 + offset_x;
                     new_origin.z += offset_z;
                 }
                 Orientation::West => {
-                    new_origin.x += - 1.0 - offset_x;
-                    new_origin.z += - offset_z;
+                    new_origin.x += -1.0 - offset_x;
+                    new_origin.z += -offset_z;
                 }
             },
             Orientation::West => match dest.direction {
@@ -91,15 +95,15 @@ impl Portal {
                     new_origin.z += 1.0 - offset_x;
                 }
                 Orientation::South => {
-                    new_origin.x += - offset_z;
-                    new_origin.z += - 1.0 + offset_x;
+                    new_origin.x += -offset_z;
+                    new_origin.z += -1.0 + offset_x;
                 }
                 Orientation::East => {
                     new_origin.x += 1.0 - offset_x;
-                    new_origin.z += - offset_z;
+                    new_origin.z += -offset_z;
                 }
                 Orientation::West => {
-                    new_origin.x += - 1.0 + offset_x;
+                    new_origin.x += -1.0 + offset_x;
                     new_origin.z += offset_z;
                 }
             },
@@ -117,7 +121,7 @@ pub enum Orientation {
     East = 0,
     North = 90,
     West = 180,
-    South = 270
+    South = 270,
 }
 
 impl Orientation {
@@ -127,7 +131,7 @@ impl Orientation {
             -90 | 270 => Rotation::AnticlockwiseDeg90,
             90 | -270 => Rotation::ClockwiseDeg90,
             180 | -180 => Rotation::Deg180,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 
@@ -137,7 +141,7 @@ impl Orientation {
             -90 | 270 => Self::South,
             90 | -270 => Self::North,
             180 | -180 => Self::West,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 }
