@@ -9,6 +9,7 @@
    <property name="ceiling_texture" value=""/>
    <property name="ground_height" type="float" value="0"/>
    <property name="ground_texture" value=""/>
+   <property name="portal_direction" value=""/>
    <property name="top_height" type="float" value="1001"/>
    <property name="top_texture" value=""/>
   </properties>
@@ -21,6 +22,7 @@
    <property name="ceiling_texture" value=""/>
    <property name="ground_height" type="float" value="0"/>
    <property name="ground_texture" value="stone..jpg"/>
+   <property name="portal_direction" value=""/>
    <property name="top_height" type="float" value="1001"/>
    <property name="top_texture" value=""/>
   </properties>
@@ -33,6 +35,7 @@
    <property name="ceiling_texture" value=""/>
    <property name="ground_height" type="float" value="0"/>
    <property name="ground_texture" value=""/>
+   <property name="portal_direction" value="E"/>
    <property name="top_height" type="float" value="1001"/>
    <property name="top_texture" value=""/>
   </properties>
@@ -45,6 +48,7 @@
    <property name="ceiling_texture" value=""/>
    <property name="ground_height" type="float" value="0"/>
    <property name="ground_texture" value=""/>
+   <property name="portal_direction" value="N"/>
    <property name="top_height" type="float" value="1001"/>
    <property name="top_texture" value=""/>
   </properties>
@@ -57,6 +61,7 @@
    <property name="ceiling_texture" value=""/>
    <property name="ground_height" type="float" value="0"/>
    <property name="ground_texture" value=""/>
+   <property name="portal_direction" value="W"/>
    <property name="top_height" type="float" value="1001"/>
    <property name="top_texture" value=""/>
   </properties>
@@ -69,6 +74,7 @@
    <property name="ceiling_texture" value=""/>
    <property name="ground_height" type="float" value="-1.7"/>
    <property name="ground_texture" value=""/>
+   <property name="portal_direction" value="S"/>
    <property name="top_height" type="float" value="1001"/>
    <property name="top_texture" value=""/>
   </properties>
@@ -105,6 +111,7 @@
    <property name="ceiling_texture" value=""/>
    <property name="ground_height" type="float" value="10"/>
    <property name="ground_texture" value=""/>
+   <property name="portal_direction" value=""/>
    <property name="top_height" type="float" value="1001"/>
    <property name="top_texture" value=""/>
   </properties>
@@ -117,6 +124,7 @@
    <property name="ceiling_texture" value=""/>
    <property name="ground_height" type="float" value="9"/>
    <property name="ground_texture" value=""/>
+   <property name="portal_direction" value=""/>
    <property name="top_height" type="float" value="1001"/>
    <property name="top_texture" value=""/>
   </properties>
@@ -129,6 +137,7 @@
    <property name="ceiling_texture" value=""/>
    <property name="ground_height" type="float" value="8"/>
    <property name="ground_texture" value=""/>
+   <property name="portal_direction" value=""/>
    <property name="top_height" type="float" value="1001"/>
    <property name="top_texture" value=""/>
   </properties>
@@ -141,6 +150,7 @@
    <property name="ceiling_texture" value=""/>
    <property name="ground_height" type="float" value="6"/>
    <property name="ground_texture" value=""/>
+   <property name="portal_direction" value=""/>
    <property name="top_height" type="float" value="1001"/>
    <property name="top_texture" value=""/>
   </properties>
@@ -153,6 +163,7 @@
    <property name="ceiling_texture" value=""/>
    <property name="ground_height" type="float" value="2.3"/>
    <property name="ground_texture" value=""/>
+   <property name="portal_direction" value=""/>
    <property name="top_height" type="float" value="1001"/>
    <property name="top_texture" value=""/>
   </properties>
@@ -164,7 +175,8 @@
    <property name="ceiling_height" type="float" value="1000"/>
    <property name="ceiling_texture" value=""/>
    <property name="ground_height" type="float" value="0"/>
-   <property name="ground_texture" value="grass.jpg"/>
+   <property name="ground_texture" value="light_plank.png"/>
+   <property name="portal_direction" value=""/>
    <property name="top_height" type="float" value="1001"/>
    <property name="top_texture" value=""/>
   </properties>
@@ -201,6 +213,7 @@
    <property name="ceiling_texture" value=""/>
    <property name="ground_height" type="float" value="-0.3"/>
    <property name="ground_texture" value="grass.jpg"/>
+   <property name="portal_direction" value=""/>
    <property name="top_height" type="float" value="1001"/>
    <property name="top_texture" value=""/>
   </properties>
@@ -213,6 +226,7 @@
    <property name="ceiling_texture" value=""/>
    <property name="ground_height" type="float" value="-0.7"/>
    <property name="ground_texture" value="grass.jpg"/>
+   <property name="portal_direction" value=""/>
    <property name="top_height" type="float" value="1001"/>
    <property name="top_texture" value=""/>
   </properties>
@@ -225,6 +239,7 @@
    <property name="ceiling_texture" value=""/>
    <property name="ground_height" type="float" value="-0.8"/>
    <property name="ground_texture" value="grass.jpg"/>
+   <property name="portal_direction" value=""/>
    <property name="top_height" type="float" value="1001"/>
    <property name="top_texture" value=""/>
   </properties>
@@ -237,6 +252,7 @@
    <property name="ceiling_texture" value=""/>
    <property name="ground_height" type="float" value="-0.9"/>
    <property name="ground_texture" value="grass.jpg"/>
+   <property name="portal_direction" value=""/>
    <property name="top_height" type="float" value="1001"/>
    <property name="top_texture" value=""/>
   </properties>
@@ -249,6 +265,7 @@
    <property name="ceiling_texture" value=""/>
    <property name="ground_height" type="float" value="-1"/>
    <property name="ground_texture" value="grass.jpg"/>
+   <property name="portal_direction" value=""/>
    <property name="top_height" type="float" value="1001"/>
    <property name="top_texture" value=""/>
   </properties>
@@ -261,6 +278,7 @@
    <property name="ceiling_texture" value=""/>
    <property name="ground_height" type="float" value="-1.7"/>
    <property name="ground_texture" value="grass.jpg"/>
+   <property name="portal_direction" value=""/>
    <property name="top_height" type="float" value="1001"/>
    <property name="top_texture" value=""/>
   </properties>

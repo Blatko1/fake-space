@@ -5,7 +5,7 @@ use glam::{Vec2, Vec3};
 
 use crate::{
     control::GameInput,
-    map::blueprint::Blueprint,
+    map::tilemap::Tilemap,
     raycaster::camera::{normalize_rad, CameraTarget, CameraTargetData},
 };
 
@@ -93,7 +93,7 @@ impl CylinderBody {
         }
     }
 
-    pub fn collision_detection_resolution(&mut self, blueprint: &Blueprint) {
+    pub fn collision_detection_resolution(&mut self, blueprint: &Tilemap) {
         if self.is_ghost {
             return;
         }

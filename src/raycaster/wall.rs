@@ -33,7 +33,7 @@ impl<'a> FrameRenderer<'a> {
         let draw_from = ((self.half_view_height - pixels_to_bottom) as usize)
             .clamp(params.bottom_draw_bound, params.top_draw_bound);
         let draw_to = ((self.half_view_height + pixels_to_top) as usize)
-            .clamp(params.bottom_draw_bound, params.top_draw_bound);
+            .clamp(draw_from, params.top_draw_bound);
 
         let tex_x = match ray.hit_wall_side {
             Side::Vertical if ray.dir.x > 0.0 => {

@@ -195,7 +195,7 @@ impl Canvas {
         let frame_size = (canvas_width * canvas_height * 4) as usize;
 
         // TODO change/fix this
-        let font_data = std::fs::read("res/Minecraft.ttf").unwrap();
+        let font_data = std::fs::read("tiled/Minecraft.ttf").unwrap();
         let font = FontVec::try_from_vec(font_data).unwrap();
         let debug_ui = DebugUI::new(&ctx, font);
 

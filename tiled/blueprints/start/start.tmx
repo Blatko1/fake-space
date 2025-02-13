@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.10" tiledversion="1.11.1" orientation="orthogonal" renderorder="right-up" width="20" height="20" tilewidth="5" tileheight="5" infinite="0" nextlayerid="2" nextobjectid="1">
  <properties>
-  <property name="ambient" type="float" value="0"/>
+  <property name="ambient_light" type="float" value="0"/>
+  <property name="skybox_bottom" value=""/>
   <property name="skybox_east" value=""/>
   <property name="skybox_north" value=""/>
   <property name="skybox_south" value=""/>
+  <property name="skybox_top" value=""/>
   <property name="skybox_west" value=""/>
  </properties>
  <tileset firstgid="1" source="set.tsx"/>
@@ -14,7 +16,7 @@
 2,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,2,
 2,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,2,
 2,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,2,
-2,14,14,14,14,14,14,14,14,6,14,14,14,14,14,14,14,14,14,2,
+2,14,14,14,14,14,14,14,14,4,14,14,14,14,14,14,14,14,14,2,
 2,14,14,14,14,14,14,14,22,22,20,14,14,14,14,14,14,14,14,2,
 2,14,14,14,14,14,14,14,22,22,18,14,14,14,14,14,14,14,14,2,
 2,14,14,14,14,14,14,14,21,21,21,14,14,14,14,14,14,14,14,2,

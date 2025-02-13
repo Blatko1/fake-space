@@ -15,7 +15,6 @@ use self::physics::{CylinderBody, PhysicsStateDebugData};
 pub struct Player {
     body: CylinderBody,
 
-    score: u32,
     current_room: RoomID,
     use_flashlight: bool,
 }
@@ -24,7 +23,7 @@ impl Player {
     // TODO positive pitch should make camera look UP, not DOWN!!!?
     pub fn new(current_room: RoomID) -> Self {
         let body = CylinderBody::new(
-            Vec3::new(10.5, 1.0, 14.5),
+            Vec3::new(5.5, 2.0, 4.5),
             90.0f32.to_radians(),
             0.0,
             0.2,
@@ -39,7 +38,6 @@ impl Player {
         );
 
         Self {
-            score: 0,
             body,
             current_room,
             use_flashlight: false,
@@ -52,42 +50,55 @@ impl Player {
         self.body.update_physics(delta);
 
         // Teleportation between rooms
-        if let Some(tile) = room.blueprint.get_tile_checked(
+        if let Some(tile) = room.tilemap.get_tile_checked(
             self.body.feet_position.x as i64,
             self.body.feet_position.z as i64,
         ) {
             // Check if tile has a portal
-            if let Some(src_dummy_portal) = tile.portal {
+            if let Some(id) = tile.portal_id {
                 // Check if portal has a linked portal
-                let src_portal = room.get_portal(src_dummy_portal.id);
-                if let Some((room_id, portal_id)) = src_portal.link {
+                let src_portal = room.get_portal(id);
+                if let Some((room_id, dest_id)) = src_portal.destination {
                     // Teleport the player
                     self.current_room = room_id;
                     let dest_room = map.get_room_data(room_id);
-                    let dest_portal = dest_room.get_portal(portal_id);
+                    let dest_portal = dest_room.get_portal(dest_id);
                     room = dest_room;
 
-                    let new_origin =
-                        src_portal.teleport_to(self.body.feet_position, dest_portal);
-                    let yaw_angle_difference =
-                        match src_portal.direction_difference(&dest_portal) {
-                            Rotation::Deg0 => PI,
-                            Rotation::AnticlockwiseDeg90 => PI * 0.5,
-                            Rotation::ClockwiseDeg90 => -PI * 0.5,
-                            Rotation::Deg180 => 0.0,
-                        };
-                    self.body.feet_position = new_origin;
-                    self.body.add_yaw(yaw_angle_difference);
+                    let player_map_pos = Vec2::new(self.body.feet_position.x, self.body.feet_position.z);
+                    let offset = player_map_pos - src_portal.center;
+
+                    let src_angle = f32::atan2(src_portal.direction.y, src_portal.direction.x);
+                    let dest_angle = f32::atan2(-dest_portal.direction.y, -dest_portal.direction.x);
+                    let diff = dest_angle - src_angle;
+                    let rotation = glam::mat2(Vec2::new(diff.cos(), diff.sin()), Vec2::new(-diff.sin(), diff.cos()));
+                    let rotated_offset = rotation * offset;
+                    println!("src: {}, dest: {}", src_portal.direction, dest_portal.direction);
+                    let new_position = dest_portal.center + rotated_offset + (-dest_portal.direction);
+                    self.body.feet_position = Vec3::new(new_position.x, self.body.feet_position.y + dest_portal.ground_height - src_portal.ground_height, new_position.y);
+
+                    self.body.add_yaw(diff);
+
+                    //let dest_room = map.get_room_data(room_id);
+                    //let dest_portal = dest_room.get_portal(portal_id);
+
+                    //let new_origin =
+                    //    src_portal.teleport_to(self.body.feet_position, dest_portal);
+                    //let yaw_angle_difference =
+                    //    match src_portal.direction_difference(&dest_portal) {
+                    //        Rotation::Deg0 => PI,
+                    //        Rotation::AnticlockwiseDeg90 => PI * 0.5,
+                    //        Rotation::ClockwiseDeg90 => -PI * 0.5,
+                    //        Rotation::Deg180 => 0.0,
+                    //    };
+                    //self.body.feet_position = new_origin;
+                    //self.body.add_yaw(yaw_angle_difference);
                 }
             }
         }
-        self.body.collision_detection_resolution(room.blueprint);
+        self.body.collision_detection_resolution(room.tilemap);
     }
-
-    pub fn increase_score(&mut self, add: u32) {
-        self.score += add
-    }
-
+    
     pub fn current_room_id(&self) -> RoomID {
         self.current_room
     }

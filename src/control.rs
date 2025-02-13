@@ -31,6 +31,8 @@ impl ControllerSettings {
             GameInput::ToggleFullScreen => KeyCode::F11,
             GameInput::IncreaseResolution => KeyCode::PageUp,
             GameInput::DecreaseResolution => KeyCode::PageDown,
+            // TODO split controls into one reloading map, and other textures only
+            GameInput::ReloadMap => KeyCode::KeyR
         }
     }
 }
@@ -69,4 +71,5 @@ pub enum GameInput {
     ToggleFullScreen,
     IncreaseResolution,
     DecreaseResolution,
+    ReloadMap
 }

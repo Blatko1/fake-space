@@ -1,31 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.1" orientation="orthogonal" renderorder="right-up" width="11" height="17" tilewidth="5" tileheight="5" infinite="0" nextlayerid="3" nextobjectid="1">
+<map version="1.10" tiledversion="1.11.1" orientation="orthogonal" renderorder="right-up" width="11" height="17" tilewidth="5" tileheight="5" infinite="0" nextlayerid="4" nextobjectid="1">
  <properties>
-  <property name="ambient" type="float" value="0"/>
+  <property name="ambient_light" type="float" value="0"/>
+  <property name="skybox_bottom" value=""/>
   <property name="skybox_east" value=""/>
   <property name="skybox_north" value=""/>
   <property name="skybox_south" value=""/>
+  <property name="skybox_top" value=""/>
   <property name="skybox_west" value=""/>
  </properties>
  <tileset firstgid="1" source="tileset.tsx"/>
  <layer id="1" name="Tile Layer 1" width="11" height="17">
   <data encoding="csv">
 2,2,2,2,2,2,2,2,2,2,2,
-2,2,2,2,2,6,2,2,2,2,2,
-2,2,1,1,7,7,7,1,1,2,2,
-2,2,1,1,7,7,7,1,1,2,2,
-2,3,7,7,7,7,7,7,7,5,2,
-2,2,1,1,7,7,7,1,1,2,2,
-2,2,1,1,7,7,7,1,1,2,2,
-2,2,1,1,7,7,7,1,1,2,2,
-2,3,7,7,7,7,7,7,7,5,2,
-2,2,1,1,7,7,7,1,1,2,2,
-2,2,1,1,7,7,7,1,1,2,2,
-2,2,1,1,7,7,7,1,1,2,2,
-2,3,7,7,7,7,7,7,7,5,2,
-2,2,1,1,7,7,7,1,1,2,2,
-2,2,1,1,7,7,7,1,1,2,2,
 2,2,2,2,2,4,2,2,2,2,2,
+2,2,1,1,7,7,7,1,1,2,2,
+2,2,1,1,7,7,7,1,1,2,2,
+2,5,7,7,7,7,7,7,7,3,2,
+2,2,1,1,7,7,7,1,1,2,2,
+2,2,1,1,7,7,7,1,1,2,2,
+2,2,1,1,7,7,7,1,1,2,2,
+2,5,7,7,7,7,7,7,7,3,2,
+2,2,1,1,7,7,7,1,1,2,2,
+2,2,1,1,7,7,7,1,1,2,2,
+2,2,1,1,7,7,7,1,1,2,2,
+2,5,7,7,7,7,7,7,7,3,2,
+2,2,1,1,7,7,7,1,1,2,2,
+2,2,1,1,7,7,7,1,1,2,2,
+2,2,2,2,2,6,2,2,2,2,2,
 2,2,2,2,2,2,2,2,2,2,2
 </data>
  </layer>

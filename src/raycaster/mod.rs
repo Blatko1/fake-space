@@ -3,7 +3,7 @@ mod platform;
 mod ray;
 mod wall;
 
-use glam::Vec3;
+use glam::{Vec2, Vec3};
 use platform::{PlatformRenderParams, PlatformType};
 use ray::WallSide;
 use rayon::iter::{IndexedParallelIterator, ParallelIterator};
@@ -88,9 +88,9 @@ impl<'a> FrameRenderer<'a> {
         let static_ray = Ray::new_one_step(self.camera, Vec3::splat(0.5), column_index);
 
         let mut current_room = self.map.get_room_data(self.player.current_room_id());
-        let mut current_room_dimensions = current_room.blueprint.dimensions_i64();
+        let mut current_room_dimensions = current_room.tilemap.dimensions_i64();
 
-        let room_orientation = current_room.data.orientation;
+        let room_direction = current_room.data.direction;
 
         let mut skybox_textures = self
             .textures
@@ -134,7 +134,7 @@ impl<'a> FrameRenderer<'a> {
              * ========================================================== */
             // Tile which the ray just traveled over before hitting a wall
             let current_tile = current_room
-                .blueprint
+                .tilemap
                 .get_tile_unchecked(current_tile_x, current_tile_z);
 
             // Draw ground platform
@@ -177,7 +177,7 @@ impl<'a> FrameRenderer<'a> {
              * ========================================================== */
             // The tile ray hit
             let next_tile = current_room
-                .blueprint
+                .tilemap
                 .get_tile_unchecked(ray.next_tile.x as usize, ray.next_tile.z as usize);
 
             let params = WallRenderParams {
@@ -205,7 +205,7 @@ impl<'a> FrameRenderer<'a> {
                 //println!("wall bottom skiped!");
                 self.render_skybox(
                     static_ray,
-                    room_orientation,
+                    room_direction,
                     skybox_textures,
                     bottom_draw_bound,
                     from,
@@ -224,18 +224,29 @@ impl<'a> FrameRenderer<'a> {
              *                      Check for portal
              * ========================================================== */
             // Switch to the different room if portal is hit
-            if let Some(src_dummy_portal) = next_tile.portal {
-                let src_portal = current_room.get_portal(src_dummy_portal.id);
-                match src_portal.link {
-                    Some((room_id, portal_id)) => {
+            if let Some(id) = next_tile.portal_id {
+                let src_portal = current_room.get_portal(id);
+                match src_portal.destination {
+                    Some((room_id, dest_id)) => {
                         let dest_room = self.map.get_room_data(room_id);
-                        let dest_portal = dest_room.get_portal(portal_id);
-                        let rotation = src_portal.direction_difference(&dest_portal);
-                        ray.rotate(rotation);
-                        ray.portal_teleport(src_portal, dest_portal);
+                        //dest_room.data.direction
+                        let dest_portal = dest_room.get_portal(dest_id);
+                        let src_angle = f32::atan2(src_portal.direction.y, src_portal.direction.x);
+                        let dest_angle = f32::atan2(-dest_portal.direction.y, -dest_portal.direction.x);
+                        let diff = dest_angle - src_angle;
+                        //panic!("diff: {}", diff);
+
+                        //let rotation = src_portal.direction_difference(&dest_portal);
+                        ray.rotate(diff);
+
+                        let offset = Vec2::new(ray.origin.x, ray.origin.z) - src_portal.center;
+                        let rotation = glam::mat2(Vec2::new(diff.cos(), diff.sin()), Vec2::new(-diff.sin(), diff.cos()));
+                        let rotated_offset = rotation * offset;
+                        let new_position = dest_portal.center + rotated_offset + (-dest_portal.direction);
+                        ray.origin = Vec3::new(new_position.x, ray.origin.y + dest_portal.ground_height - src_portal.ground_height, new_position.y);
 
                         current_room = dest_room;
-                        current_room_dimensions = current_room.blueprint.dimensions_i64();
+                        current_room_dimensions = current_room.tilemap.dimensions_i64();
                         skybox_textures = self
                             .textures
                             .get_skybox_textures(current_room.data.skybox());
@@ -251,7 +262,7 @@ impl<'a> FrameRenderer<'a> {
         }
         self.render_skybox(
             static_ray,
-            room_orientation,
+            room_direction,
             skybox_textures,
             bottom_draw_bound,
             top_draw_bound,
@@ -262,7 +273,7 @@ impl<'a> FrameRenderer<'a> {
     fn render_skybox(
         &self,
         ray: Ray,
-        room_orientation: Orientation,
+        room_direction: Vec2,
         skybox_textures: SkyboxTexturesRef,
         bottom_draw_bound: usize,
         top_draw_bound: usize,

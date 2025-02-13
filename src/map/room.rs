@@ -1,3 +1,4 @@
+use glam::Vec2;
 use rand::{rngs::ThreadRng, seq::SliceRandom, Rng};
 
 use crate::{
@@ -6,7 +7,7 @@ use crate::{
 };
 
 use super::{
-    blueprint::{Blueprint, BlueprintID, ObjectID, SkyboxTextureIDs},
+    tilemap::{Tilemap, TilemapID, ObjectID, Skybox},
     portal::{Orientation, Portal, PortalID, Rotation},
 };
 
@@ -19,31 +20,31 @@ pub struct RoomID(pub usize);
 #[derive(Debug)]
 pub struct Room {
     pub(super) id: RoomID,
-    pub(super) segment_id: BlueprintID,
+    pub(super) tilemap_id: TilemapID,
     // Each portal has its own index which is the position in this Vec
     pub(super) portals: Vec<Portal>,
     //pub(super) objects: Vec<Option<ModelID>>,
     pub(super) is_fully_generated: bool,
-    pub(super) skybox: SkyboxTextureIDs,
+    pub(super) skybox: Skybox,
     pub(super) ambient_light_intensity: f32,
 
     // TODO finish orientation for skyboxes to remain in place
     /// To which side is the room oriented to or to where points the room north
-    pub orientation: Orientation,
+    pub direction: Vec2,
 }
 
 impl Room {
-    pub fn new(id: RoomID, blueprint: &Blueprint, orientation: Orientation) -> Self {
+    pub fn new(id: RoomID, tilemap: &Tilemap, direction: Vec2) -> Self {
         Self {
             id,
-            segment_id: blueprint.id,
-            portals: blueprint.unlinked_portals.clone(),
+            tilemap_id: tilemap.id,
+            portals: tilemap.unlinked_portals.clone(),
             //objects: blueprint.object_placeholders.clone(),
             is_fully_generated: false,
-            skybox: blueprint.skybox,
-            ambient_light_intensity: blueprint.ambient_light_intensity,
+            skybox: tilemap.default_skybox,
+            ambient_light_intensity: tilemap.default_ambient_light,
 
-            orientation,
+            direction,
         }
     }
 
@@ -56,14 +57,14 @@ impl Room {
         self.ambient_light_intensity
     }
 
-    pub fn skybox(&self) -> &SkyboxTextureIDs {
+    pub fn skybox(&self) -> &Skybox {
         &self.skybox
     }
 }
 
 #[derive(Debug)]
 pub struct RoomRef<'a> {
-    pub blueprint: &'a Blueprint,
+    pub tilemap: &'a Tilemap,
     pub data: &'a Room,
 }
 

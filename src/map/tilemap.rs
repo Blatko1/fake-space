@@ -1,70 +1,29 @@
 use crate::{models::ModelID, raycaster::PointXZ, textures::TextureID};
 
-use super::portal::{DummyPortal, Portal};
+use super::portal::{ Portal, PortalID};
 
 #[derive(Debug, Clone, Copy)]
-pub struct BlueprintID(pub usize);
+pub struct TilemapID(pub usize);
 
 // TODO Use a struct or type for dimensions instead
 // TODO rename all "blueprints" to "blueprints"
 /// A map blueprint (room) with immutable data.
 /// You can mutate room data in a [`Room`] struct.
 #[derive(Debug)]
-pub struct Blueprint {
-    pub(super) id: BlueprintID,
-    /// Room dimensions (width, height).
+pub struct Tilemap {
+    pub(super) id: TilemapID,
     pub(super) dimensions: (u64, u64),
     pub(super) tiles: Vec<Tile>,
+    // TODO is unlinked portals a good name?????
     pub(super) unlinked_portals: Vec<Portal>,
     //pub(super) object_placeholders: Vec<Option<ModelID>>,
-    pub(super) skybox: SkyboxTextureIDs,
+    pub(super) default_skybox: Skybox,
+    // TODO is this needed?????
     pub(super) repeatable: bool,
-    pub(super) ambient_light_intensity: f32,
+    pub(super) default_ambient_light: f32,
 }
 
-impl Blueprint {
-    pub fn new(
-        id: BlueprintID,
-        dimensions: (u64, u64),
-        tiles: Vec<Tile>,
-        skybox: SkyboxTextureIDs,
-        repeatable: bool,
-        ambient_light_intensity: f32,
-    ) -> Self {
-        // Create unlinked Portals from DummyPortals
-        let unlinked_portals = tiles
-            .iter()
-            .filter(|tile| tile.portal.is_some())
-            .map(|tile| {
-                let dummy = tile.portal.unwrap();
-                Portal {
-                    id: dummy.id,
-                    direction: dummy.orientation,
-                    position: tile.position,
-                    center: PointXZ::new(
-                        tile.position.x as f32 + 0.5,
-                        tile.position.z as f32 + 0.5,
-                    ),
-                    ground_level: tile.ground_height,
-                    link: None,
-                }
-            })
-            .collect();
-
-        let object_placeholders =
-            tiles.iter().filter(|tile| tile.object.is_some()).count();
-        Self {
-            id,
-            dimensions,
-            unlinked_portals,
-            tiles,
-            //object_placeholders: vec![None; object_placeholders],
-            skybox,
-            repeatable,
-            ambient_light_intensity,
-        }
-    }
-
+impl Tilemap {
     /// Returns the value at the provided map coordinates.
     /// Parsed arguments are assumed to be in map bound and correct.
     /// This game assumes that the y-axis points upwards, the z-axis forwards
@@ -125,7 +84,7 @@ pub struct Tile {
     /// level to which the top wall stretches.
     pub top_height: f32,
     /// If the current tile should be a portal to different blueprint (map).
-    pub portal: Option<DummyPortal>,
+    pub portal_id: Option<PortalID>,
 
     pub object: Option<ObjectID>,
 }
@@ -134,7 +93,7 @@ pub struct Tile {
 pub struct ObjectID(pub usize);
 
 #[derive(Copy, Clone, Debug)]
-pub struct SkyboxTextureIDs {
+pub struct Skybox {
     pub north: TextureID,
     pub east: TextureID,
     pub south: TextureID,

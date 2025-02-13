@@ -1,6 +1,6 @@
 use crate::map::portal::{Portal, Rotation};
 use crate::raycaster::camera::Camera;
-use glam::Vec3;
+use glam::{Vec2, Vec3};
 
 use super::{PointXZ, Side};
 
@@ -146,10 +146,9 @@ impl Ray {
         ray
     }
 
-    pub fn rotate(&mut self, rotation: Rotation) {
-        match rotation {
-            Rotation::Deg180 => {}
-            Rotation::ClockwiseDeg90 => {
+    pub fn rotate(&mut self, delta: f32) {
+        match (delta.to_degrees() as i32) {
+            90 | -270 => {
                 // Rotate 90 degrees clockwise
                 self.dir = Vec3::new(self.dir.z, 0.0, -self.dir.x);
                 self.camera_dir = Vec3::new(self.camera_dir.z, 0.0, -self.camera_dir.x);
@@ -171,7 +170,7 @@ impl Ray {
                     WallSide::West => WallSide::North,
                 };
             }
-            Rotation::AnticlockwiseDeg90 => {
+            -90 | 270 => {
                 // Rotate 90 degrees anticlockwise
                 self.dir = Vec3::new(-self.dir.z, 0.0, self.dir.x);
                 self.camera_dir = Vec3::new(-self.camera_dir.z, 0.0, self.camera_dir.x);
@@ -193,7 +192,7 @@ impl Ray {
                     WallSide::West => WallSide::South,
                 };
             }
-            Rotation::Deg0 => {
+            180 | -180 => {
                 // No difference, so the ray should be rotated 180 degrees
                 self.dir = -self.dir;
                 self.camera_dir = -self.camera_dir;
@@ -207,13 +206,14 @@ impl Ray {
                     WallSide::West => WallSide::East,
                 };
             }
+            _ => {}
         }
     }
 
-    pub fn portal_teleport(&mut self, src: Portal, dest: Portal) {
-        self.origin = src.teleport_to(self.origin, dest);
+    pub fn portal_teleport(&mut self, src: Portal, dest: Vec2) {
+        //self.origin = src.teleport_to(self.origin, dest);
 
-        self.next_tile = PointXZ::new(dest.position.x as i64, dest.position.z as i64);
+        self.next_tile = PointXZ::new(dest.x as i64, dest.y as i64);
         match self.hit_wall_side {
             Side::Vertical => {
                 self.side_dist_x -= self.delta_dist_x;

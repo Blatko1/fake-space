@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::map::blueprint::SkyboxTextureIDs;
+use crate::map::tilemap::Skybox;
 
 pub struct TextureArray {
     textures: Vec<TextureData>,
@@ -20,7 +20,7 @@ impl TextureArray {
         Self { textures }
     }
 
-    pub fn get_skybox_textures(&self, skybox: &SkyboxTextureIDs) -> SkyboxTexturesRef {
+    pub fn get_skybox_textures(&self, skybox: &Skybox) -> SkyboxTexturesRef {
         SkyboxTexturesRef {
             north: self.get_texture_data(skybox.north),
             east: self.get_texture_data(skybox.east),

@@ -9,6 +9,7 @@
    <property name="ceiling_texture" value=""/>
    <property name="ground_height" type="float" value="-1000"/>
    <property name="ground_texture" value=""/>
+   <property name="portal_direction" value=""/>
    <property name="top_height" type="float" value="21"/>
    <property name="top_texture" value=""/>
   </properties>
@@ -21,6 +22,7 @@
    <property name="ceiling_texture" value=""/>
    <property name="ground_height" type="float" value="19"/>
    <property name="ground_texture" value=""/>
+   <property name="portal_direction" value=""/>
    <property name="top_height" type="float" value="100"/>
    <property name="top_texture" value=""/>
   </properties>
@@ -85,6 +87,7 @@
    <property name="ceiling_texture" value="stone_bricks.jpg"/>
    <property name="ground_height" type="float" value="0"/>
    <property name="ground_texture" value="metal_floor.jpg"/>
+   <property name="portal_direction" value=""/>
    <property name="top_height" type="float" value="21"/>
    <property name="top_texture" value=""/>
   </properties>

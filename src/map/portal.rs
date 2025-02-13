@@ -1,4 +1,4 @@
-use glam::Vec3;
+use glam::{Vec2, Vec3};
 
 use crate::raycaster::PointXZ;
 
@@ -7,35 +7,30 @@ use super::room::RoomID;
 #[derive(Debug, Clone, Copy)]
 pub struct PortalID(pub usize);
 
-#[derive(Debug, Copy, Clone)]
-pub struct DummyPortal {
-    pub id: PortalID,
-    pub orientation: Orientation,
-}
-
 #[derive(Debug, Clone, Copy)]
 pub struct Portal {
     pub id: PortalID,
-    pub direction: Orientation,
+    pub direction: Vec2,
+    // TODO do I really need both 'position' and 'center' position???
     pub position: PointXZ<u64>,
-    pub center: PointXZ<f32>,
-    pub ground_level: f32,
-    pub link: Option<(RoomID, PortalID)>,
+    pub center: Vec2,
+    pub ground_height: f32,
+    pub destination: Option<(RoomID, PortalID)>,
 }
 
-impl Portal {
+/*impl Portal {
     /// Returns new position and a difference in angle
     pub fn teleport_to(&self, origin: Vec3, dest: Portal) -> Vec3 {
         let offset_x = self.center.x - origin.x;
         let offset_z = self.center.z - origin.z;
         let mut new_origin = Vec3::new(
             dest.center.x,
-            origin.y + dest.ground_level - self.ground_level,
+            origin.y + dest.ground_height - self.ground_height,
             dest.center.z,
         );
 
-        match self.direction {
-            Orientation::North => match dest.direction {
+        match self.orientation {
+            Orientation::North => match dest.orientation {
                 Orientation::North => {
                     new_origin.x += offset_x;
                     new_origin.z += 1.0 + offset_z;
@@ -53,7 +48,7 @@ impl Portal {
                     new_origin.z += offset_x;
                 }
             },
-            Orientation::South => match dest.direction {
+            Orientation::South => match dest.orientation {
                 Orientation::North => {
                     new_origin.x += -offset_x;
                     new_origin.z += 1.0 - offset_z;
@@ -71,7 +66,7 @@ impl Portal {
                     new_origin.z += -offset_x;
                 }
             },
-            Orientation::East => match dest.direction {
+            Orientation::East => match dest.orientation {
                 Orientation::North => {
                     new_origin.x += -offset_z;
                     new_origin.z += 1.0 + offset_x;
@@ -89,7 +84,7 @@ impl Portal {
                     new_origin.z += -offset_z;
                 }
             },
-            Orientation::West => match dest.direction {
+            Orientation::West => match dest.orientation {
                 Orientation::North => {
                     new_origin.x += offset_z;
                     new_origin.z += 1.0 - offset_x;
@@ -112,9 +107,9 @@ impl Portal {
     }
 
     pub fn direction_difference(&self, other: &Self) -> Rotation {
-        self.direction.difference(other.direction)
+        self.orientation.difference(other.orientation)
     }
-}
+}*/
 
 #[derive(Debug, Clone, Copy)]
 pub enum Orientation {

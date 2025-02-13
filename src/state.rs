@@ -5,7 +5,7 @@ use winit::event::DeviceEvent;
 
 use crate::{
     control::GameInput,
-    map::{parser::MapParser, room::RoomID, Map},
+    map::{self, room::RoomID, Map},
     models::ModelArray,
     player::Player,
     raycaster::{self, camera::Camera, FrameRenderer},
@@ -32,10 +32,7 @@ impl GameState {
         view_width: u32,
         view_height: u32,
     ) -> Self {
-        // TODO remove 'unwrap()'s
-        let path: PathBuf = data_path.into().canonicalize().unwrap();
-        let parent_path = path.parent().unwrap().to_path_buf();
-        let (blueprint, textures) = MapParser::new("tiled/map.tmx").parse();
+        let (tile_maps, textures) = map::parser::parse("tiled");
         /*let input = clean_input(std::fs::read_to_string(path).unwrap());
         let (blueprints, textures, models) = match MapParser::new(parent_path)
             .parse(&input)
@@ -53,7 +50,7 @@ impl GameState {
         Self {
             camera,
 
-            map: Map::new(vec![blueprint]),
+            map: Map::new(tile_maps),
             textures: TextureArray::new(textures),
             models: ModelArray::new(vec![]),
 
@@ -85,6 +82,14 @@ impl GameState {
     }
 
     pub fn handle_game_input(&mut self, input: GameInput, is_pressed: bool) {
+        match input {
+            GameInput::ReloadMap => {
+                let (tile_maps, textures) = map::parser::parse("tiled");
+                self.map = Map::new(tile_maps);
+                self.textures = TextureArray::new(textures);
+            },
+            _ => ()
+        }
         self.player.handle_game_input(input, is_pressed);
     }
 

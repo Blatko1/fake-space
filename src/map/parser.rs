@@ -1,230 +1,163 @@
 use std::{
     fs,
-    path::{Path, PathBuf},
-    process::id,
+    path::{Path},
 };
 
-use hashbrown::HashMap;
+use glam::Vec2;
 use image::{EncodableLayout, ImageReader};
 use tiled::{Loader, PropertyValue, TileLayer};
 
 use crate::{
     raycaster::PointXZ,
-    textures::{self, TextureData, TextureID},
+    textures::{ TextureData, TextureID},
 };
 
 use super::{
-    blueprint::{Blueprint, BlueprintID, SkyboxTextureIDs, Tile},
-    portal::{DummyPortal, Orientation, PortalID},
+    portal::{ Orientation, Portal, PortalID}, tilemap::{Skybox, Tile, Tilemap, TilemapID}
 };
 
-pub fn parse<P: AsRef<Path>>(path: P) {
+pub fn parse<P: AsRef<Path>>(path: P) -> (Vec<Tilemap>, Vec<TextureData>) {
     let texture_dir_path = path.as_ref().join("textures");
     let texture_dir =
         fs::read_dir(texture_dir_path).expect("Couldn't find 'texture' dir");
-    let texture_array: Vec<TextureData> = texture_dir
+    let texture_array: Vec<(String, TextureData)> = texture_dir
         .flatten()
         .enumerate()
         .filter(|(_, texture)| texture.metadata().unwrap().is_file())
         .map(|(i, texture)| {
+            let texture_name = texture.file_name().to_str().unwrap().to_owned();
+            println!("name: {}", texture_name);
             let data = ImageReader::open(texture.path()).unwrap().decode().unwrap();
-            TextureData::new(
+            (texture_name, TextureData::new(
                 TextureID(i),
                 data.to_rgba8().as_bytes().to_vec(),
                 data.width() as usize,
                 data.height() as usize,
                 false,
-            )
+            ))
         }).collect();
 
     let blueprint_dir_path = path.as_ref().join("blueprints");
-    let blueprint_dir = fs::read_dir(blueprint_dir_path).expect("Couldn't find 'blueprints' dir");
-    let blueprints = Vec::with_capacity(blueprint_dir.count());
+    let blueprint_count = fs::read_dir(&blueprint_dir_path).expect("Couldn't find 'blueprints' dir").count();
+    let blueprint_dir = fs::read_dir(blueprint_dir_path).unwrap();
+    let mut blueprints = Vec::with_capacity(blueprint_count);
     for blueprint_path in blueprint_dir.flatten() {
-        let blueprint_name = blueprint_path.file_name().to_str().unwrap();
-        let blueprint_tmx_path = blueprint_path.path().join(format!("{}.tmx", blueprint_name));
-        let map = Loader::new()
-            .load_tmx_map(blueprint_tmx_path)
+        let blueprint_name = blueprint_path.file_name().to_str().unwrap().to_owned();
+        let tmx_path = blueprint_path.path().join(format!("{}.tmx", blueprint_name));
+        let tiled_data = Loader::new()
+            .load_tmx_map(tmx_path)
             .unwrap();
 
+        let map_properties = &tiled_data.properties;
+        let PropertyValue::FloatValue(ambient_light) = map_properties.get("ambient_light").unwrap().to_owned() else { panic!()};
+        let PropertyValue::StringValue(skybox_north_name) = map_properties.get("skybox_north").unwrap() else { panic!()};
+        let PropertyValue::StringValue(skybox_east_name) = map_properties.get("skybox_east").unwrap() else { panic!()};
+        let PropertyValue::StringValue(skybox_south_name) = map_properties.get("skybox_south").unwrap() else { panic!()};
+        let PropertyValue::StringValue(skybox_west_name) = map_properties.get("skybox_west").unwrap() else { panic!()};
+        let PropertyValue::StringValue(skybox_top_name) = map_properties.get("skybox_top").unwrap() else { panic!()};
+        let PropertyValue::StringValue(skybox_bottom_name) = map_properties.get("skybox_bottom").unwrap() else { panic!()};
+
+        let skybox_north = texture_array.iter().position(|(name, _)| name == skybox_north_name);
+        let skybox_east = texture_array.iter().position(|(name, _)| name == skybox_east_name);
+        let skybox_south = texture_array.iter().position(|(name, _)| name == skybox_south_name);
+        let skybox_west = texture_array.iter().position(|(name, _)| name == skybox_west_name);
+        let skybox_top = texture_array.iter().position(|(name, _)| name == skybox_top_name);
+        let skybox_bottom = texture_array.iter().position(|(name, _)| name == skybox_bottom_name);
+
+        // TODO find a better solution instead of idx+1 everywhere
+        let default_skybox = Skybox {
+            north: skybox_north.map(|idx| TextureID(idx+1)).unwrap_or_default(),
+            east: skybox_east.map(|idx| TextureID(idx+1)).unwrap_or_default(),
+            south: skybox_south.map(|idx| TextureID(idx+1)).unwrap_or_default(),
+            west: skybox_west.map(|idx| TextureID(idx+1)).unwrap_or_default(),
+            top: skybox_top.map(|idx| TextureID(idx+1)).unwrap_or_default(),
+            bottom: skybox_bottom.map(|idx| TextureID(idx+1)).unwrap_or_default(),
+        };
+
         let TileLayer::Finite(tile_layer) =
-            map.get_layer(0).unwrap().as_tile_layer().unwrap()
+            tiled_data.get_layer(0).unwrap().as_tile_layer().unwrap()
         else {
             panic!()
         };
-    }
-}
 
-pub struct MapParser {
-    parent_path: PathBuf,
-    textures: HashMap<String, TextureData>,
-    texture_count: usize,
-}
-
-impl MapParser {
-    pub fn new<P: AsRef<Path>>(path: P) -> Self {
-        Self {
-            parent_path: path.as_ref().canonicalize().unwrap(),
-            textures: HashMap::new(),
-            texture_count: 0,
-        }
-    }
-
-    pub fn parse(mut self) -> (Blueprint, Vec<TextureData>) {
-        let map = Loader::new()
-            .load_tmx_map(self.parent_path.clone())
-            .unwrap();
-
-        let TileLayer::Finite(tile_layer) =
-            map.get_layer(0).unwrap().as_tile_layer().unwrap()
-        else {
-            panic!()
-        };
-
-        let mut portal_count = 0;
-        let mut tiles = Vec::new();
-        for y in 0..tile_layer.height() as i32 {
-            for x in 0..tile_layer.width() as i32 {
-                let tile = tile_layer.get_tile(x, y).unwrap();
-                let properties = &tile.get_tile().unwrap().properties;
-                let PropertyValue::FloatValue(bottom_height) =
-                    *properties.get("bottom_height").unwrap()
-                else {
-                    panic!()
-                };
-                let PropertyValue::FloatValue(ground_height) =
-                    *properties.get("ground_height").unwrap()
-                else {
-                    panic!()
-                };
-                let PropertyValue::FloatValue(ceiling_height) =
-                    *properties.get("ceiling_height").unwrap()
-                else {
-                    panic!()
-                };
-                let PropertyValue::FloatValue(top_height) =
-                    *properties.get("top_height").unwrap()
-                else {
-                    panic!()
-                };
-
-                let PropertyValue::FileValue(bottom_texture_path) =
-                    properties.get("bottom_texture").unwrap()
-                else {
-                    panic!()
-                };
-                let bottom_wall_tex = self.parse_texture(bottom_texture_path.to_owned());
-                let PropertyValue::FileValue(ground_texture_path) =
-                    properties.get("ground_texture").unwrap()
-                else {
-                    panic!()
-                };
-                let ground_tex = self.parse_texture(ground_texture_path.to_owned());
-                let PropertyValue::FileValue(ceiling_texture_path) =
-                    properties.get("ceiling_texture").unwrap()
-                else {
-                    panic!()
-                };
-                let ceiling_tex = self.parse_texture(ceiling_texture_path.to_owned());
-                let PropertyValue::FileValue(top_texture_path) =
-                    properties.get("top_texture").unwrap()
-                else {
-                    panic!()
-                };
-                let top_wall_tex = self.parse_texture(top_texture_path.to_owned());
-
-                let portal = if let Some(portal_direction) =
-                    properties.get("portal_direction")
-                {
-                    let PropertyValue::StringValue(portal_direction) = portal_direction
-                    else {
-                        panic!()
+        let width = tile_layer.width() as i32;
+        let height = tile_layer.height() as i32; 
+        let mut tiles = Vec::with_capacity((width * height) as usize);
+        let mut portals = Vec::new();
+        for y in 0..height {
+            for x in 0..width {
+                // Reverse the y direction
+                let tile_properties = &tile_layer.get_tile(x, height - y - 1).unwrap().get_tile().unwrap().properties;
+                let PropertyValue::FloatValue(bottom_height) = tile_properties.get("bottom_height").unwrap().to_owned() else { panic!()};
+                let PropertyValue::FloatValue(ground_height) = tile_properties.get("ground_height").unwrap().to_owned() else { panic!()};
+                let PropertyValue::FloatValue(ceiling_height) = tile_properties.get("ceiling_height").unwrap().to_owned() else { panic!()};
+                let PropertyValue::FloatValue(top_height) = tile_properties.get("top_height").unwrap().to_owned() else { panic!()};
+                let PropertyValue::StringValue(bottom_texture_name) = tile_properties.get("bottom_texture").unwrap() else { panic!()};
+                let PropertyValue::StringValue(ground_texture_name) = tile_properties.get("ground_texture").unwrap() else { panic!()};
+                let PropertyValue::StringValue(ceiling_texture_name) = tile_properties.get("ceiling_texture").unwrap() else { panic!()};
+                let PropertyValue::StringValue(top_texture_name) = tile_properties.get("top_texture").unwrap() else { panic!()};
+                let PropertyValue::StringValue(portal_direction) = tile_properties.get("portal_direction").unwrap() else {panic!()};
+                
+                let bottom_texture = texture_array.iter().position(|(name, _)| name == bottom_texture_name);
+                let ground_texture = texture_array.iter().position(|(name, _)| name == ground_texture_name);
+                let ceiling_texture = texture_array.iter().position(|(name, _)| name == ceiling_texture_name);
+                let top_texture = texture_array.iter().position(|(name, _)| name == top_texture_name);
+                
+                let position = PointXZ { x: x as u64, z: y as u64 };
+                let portal_id = if !portal_direction.is_empty() {
+                    let direction = match portal_direction.as_str() {
+                        "N" => Vec2::Y,
+                        "E" => Vec2::X,
+                        "S" => Vec2::NEG_Y,
+                        "W" => Vec2::NEG_X,
+                        _ => panic!()
                     };
-                    if !portal_direction.is_empty() {
-                        let orientation = match portal_direction.as_str() {
-                            "N" => Orientation::North,
-                            "E" => Orientation::East,
-                            "S" => Orientation::South,
-                            "W" => Orientation::West,
-                            _ => panic!(),
-                        };
-                        let portal = DummyPortal {
-                            id: PortalID(portal_count),
-                            orientation,
-                        };
-                        portal_count += 1;
-                        Some(portal)
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                };
+                    let id = PortalID(portals.len());
+                    let portal = Portal {
+                        id,
+                        direction,
+                        position,
+                        center: Vec2::new(
+                            position.x as f32 + 0.5,
+                            position.z as f32 + 0.5,
+                        ),
+                        ground_height,
+                        destination: None,
+                    };
+                    portals.push(portal);
+                    Some(id)
+                } else { None };
 
                 let tile = Tile {
-                    position: PointXZ::new(x as u64, y as u64),
-                    bottom_wall_tex,
-                    top_wall_tex,
-                    ground_tex,
-                    ceiling_tex,
+                    position,
+                    bottom_wall_tex: bottom_texture.map(|idx| TextureID(idx+1)).unwrap_or_default(),
+                    top_wall_tex: top_texture.map(|idx| TextureID(idx+1)).unwrap_or_default(),
+                    ground_tex: ground_texture.map(|idx| TextureID(idx+1)).unwrap_or_default(),
+                    ceiling_tex: ceiling_texture.map(|idx| TextureID(idx+1)).unwrap_or_default(),
                     bottom_height,
                     ground_height,
                     ceiling_height,
                     top_height,
-                    portal,
+                    portal_id,
                     object: None,
                 };
                 tiles.push(tile);
             }
         }
-        let skybox = SkyboxTextureIDs {
-            north: TextureID::default(),
-            east: TextureID::default(),
-            south: TextureID::default(),
-            west: TextureID::default(),
-            top: TextureID::default(),
-            bottom: TextureID::default(),
+
+        let blueprint = Tilemap {
+            id: TilemapID(blueprints.len()),
+            dimensions: (width as u64, height as u64),
+            tiles,
+            unlinked_portals: portals,
+            default_skybox,
+            repeatable: false,
+            default_ambient_light: ambient_light,
         };
-        (
-            Blueprint::new(
-                BlueprintID(0),
-                (map.width as u64, map.height as u64),
-                tiles,
-                skybox,
-                false,
-                1.0,
-            ),
-            self.textures.drain().map(|(_, v)| v).collect(),
-        )
+        blueprints.push(blueprint);
     }
 
-    fn parse_texture(&mut self, texture_path: String) -> TextureID {
-        if !texture_path.is_empty() {
-            if let Some(tex) = self.textures.get(&texture_path) {
-                tex.id()
-            } else {
-                println!("path: {:?}, tex_path: {}", self.parent_path, texture_path);
-                let data =
-                    ImageReader::open(self.parent_path.join("..").join(&texture_path))
-                        .unwrap()
-                        .decode()
-                        .unwrap();
-                let id = TextureID(self.texture_count);
-                self.texture_count += 1;
+    let textures = texture_array.into_iter().map(|(_, texture_data)| texture_data).collect();
 
-                let texture = TextureData::new(
-                    id,
-                    data.to_rgba8().as_bytes().to_vec(),
-                    data.width() as usize,
-                    data.height() as usize,
-                    false,
-                );
-                self.textures.insert(texture_path, texture);
-
-                id
-            }
-        } else {
-            TextureID::default()
-        }
-    }
+    (blueprints, textures)
 }
